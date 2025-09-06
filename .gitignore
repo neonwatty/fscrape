@@ -69,3 +69,6 @@ Desktop.ini
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# TFQ test failure queue database
+.tfq/
