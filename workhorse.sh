@@ -46,9 +46,9 @@ if [ "$TFQ_COUNT" -eq 0 ]; then
         
         # Create commit message with task number
         if [ -n "$TASK_NUM" ]; then
-            COMMIT_MSG="Task $TASK_NUM: $TASK_NAME"
+            COMMIT_MSG="Completed Task $TASK_NUM: $TASK_NAME"
         else
-            COMMIT_MSG="$TASK_NAME"
+            COMMIT_MSG="Completed $TASK_NAME"
         fi
         
         # Stage all changes
