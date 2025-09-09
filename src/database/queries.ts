@@ -1,0 +1,665 @@
+import Database from "better-sqlite3";
+
+/**
+ * Prepared statements for database operations
+ * All statements are pre-compiled for performance
+ */
+export class PreparedQueries {
+  readonly posts: {
+    insert: Database.Statement;
+    update: Database.Statement;
+    upsert: Database.Statement;
+    getById: Database.Statement;
+    getByPlatform: Database.Statement;
+    getRecent: Database.Statement;
+    getAll: Database.Statement;
+    count: Database.Statement;
+    countByPlatform: Database.Statement;
+  };
+
+  readonly comments: {
+    insert: Database.Statement;
+    update: Database.Statement;
+    upsert: Database.Statement;
+    getById: Database.Statement;
+    getByPost: Database.Statement;
+    getByUser: Database.Statement;
+    getByParent: Database.Statement;
+    getThread: Database.Statement;
+    count: Database.Statement;
+  };
+
+  readonly users: {
+    insert: Database.Statement;
+    update: Database.Statement;
+    upsert: Database.Statement;
+    getById: Database.Statement;
+    getByUsername: Database.Statement;
+    getTopByKarma: Database.Statement;
+    getByPlatform: Database.Statement;
+  };
+
+  readonly sessions: {
+    create: Database.Statement;
+    update: Database.Statement;
+    get: Database.Statement;
+    getActive: Database.Statement;
+    getByPlatform: Database.Statement;
+    complete: Database.Statement;
+  };
+
+  readonly metrics: {
+    insert: Database.Statement;
+    upsert: Database.Statement;
+    getBySession: Database.Statement;
+    getByTimeRange: Database.Statement;
+    postsPerPlatform: Database.Statement;
+    commentsPerPlatform: Database.Statement;
+    avgScoreByPlatform: Database.Statement;
+    topPostsByScore: Database.Statement;
+    topUsersByKarma: Database.Statement;
+  };
+
+  readonly rateLimit: {
+    check: Database.Statement;
+    increment: Database.Statement;
+    reset: Database.Statement;
+    get: Database.Statement;
+  };
+  
+  // Keep legacy properties for backward compatibility
+  readonly insertPost: Database.Statement;
+  readonly updatePost: Database.Statement;
+  readonly insertComment: Database.Statement;
+  readonly updateComment: Database.Statement;
+  readonly insertUser: Database.Statement;
+  readonly updateUser: Database.Statement;
+  readonly insertSession: Database.Statement;
+  readonly updateSession: Database.Statement;
+
+  constructor(db: Database.Database) {
+    // Ensure required tables exist before creating prepared statements
+    this.ensureTablesExist(db);
+    // ============================================================================
+    // Post Queries
+    // ============================================================================
+
+    const insertPost = db.prepare(`
+      INSERT INTO forum_posts (
+        id, platform, platform_id, title, content, author, author_id, url,
+        score, comment_count, created_at, updated_at, metadata
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      )
+    `);
+
+    const updatePost = db.prepare(`
+      UPDATE forum_posts
+      SET score = @score,
+          comment_count = @commentCount,
+          updated_at = @updatedAt,
+          metadata = @metadata
+      WHERE id = @id AND platform = @platform
+    `);
+
+    const upsertPost = db.prepare(`
+      INSERT INTO forum_posts (
+        id, platform, platform_id, title, content, author, author_id, url,
+        score, comment_count, created_at, updated_at, metadata
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      )
+      ON CONFLICT(platform, platform_id) DO UPDATE SET
+        score = excluded.score,
+        comment_count = excluded.comment_count,
+        updated_at = excluded.updated_at,
+        metadata = excluded.metadata
+    `);
+
+    const getPostById = db.prepare(`
+      SELECT * FROM forum_posts
+      WHERE id = ?
+    `);
+
+    const getPostsByPlatform = db.prepare(`
+      SELECT * FROM forum_posts
+      WHERE platform = ?
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `);
+
+    const getRecentPosts = db.prepare(`
+      SELECT * FROM forum_posts
+      WHERE created_at >= ?
+      ORDER BY created_at DESC
+      LIMIT ?
+    `);
+
+    const getAllPosts = db.prepare(`
+      SELECT * FROM forum_posts
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `);
+
+    const countPosts = db.prepare(`
+      SELECT COUNT(*) as count FROM forum_posts
+    `);
+
+    const countPostsByPlatform = db.prepare(`
+      SELECT COUNT(*) as count FROM forum_posts
+      WHERE platform = ?
+    `);
+
+    this.posts = {
+      insert: insertPost,
+      update: updatePost,
+      upsert: upsertPost,
+      getById: getPostById,
+      getByPlatform: getPostsByPlatform,
+      getRecent: getRecentPosts,
+      getAll: getAllPosts,
+      count: countPosts,
+      countByPlatform: countPostsByPlatform
+    };
+
+    // Legacy compatibility
+    this.insertPost = insertPost;
+    this.updatePost = updatePost;
+
+    // ============================================================================
+    // Comment Queries
+    // ============================================================================
+
+    const insertComment = db.prepare(`
+      INSERT INTO comments (
+        id, post_id, parent_id, platform, platform_id, author, author_id,
+        content, score, depth, created_at, updated_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      )
+    `);
+
+    const updateComment = db.prepare(`
+      UPDATE comments
+      SET score = @score, updated_at = @updatedAt
+      WHERE id = @id AND platform = @platform
+    `);
+
+    const upsertComment = db.prepare(`
+      INSERT INTO comments (
+        id, post_id, parent_id, platform, platform_id, author, author_id,
+        content, score, depth, created_at, updated_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      )
+      ON CONFLICT(platform, platform_id) DO UPDATE SET
+        score = excluded.score,
+        updated_at = excluded.updated_at
+    `);
+
+    const getCommentById = db.prepare(`
+      SELECT * FROM comments
+      WHERE id = ?
+    `);
+
+    const getCommentsByPost = db.prepare(`
+      SELECT * FROM comments
+      WHERE post_id = ?
+      ORDER BY created_at ASC
+    `);
+
+    const getCommentsByUser = db.prepare(`
+      SELECT * FROM comments
+      WHERE author_id = ?
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `);
+
+    const getCommentsByParent = db.prepare(`
+      SELECT * FROM comments
+      WHERE parent_id = ?
+      ORDER BY created_at ASC
+    `);
+
+    const getCommentThread = db.prepare(`
+      WITH RECURSIVE thread AS (
+        SELECT * FROM comments WHERE id = ?
+        UNION ALL
+        SELECT c.* FROM comments c
+        INNER JOIN thread t ON c.parent_id = t.id
+      )
+      SELECT * FROM thread
+    `);
+
+    const countComments = db.prepare(`
+      SELECT COUNT(*) as count FROM comments
+      WHERE post_id = ?
+    `);
+
+    this.comments = {
+      insert: insertComment,
+      update: updateComment,
+      upsert: upsertComment,
+      getById: getCommentById,
+      getByPost: getCommentsByPost,
+      getByUser: getCommentsByUser,
+      getByParent: getCommentsByParent,
+      getThread: getCommentThread,
+      count: countComments
+    };
+
+    // Legacy compatibility
+    this.insertComment = insertComment;
+    this.updateComment = updateComment;
+
+    // ============================================================================
+    // User Queries
+    // ============================================================================
+
+    const insertUser = db.prepare(`
+      INSERT INTO users (
+        id, platform, username, karma, created_at, last_seen_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?
+      )
+    `);
+
+    const updateUser = db.prepare(`
+      UPDATE users
+      SET karma = @karma,
+          last_seen_at = @lastSeenAt,
+          metadata = @metadata
+      WHERE id = @id AND platform = @platform
+    `);
+
+    const upsertUser = db.prepare(`
+      INSERT INTO users (
+        id, platform, username, karma, created_at, last_seen_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?
+      )
+      ON CONFLICT(platform, id) DO UPDATE SET
+        karma = excluded.karma,
+        last_seen_at = excluded.last_seen_at
+    `);
+
+    const getUserById = db.prepare(`
+      SELECT * FROM users
+      WHERE id = ?
+    `);
+
+    const getUserByUsername = db.prepare(`
+      SELECT * FROM users
+      WHERE platform = ? AND username = ?
+    `);
+
+    const getTopUsersByKarma = db.prepare(`
+      SELECT * FROM users
+      ORDER BY karma DESC
+      LIMIT ?
+    `);
+
+    const getUsersByPlatform = db.prepare(`
+      SELECT * FROM users
+      WHERE platform = ?
+      ORDER BY karma DESC
+      LIMIT ? OFFSET ?
+    `);
+
+    this.users = {
+      insert: insertUser,
+      update: updateUser,
+      upsert: upsertUser,
+      getById: getUserById,
+      getByUsername: getUserByUsername,
+      getTopByKarma: getTopUsersByKarma,
+      getByPlatform: getUsersByPlatform
+    };
+
+    // Legacy compatibility
+    this.insertUser = insertUser;
+    this.updateUser = updateUser;
+
+    // ============================================================================
+    // Session Queries
+    // ============================================================================
+
+    const createSession = db.prepare(`
+      INSERT INTO scraping_sessions (
+        platform, status, query_type, query_value,
+        total_items_target, total_items_scraped,
+        started_at, last_activity_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?
+      )
+    `);
+
+    const updateSession = db.prepare(`
+      UPDATE scraping_sessions
+      SET status = COALESCE(@status, status),
+          total_items_target = COALESCE(@totalItemsTarget, total_items_target),
+          total_items_scraped = COALESCE(@totalItemsScraped, total_items_scraped),
+          last_item_id = COALESCE(@lastItemId, last_item_id),
+          resume_token = COALESCE(@resumeToken, resume_token),
+          last_activity_at = @lastActivityAt,
+          completed_at = COALESCE(@completedAt, completed_at),
+          error_count = COALESCE(@errorCount, error_count),
+          last_error = COALESCE(@lastError, last_error)
+      WHERE session_id = @sessionId
+    `);
+
+    const getSession = db.prepare(`
+      SELECT * FROM scraping_sessions
+      WHERE session_id = ?
+    `);
+
+    const getActiveSessions = db.prepare(`
+      SELECT * FROM scraping_sessions
+      WHERE status IN ('pending', 'running')
+      ORDER BY started_at DESC
+    `);
+
+    const getSessionsByPlatform = db.prepare(`
+      SELECT * FROM scraping_sessions
+      WHERE platform = ?
+      ORDER BY started_at DESC
+      LIMIT ? OFFSET ?
+    `);
+
+    const completeSession = db.prepare(`
+      UPDATE scraping_sessions
+      SET status = 'completed',
+          completed_at = @completedAt,
+          last_activity_at = @completedAt
+      WHERE session_id = @sessionId
+    `);
+
+    this.sessions = {
+      create: createSession,
+      update: updateSession,
+      get: getSession,
+      getActive: getActiveSessions,
+      getByPlatform: getSessionsByPlatform,
+      complete: completeSession
+    };
+
+    // Legacy compatibility
+    this.insertSession = createSession;
+    this.updateSession = updateSession;
+
+    // ============================================================================
+    // Metrics Queries
+    // ============================================================================
+
+    const insertMetric = db.prepare(`
+      INSERT INTO scraping_metrics (
+        session_id, platform, time_bucket,
+        requests_made, requests_successful, requests_failed,
+        posts_scraped, comments_scraped, users_scraped,
+        avg_response_time_ms, rate_limit_hits
+      ) VALUES (
+        @sessionId, @platform, @timeBucket,
+        @requestsMade, @requestsSuccessful, @requestsFailed,
+        @postsScraped, @commentsScraped, @usersScraped,
+        @avgResponseTimeMs, @rateLimitHits
+      )
+    `);
+
+    const upsertMetric = db.prepare(`
+      INSERT INTO scraping_metrics (
+        session_id, platform, time_bucket,
+        requests_made, requests_successful, requests_failed,
+        posts_scraped, comments_scraped, users_scraped,
+        avg_response_time_ms, rate_limit_hits
+      ) VALUES (
+        @sessionId, @platform, @timeBucket,
+        COALESCE(@requestsMade, 0),
+        COALESCE(@requestsSuccessful, 0),
+        COALESCE(@requestsFailed, 0),
+        COALESCE(@postsScraped, 0),
+        COALESCE(@commentsScraped, 0),
+        COALESCE(@usersScraped, 0),
+        @avgResponseTimeMs,
+        COALESCE(@rateLimitHits, 0)
+      )
+      ON CONFLICT(session_id, time_bucket) DO UPDATE SET
+        requests_made = requests_made + COALESCE(@requestsMade, 0),
+        requests_successful = requests_successful + COALESCE(@requestsSuccessful, 0),
+        requests_failed = requests_failed + COALESCE(@requestsFailed, 0),
+        posts_scraped = posts_scraped + COALESCE(@postsScraped, 0),
+        comments_scraped = comments_scraped + COALESCE(@commentsScraped, 0),
+        users_scraped = users_scraped + COALESCE(@usersScraped, 0),
+        avg_response_time_ms = CASE
+          WHEN avg_response_time_ms IS NULL THEN @avgResponseTimeMs
+          WHEN @avgResponseTimeMs IS NULL THEN avg_response_time_ms
+          ELSE (avg_response_time_ms + @avgResponseTimeMs) / 2
+        END,
+        rate_limit_hits = rate_limit_hits + COALESCE(@rateLimitHits, 0)
+    `);
+
+    const getMetricsBySession = db.prepare(`
+      SELECT * FROM scraping_metrics
+      WHERE session_id = ?
+      ORDER BY time_bucket DESC
+    `);
+
+    const getMetricsByTimeRange = db.prepare(`
+      SELECT 
+        time_bucket,
+        SUM(requests_made) as total_requests,
+        SUM(requests_successful) as total_successful,
+        SUM(requests_failed) as total_failed,
+        SUM(posts_scraped) as total_posts,
+        SUM(comments_scraped) as total_comments,
+        SUM(users_scraped) as total_users,
+        AVG(avg_response_time_ms) as avg_response_time,
+        SUM(rate_limit_hits) as total_rate_limits
+      FROM scraping_metrics
+      WHERE platform = ? AND time_bucket >= ? AND time_bucket <= ?
+      GROUP BY time_bucket
+      ORDER BY time_bucket DESC
+    `);
+
+    const postsPerPlatform = db.prepare(`
+      SELECT platform, COUNT(*) as count
+      FROM forum_posts
+      GROUP BY platform
+    `);
+
+    const commentsPerPlatform = db.prepare(`
+      SELECT platform, COUNT(*) as count
+      FROM comments
+      GROUP BY platform
+    `);
+
+    const avgScoreByPlatform = db.prepare(`
+      SELECT platform, AVG(score) as avg_score
+      FROM forum_posts
+      GROUP BY platform
+    `);
+
+    const topPostsByScore = db.prepare(`
+      SELECT * FROM forum_posts
+      ORDER BY score DESC
+      LIMIT ?
+    `);
+
+    const topUsersByKarma = db.prepare(`
+      SELECT * FROM users
+      ORDER BY karma DESC
+      LIMIT ?
+    `);
+
+    this.metrics = {
+      insert: insertMetric,
+      upsert: upsertMetric,
+      getBySession: getMetricsBySession,
+      getByTimeRange: getMetricsByTimeRange,
+      postsPerPlatform: postsPerPlatform,
+      commentsPerPlatform: commentsPerPlatform,
+      avgScoreByPlatform: avgScoreByPlatform,
+      topPostsByScore: topPostsByScore,
+      topUsersByKarma: topUsersByKarma
+    };
+
+    // ============================================================================
+    // Rate Limit Queries
+    // ============================================================================
+
+    const checkRateLimit = db.prepare(`
+      SELECT COUNT(*) as request_count
+      FROM rate_limit_state
+      WHERE platform = ? AND last_request_at >= ?
+    `);
+
+    const incrementRateLimit = db.prepare(`
+      INSERT INTO rate_limit_state (
+        platform, window_start, requests_in_window, 
+        last_request_at, retry_after, consecutive_errors
+      ) VALUES (
+        ?, ?, 1, ?, NULL, 0
+      )
+      ON CONFLICT(platform) DO UPDATE SET
+        requests_in_window = requests_in_window + 1,
+        last_request_at = ?,
+        updated_at = strftime('%s', 'now') * 1000
+    `);
+
+    const resetRateLimit = db.prepare(`
+      UPDATE rate_limit_state
+      SET requests_in_window = 0,
+          window_start = @windowStart,
+          consecutive_errors = 0,
+          retry_after = NULL,
+          updated_at = strftime('%s', 'now') * 1000
+      WHERE platform = @platform
+    `);
+
+    const getRateLimit = db.prepare(`
+      SELECT * FROM rate_limit_state
+      WHERE platform = ?
+    `);
+
+    this.rateLimit = {
+      check: checkRateLimit,
+      increment: incrementRateLimit,
+      reset: resetRateLimit,
+      get: getRateLimit
+    };
+  }
+
+  private ensureTablesExist(db: Database.Database): void {
+    // Create basic table structures if they don't exist
+    // This is a failsafe - proper schema should be created via migrations
+    const tableCreations = [
+      `CREATE TABLE IF NOT EXISTS forum_posts (
+        id TEXT PRIMARY KEY,
+        platform TEXT NOT NULL,
+        platform_id TEXT,
+        title TEXT,
+        content TEXT,
+        url TEXT,
+        author TEXT,
+        author_id TEXT,
+        score INTEGER DEFAULT 0,
+        comment_count INTEGER DEFAULT 0,
+        created_at INTEGER,
+        updated_at INTEGER,
+        scraped_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        metadata TEXT,
+        engagement_rate REAL GENERATED ALWAYS AS (
+          CASE 
+            WHEN (score + comment_count) = 0 THEN 0.0
+            ELSE CAST(comment_count AS REAL) / (score + comment_count)
+          END
+        ) STORED
+      )`,
+      `CREATE TABLE IF NOT EXISTS comments (
+        id TEXT PRIMARY KEY,
+        platform TEXT NOT NULL,
+        platform_id TEXT,
+        post_id TEXT,
+        parent_id TEXT,
+        author TEXT,
+        author_id TEXT,
+        content TEXT,
+        score INTEGER DEFAULT 0,
+        depth INTEGER DEFAULT 0,
+        created_at INTEGER,
+        updated_at INTEGER,
+        scraped_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        metadata TEXT
+      )`,
+      `CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        platform TEXT NOT NULL,
+        username TEXT,
+        display_name TEXT,
+        karma INTEGER DEFAULT 0,
+        created_at INTEGER,
+        last_seen_at INTEGER,
+        metadata TEXT
+      )`,
+      `CREATE TABLE IF NOT EXISTS scraping_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT UNIQUE NOT NULL,
+        platform TEXT NOT NULL,
+        query_type TEXT,
+        query_value TEXT,
+        status TEXT DEFAULT 'pending',
+        total_items_target INTEGER,
+        total_items_scraped INTEGER DEFAULT 0,
+        last_item_id TEXT,
+        resume_token TEXT,
+        started_at INTEGER,
+        completed_at INTEGER,
+        last_activity_at INTEGER,
+        error_count INTEGER DEFAULT 0,
+        last_error TEXT
+      )`,
+      `CREATE TABLE IF NOT EXISTS scraping_metrics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT,
+        platform TEXT,
+        time_bucket INTEGER,
+        requests_made INTEGER DEFAULT 0,
+        requests_successful INTEGER DEFAULT 0,
+        requests_failed INTEGER DEFAULT 0,
+        posts_scraped INTEGER DEFAULT 0,
+        comments_scraped INTEGER DEFAULT 0,
+        users_scraped INTEGER DEFAULT 0,
+        items_scraped INTEGER DEFAULT 0,
+        avg_response_time REAL DEFAULT 0,
+        avg_response_time_ms REAL DEFAULT 0,
+        rate_limit_hits INTEGER DEFAULT 0,
+        created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        UNIQUE(session_id, time_bucket)
+      )`,
+      `CREATE TABLE IF NOT EXISTS rate_limit_state (
+        platform TEXT PRIMARY KEY,
+        window_start INTEGER,
+        requests_in_window INTEGER DEFAULT 0,
+        last_request_at INTEGER,
+        retry_after INTEGER,
+        consecutive_errors INTEGER DEFAULT 0,
+        created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+      )`
+    ];
+
+    for (const sql of tableCreations) {
+      try {
+        db.exec(sql);
+      } catch (error) {
+        // Table might already exist with different schema, that's ok
+        // The migrations will handle proper schema updates
+      }
+    }
+  }
+
+  cleanup(): void {
+    // Finalize all prepared statements
+    // This is automatically done when the database closes,
+    // but we can do it explicitly for clean shutdown
+  }
+}

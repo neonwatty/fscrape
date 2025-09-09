@@ -4,7 +4,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import winston from "winston";
-import { DATABASE_SCHEMA, DATABASE_INDEXES, DATABASE_TRIGGERS } from "./schema.js";
+import {
+  DATABASE_SCHEMA,
+  DATABASE_INDEXES,
+  DATABASE_TRIGGERS,
+} from "./schema.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -160,40 +164,40 @@ export class MigrationManager {
     }
 
     let sql = fs.readFileSync(sqlPath, "utf-8");
-    
+
     // Remove all SQL comments
     sql = sql.replace(/--.*$/gm, "");
-    
+
     // Split the SQL into individual statements
     // This regex handles CREATE TRIGGER ... END; blocks specially
     const statements: string[] = [];
-    
+
     // First, extract triggers (they contain semicolons in their body)
     const triggerRegex = /CREATE\s+TRIGGER[^;]+BEGIN[\s\S]*?END;/gi;
     const triggers = sql.match(triggerRegex) || [];
-    
+
     // Remove triggers from main SQL
     let mainSql = sql;
-    triggers.forEach(trigger => {
+    triggers.forEach((trigger) => {
       mainSql = mainSql.replace(trigger, "");
     });
-    
+
     // Split remaining SQL by semicolons
     const mainStatements = mainSql
       .split(";")
-      .map(s => s.trim())
-      .filter(s => s.length > 0)
-      .map(s => s + ";");
-    
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+      .map((s) => s + ";");
+
     // Combine all statements
     statements.push(...mainStatements, ...triggers);
-    
+
     // Separate PRAGMA and other statements
-    const pragmaStatements = statements.filter(s => 
-      s.toUpperCase().trim().startsWith("PRAGMA")
+    const pragmaStatements = statements.filter((s) =>
+      s.toUpperCase().trim().startsWith("PRAGMA"),
     );
-    const otherStatements = statements.filter(s => 
-      !s.toUpperCase().trim().startsWith("PRAGMA")
+    const otherStatements = statements.filter(
+      (s) => !s.toUpperCase().trim().startsWith("PRAGMA"),
     );
 
     // Execute PRAGMA statements first (outside transaction)
@@ -235,7 +239,7 @@ export const migrations: Migration[] = [
       // Load the initial schema from the schema.sql file
       // We need to manually specify the path since we're in a migration context
       const schemaPath = path.join(__dirname, "schema.sql");
-      
+
       if (fs.existsSync(schemaPath)) {
         const manager = new MigrationManager(db);
         manager.loadSchemaFromFile(schemaPath);
@@ -245,12 +249,12 @@ export const migrations: Migration[] = [
         for (const [, tableSchema] of Object.entries(DATABASE_SCHEMA)) {
           db.exec(tableSchema as string);
         }
-        
+
         // Create indexes
         for (const indexSql of DATABASE_INDEXES) {
           db.exec(indexSql);
         }
-        
+
         // Create triggers
         for (const triggerSql of DATABASE_TRIGGERS) {
           db.exec(triggerSql);
@@ -294,16 +298,18 @@ export const migrations: Migration[] = [
       try {
         // Check if column already exists
         const columnExists = db
-          .prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='forum_posts'")
+          .prepare(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='forum_posts'",
+          )
           .get() as { sql: string } | undefined;
-        
+
         if (columnExists && !columnExists.sql.includes("content_hash")) {
           db.exec(`
             ALTER TABLE forum_posts 
             ADD COLUMN content_hash TEXT;
           `);
         }
-        
+
         // Create index for duplicate detection
         db.exec(`
           CREATE INDEX IF NOT EXISTS idx_posts_content_hash 
