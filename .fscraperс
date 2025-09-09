@@ -1,0 +1,52 @@
+{
+  "platform": "reddit",
+  "userAgent": "fscrape/1.0 (https://github.com/yourusername/fscrape)",
+  "timeout": 30000,
+  "maxConcurrent": 5,
+  "followRedirects": true,
+  "validateSSL": true,
+  "database": {
+    "type": "sqlite",
+    "path": "./data/fscrape.db",
+    "connectionPoolSize": 10
+  },
+  "rateLimit": {
+    "maxRequestsPerSecond": 1,
+    "maxRequestsPerMinute": 30,
+    "maxRequestsPerHour": 1000,
+    "retryAfter": 60000,
+    "backoffMultiplier": 2,
+    "maxRetries": 3,
+    "respectRateLimitHeaders": true
+  },
+  "cache": {
+    "enabled": true,
+    "ttl": 3600000,
+    "maxSize": 100,
+    "strategy": "lru",
+    "persistToFile": false
+  },
+  "export": {
+    "format": "json",
+    "outputDir": "./output",
+    "includeComments": true,
+    "includeUsers": true,
+    "prettify": true,
+    "compression": "none"
+  },
+  "logging": {
+    "level": "info",
+    "console": true,
+    "format": "pretty",
+    "maxFiles": 5,
+    "maxSize": "10m"
+  },
+  "headers": {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Accept-Encoding": "gzip, deflate",
+    "DNT": "1",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1"
+  }
+}
