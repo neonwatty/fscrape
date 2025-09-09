@@ -8,6 +8,7 @@
   },
   "claude": {
     "enabled": true,
+    "dangerouslySkipPermissions": true,
     "maxIterations": 10,
     "testTimeout": 300000,
     "prompt": "Run the test file at {testFilePath} and debug any errors you encounter one at a time. Then run the test again to verify that your changes have fixed any errors.",

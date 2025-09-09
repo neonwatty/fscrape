@@ -1,9 +1,12 @@
-// fscrape - A flexible forum scraper
-// This is the main entry point placeholder for Phase 1 foundation setup
+/**
+ * fscrape - Multi-platform forum scraper
+ * Main entry point for the library
+ */
 
-export const version = '1.0.0';
-
-// Placeholder function to validate TypeScript configuration
-export function validateSetup(): boolean {
-  return true;
-}
+export * from './types/index.js';
+export * from './platforms/index.js';
+export * from './database/index.js';
+export * from './export/index.js';
+export * from './session/index.js';
+export * from './config/index.js';
+export * from './utils/index.js';

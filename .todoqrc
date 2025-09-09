@@ -13,10 +13,29 @@
     "status": "pending",
     "priority": 0
   },
-   "claude": {
+  "claude": {
     "enabled": true,
-    "verbose": true,
+    "maxIterations": 10,
+    "timeout": 180000,
+    "model": "opusplan",
+    "verbose": false,
     "dangerouslySkipPermissions": true,
-    "outputFormat": "stream-json"
+    "allowedTools": [
+      "Read",
+      "Write",
+      "Edit",
+      "Bash",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "TodoWrite"
+    ],
+    "customArgs": [],
+    "continueSession": true,
+    "appendSystemPrompt": "## TodoQ Task Execution Guidelines\n\nExecute the following steps:\n\n1. **Parse and Validate Task JSON**\n   - Extract and validate all task fields from the provided task JSON\n   - Verify task number, name, and description are present\n   - Check for any dependencies, files, or documentation references\n   - **COMPLETION**: Mark step 1 complete in TodoWrite\n\n2. **Mark Task as In Progress**\n   - Update task status to in_progress in TodoWrite\n   - Initialize tracking for all implementation steps\n   - **COMPLETION**: Mark step 2 complete\n\n3. **Verify Working Directory and Project Structure**\n   - Confirm working in correct project directory\n   - Check for existence of referenced files/directories\n   - Verify project setup is appropriate for task\n   - **COMPLETION**: Mark step 3 complete\n\n4. **Phase 1 Checkpoint - Initialization Complete**\n   - **MANDATORY VALIDATION**: Verify TodoWrite shows steps 1-3 as completed\n   - Verify task json successfully extracted and task marked in_progress\n   - If ANY previous step incomplete: create specific recovery todos and STOP\n   - **COMPLETION**: Mark step 4 complete, start step 5\n\n5. **Context Extraction & Documentation Research**\n   - **CHECKPOINT**: Verify step 4 completed in TodoWrite before proceeding\n   - Extract all elements from task json (number, name, description, files, docs_references, etc.)\n   - If documentation references provided: Use WebFetch/WebSearch tools for comprehensive documentation research\n   - Formulate effective search queries and connect findings to implementation and testing strategies\n   - Integrate documentation findings with task context for implementation planning\n   - **COMPLETION**: Mark step 5 complete, start step 6\n\n6. **Implementation Phase**\n   - **CHECKPOINT**: Verify step 5 completed in TodoWrite before proceeding\n   - Expand task into specific implementation steps and update TodoWrite accordingly\n   - Execute each implementation step using appropriate tools (Read, Edit, Bash, etc.)\n   - Validate each substep completion before proceeding to next substep\n   - Follow existing code conventions and patterns found in the codebase\n   - **COMPLETION**: Mark step 6 complete when all implementation subtasks completed, start step 7\n\n7. **Phase 2 Checkpoint - Implementation Complete**\n   - **MANDATORY VALIDATION**: Verify TodoWrite shows steps 1-6 as completed\n   - Verify all implementation subtasks completed successfully\n   - If implementation incomplete: create specific recovery todos and STOP\n   - **COMPLETION**: Mark step 7 complete, start step 8\n\n8. **Testing & Validation Pipeline**\n   - **CHECKPOINT**: Verify step 7 completed in TodoWrite before proceeding\n   - Determine proper unit and integration tests for implemented functionality\n   - Use Bash tool to run project-specific testing commands\n   - Use Bash tool to run linting/typecheck validation if available (npm run lint, npm run typecheck)\n   - On ANY test failures: Create specific recovery todos, keep step 8 as in_progress, and STOP\n   - **COMPLETION**: Only mark step 8 complete when ALL tests pass\n\n## Error Recovery Pattern\n**On ANY Step Failure:**\n1. Keep current step as in_progress in TodoWrite\n2. Create specific recovery todo describing the exact failure\n3. DO NOT proceed to next step until current step shows completed\n4. Analyze failure context and resolve using appropriate direct tools (Read, Edit, Bash, etc.)\n5. Only continue sequential execution after recovery todo completed\n\n## Mandatory Validation Rules\n1. **Sequential Enforcement**: No step can begin until previous step shows completed in TodoWrite\n2. **Checkpoint Validation**: Phase checkpoints (4, 7) MUST verify all previous steps completed\n3. **Error Stopping**: ANY failure creates recovery todos and halts progression\n4. **No Skipping**: Every step must be explicitly marked complete in TodoWrite",
+    "maxRetries": 3,
+    "retryDelay": 2000,
+    "retryBackoffMultiplier": 2,
+    "maxRetryDelay": 15000
   }
 }
