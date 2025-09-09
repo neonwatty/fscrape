@@ -40,15 +40,23 @@ if [ "$TFQ_COUNT" -eq 0 ]; then
     if [ -n "$(git status --porcelain)" ]; then
         echo "📝 Changes detected. Committing..."
         
-        # Get current task description for commit message
-        TASK_DESC=$(todoq current --format "%t" 2>/dev/null || echo "Complete task")
+        # Get task number and name for commit message
+        TASK_NUM=$(todoq current --number 2>/dev/null || echo "")
+        TASK_NAME=$(todoq current --json 2>/dev/null | grep '"name"' | head -1 | cut -d'"' -f4 || echo "Complete task")
+        
+        # Create commit message with task number
+        if [ -n "$TASK_NUM" ]; then
+            COMMIT_MSG="Task $TASK_NUM: $TASK_NAME"
+        else
+            COMMIT_MSG="$TASK_NAME"
+        fi
         
         # Stage all changes
         git add .
         check_command "git add"
         
         # Commit with task description
-        git commit -m "$TASK_DESC"
+        git commit -m "$COMMIT_MSG"
         check_command "git commit"
         
         # Push to remote
