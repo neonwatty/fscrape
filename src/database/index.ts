@@ -5,3 +5,10 @@ export {
   DATABASE_INDEXES,
   DATABASE_TRIGGERS,
 } from "./schema.js";
+export {
+  MigrationManager,
+  migrations,
+  runDatabaseMigrations,
+  initializeDatabase,
+  getMigrationStatus,
+} from "./migrations.js";
