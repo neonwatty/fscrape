@@ -2,7 +2,12 @@
  * JSON exporter for forum data with formatting options
  */
 
-import type { ForumPost, Comment, User, ScrapeResult } from "../../types/core.js";
+import type {
+  ForumPost,
+  Comment,
+  User,
+  ScrapeResult,
+} from "../../types/core.js";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { dirname } from "path";
 
@@ -53,21 +58,33 @@ export class JsonExporter {
 
     if (this.options.separateFiles) {
       // Export to separate files
-      const postsFile = await this.exportPosts(data.posts, `${basePath}_posts.json`);
+      const postsFile = await this.exportPosts(
+        data.posts,
+        `${basePath}_posts.json`,
+      );
       exportedFiles.push(postsFile);
 
       if (this.options.includeComments && data.comments) {
-        const commentsFile = await this.exportComments(data.comments, `${basePath}_comments.json`);
+        const commentsFile = await this.exportComments(
+          data.comments,
+          `${basePath}_comments.json`,
+        );
         exportedFiles.push(commentsFile);
       }
 
       if (this.options.includeUsers && data.users) {
-        const usersFile = await this.exportUsers(data.users, `${basePath}_users.json`);
+        const usersFile = await this.exportUsers(
+          data.users,
+          `${basePath}_users.json`,
+        );
         exportedFiles.push(usersFile);
       }
 
       if (this.options.includeMetadata && data.metadata) {
-        const metadataFile = await this.exportMetadata(data.metadata, `${basePath}_metadata.json`);
+        const metadataFile = await this.exportMetadata(
+          data.metadata,
+          `${basePath}_metadata.json`,
+        );
         exportedFiles.push(metadataFile);
       }
     } else {
@@ -102,8 +119,13 @@ export class JsonExporter {
   /**
    * Export comments to JSON
    */
-  async exportComments(comments: Comment[], outputPath: string): Promise<string> {
-    const transformedComments = comments.map((comment) => this.transformComment(comment));
+  async exportComments(
+    comments: Comment[],
+    outputPath: string,
+  ): Promise<string> {
+    const transformedComments = comments.map((comment) =>
+      this.transformComment(comment),
+    );
     const jsonString = this.stringify(transformedComments);
     writeFileSync(outputPath, jsonString);
     return outputPath;
@@ -138,7 +160,9 @@ export class JsonExporter {
     };
 
     if (this.options.includeComments && data.comments) {
-      result.comments = data.comments.map((comment) => this.transformComment(comment));
+      result.comments = data.comments.map((comment) =>
+        this.transformComment(comment),
+      );
     }
 
     if (this.options.includeUsers && data.users) {

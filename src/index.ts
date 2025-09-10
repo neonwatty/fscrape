@@ -7,7 +7,7 @@ export * from "./types/index.js";
 export * from "./platforms/index.js";
 export * from "./database/index.js";
 // Export everything except ExportConfig to avoid conflict
-export { 
+export {
   ExportManager,
   CsvExporter,
   JsonExporter,
@@ -18,7 +18,7 @@ export {
   FilterChain,
   DataTransformer,
   TransformPresets,
-  TransformChain
+  TransformChain,
 } from "./export/index.js";
 export type {
   CsvExportOptions,
@@ -26,7 +26,7 @@ export type {
   MarkdownExportOptions,
   HtmlExportOptions,
   FilterOptions,
-  TransformOptions
+  TransformOptions,
 } from "./export/index.js";
 export * from "./session/index.js";
 export * from "./config/index.js";

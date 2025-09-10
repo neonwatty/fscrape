@@ -30,12 +30,14 @@ export interface ListCommandOptions {
 export function createListCommand(): Command {
   const command = new Command("list");
 
-  command
-    .description("List and query data from database")
-    .action(async () => {
-      console.log(chalk.yellow("Please specify a subcommand: posts, comments, users, stats, or search"));
-      console.log(chalk.gray("Example: fscrape list posts --platform reddit"));
-    });
+  command.description("List and query data from database").action(async () => {
+    console.log(
+      chalk.yellow(
+        "Please specify a subcommand: posts, comments, users, stats, or search",
+      ),
+    );
+    console.log(chalk.gray("Example: fscrape list posts --platform reddit"));
+  });
 
   // Subcommands for specific data types
   command
@@ -105,7 +107,11 @@ export function createListCommand(): Command {
     .option("-d, --database <path>", "Database file path", "fscrape.db")
     .option("-p, --platform <platform>", "Filter by platform")
     .option("-l, --limit <number>", "Maximum results", parseInt, 20)
-    .option("--in <fields>", "Search in fields (title,content,author)", "title,content")
+    .option(
+      "--in <fields>",
+      "Search in fields (title,content,author)",
+      "title,content",
+    )
     .option("-f, --format <format>", "Output format", "table")
     .action(async (query: string, options) => {
       await handleSearch(query, options);
@@ -117,7 +123,10 @@ export function createListCommand(): Command {
 /**
  * Handle list command
  */
-async function handleList(type: string, options: ListCommandOptions): Promise<void> {
+async function handleList(
+  type: string,
+  options: ListCommandOptions,
+): Promise<void> {
   try {
     // Connect to database
     const dbManager = new DatabaseManager({
@@ -186,8 +195,16 @@ async function handleList(type: string, options: ListCommandOptions): Promise<vo
     } else if (options.format === "simple") {
       posts.forEach((post, index) => {
         console.log(chalk.cyan(`${index + 1}. ${post.title}`));
-        console.log(chalk.gray(`   Author: ${post.author} | Score: ${post.score} | Comments: ${post.commentCount}`));
-        console.log(chalk.gray(`   Platform: ${post.platform} | Date: ${new Date(post.createdAt).toLocaleDateString()}`));
+        console.log(
+          chalk.gray(
+            `   Author: ${post.author} | Score: ${post.score} | Comments: ${post.commentCount}`,
+          ),
+        );
+        console.log(
+          chalk.gray(
+            `   Platform: ${post.platform} | Date: ${new Date(post.createdAt).toLocaleDateString()}`,
+          ),
+        );
         if (options.verbose && post.content) {
           console.log(chalk.gray(`   ${post.content.substring(0, 200)}...`));
         }
@@ -200,10 +217,11 @@ async function handleList(type: string, options: ListCommandOptions): Promise<vo
       ];
 
       posts.forEach((post, index) => {
-        const title = post.title.length > 50 
-          ? post.title.substring(0, 47) + "..." 
-          : post.title;
-        
+        const title =
+          post.title.length > 50
+            ? post.title.substring(0, 47) + "..."
+            : post.title;
+
         tableData.push([
           (index + 1).toString(),
           title,
@@ -215,21 +233,26 @@ async function handleList(type: string, options: ListCommandOptions): Promise<vo
         ]);
       });
 
-      console.log(table(tableData, {
-        header: {
-          alignment: "center",
-          content: chalk.cyan("Posts"),
-        },
-      }));
+      console.log(
+        table(tableData, {
+          header: {
+            alignment: "center",
+            content: chalk.cyan("Posts"),
+          },
+        }),
+      );
     }
 
     // Show summary
     if (options.format !== "json") {
-      console.log(chalk.gray(`\nShowing ${posts.length} posts (offset: ${options.offset || 0})`));
+      console.log(
+        chalk.gray(
+          `\nShowing ${posts.length} posts (offset: ${options.offset || 0})`,
+        ),
+      );
     }
 
     await dbManager.close();
-
   } catch (error) {
     console.error(chalk.red("❌ List failed:"));
     console.error(chalk.red(`Error: ${formatError(error)}`));
@@ -276,13 +299,18 @@ async function handleListComments(options: any): Promise<void> {
       console.log(JSON.stringify(comments, null, 2));
     } else if (options.format === "simple") {
       comments.forEach((comment, index) => {
-        const content = comment.content.length > 200 
-          ? comment.content.substring(0, 197) + "..." 
-          : comment.content;
-        
+        const content =
+          comment.content.length > 200
+            ? comment.content.substring(0, 197) + "..."
+            : comment.content;
+
         console.log(chalk.cyan(`${index + 1}. ${comment.author}:`));
         console.log(chalk.gray(`   ${content}`));
-        console.log(chalk.gray(`   Score: ${comment.score} | Platform: ${comment.platform} | Date: ${new Date(comment.createdAt).toLocaleDateString()}`));
+        console.log(
+          chalk.gray(
+            `   Score: ${comment.score} | Platform: ${comment.platform} | Date: ${new Date(comment.createdAt).toLocaleDateString()}`,
+          ),
+        );
         console.log();
       });
     } else {
@@ -292,10 +320,11 @@ async function handleListComments(options: any): Promise<void> {
       ];
 
       comments.forEach((comment, index) => {
-        const content = comment.content.length > 40 
-          ? comment.content.substring(0, 37) + "..." 
-          : comment.content;
-        
+        const content =
+          comment.content.length > 40
+            ? comment.content.substring(0, 37) + "..."
+            : comment.content;
+
         tableData.push([
           (index + 1).toString(),
           comment.author,
@@ -306,12 +335,14 @@ async function handleListComments(options: any): Promise<void> {
         ]);
       });
 
-      console.log(table(tableData, {
-        header: {
-          alignment: "center",
-          content: chalk.cyan("Comments"),
-        },
-      }));
+      console.log(
+        table(tableData, {
+          header: {
+            alignment: "center",
+            content: chalk.cyan("Comments"),
+          },
+        }),
+      );
     }
 
     if (options.format !== "json") {
@@ -319,7 +350,6 @@ async function handleListComments(options: any): Promise<void> {
     }
 
     await dbManager.close();
-
   } catch (error) {
     console.error(chalk.red("❌ List failed:"));
     console.error(chalk.red(`Error: ${formatError(error)}`));
@@ -379,9 +409,7 @@ async function handleListUsers(options: any): Promise<void> {
       console.log(JSON.stringify(users, null, 2));
     } else {
       // Table format
-      const tableData = [
-        ["#", "Username", "Karma", "Platform", "Created"],
-      ];
+      const tableData = [["#", "Username", "Karma", "Platform", "Created"]];
 
       users.forEach((user, index) => {
         tableData.push([
@@ -389,16 +417,20 @@ async function handleListUsers(options: any): Promise<void> {
           user.username,
           user.karma?.toString() || "0",
           user.platform,
-          user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A",
+          user.createdAt
+            ? new Date(user.createdAt).toLocaleDateString()
+            : "N/A",
         ]);
       });
 
-      console.log(table(tableData, {
-        header: {
-          alignment: "center",
-          content: chalk.cyan("Users"),
-        },
-      }));
+      console.log(
+        table(tableData, {
+          header: {
+            alignment: "center",
+            content: chalk.cyan("Users"),
+          },
+        }),
+      );
     }
 
     if (options.format !== "json") {
@@ -406,7 +438,6 @@ async function handleListUsers(options: any): Promise<void> {
     }
 
     await dbManager.close();
-
   } catch (error) {
     console.error(chalk.red("❌ List failed:"));
     console.error(chalk.red(`Error: ${formatError(error)}`));
@@ -443,30 +474,36 @@ async function handleStats(options: any): Promise<void> {
 
     console.log(table(statsTable));
 
-    if (stats.platformBreakdown && Object.keys(stats.platformBreakdown).length > 0) {
+    if (
+      stats.platformBreakdown &&
+      Object.keys(stats.platformBreakdown).length > 0
+    ) {
       console.log(chalk.cyan("\n📈 Platform Breakdown\n"));
-      const platformTable = [
-        ["Platform", "Posts", "Comments", "Users"],
-      ];
+      const platformTable = [["Platform", "Posts", "Comments", "Users"]];
 
-      Object.entries(stats.platformBreakdown).forEach(([platform, data]: [string, any]) => {
-        platformTable.push([
-          platform,
-          data.posts?.toString() || "0",
-          data.comments?.toString() || "0",
-          data.users?.toString() || "0",
-        ]);
-      });
+      Object.entries(stats.platformBreakdown).forEach(
+        ([platform, data]: [string, any]) => {
+          platformTable.push([
+            platform,
+            data.posts?.toString() || "0",
+            data.comments?.toString() || "0",
+            data.users?.toString() || "0",
+          ]);
+        },
+      );
 
       console.log(table(platformTable));
     }
 
     if (stats.dateRange) {
-      console.log(chalk.gray(`\nDate range: ${stats.dateRange.earliest.toLocaleDateString()} - ${stats.dateRange.latest.toLocaleDateString()}`));
+      console.log(
+        chalk.gray(
+          `\nDate range: ${stats.dateRange.earliest.toLocaleDateString()} - ${stats.dateRange.latest.toLocaleDateString()}`,
+        ),
+      );
     }
 
     await dbManager.close();
-
   } catch (error) {
     console.error(chalk.red("❌ Stats failed:"));
     console.error(chalk.red(`Error: ${formatError(error)}`));
@@ -489,7 +526,9 @@ async function handleSearch(query: string, options: any): Promise<void> {
     console.log(chalk.cyan(`🔍 Searching for: "${query}"\n`));
 
     // Search in specified fields
-    const searchFields = options.in ? options.in.split(",") : ["title", "content"];
+    const searchFields = options.in
+      ? options.in.split(",")
+      : ["title", "content"];
     const searchOptions: any = {
       query,
       fields: searchFields,
@@ -510,20 +549,24 @@ async function handleSearch(query: string, options: any): Promise<void> {
     // Display posts
     if (posts.length > 0) {
       console.log(chalk.cyan(`📝 Posts (${posts.length} results):\n`));
-      
+
       if (options.format === "json") {
         console.log(JSON.stringify(posts, null, 2));
       } else {
         posts.forEach((post, index) => {
           console.log(chalk.yellow(`${index + 1}. ${post.title}`));
-          console.log(chalk.gray(`   Author: ${post.author} | Platform: ${post.platform}`));
-          
+          console.log(
+            chalk.gray(
+              `   Author: ${post.author} | Platform: ${post.platform}`,
+            ),
+          );
+
           // Highlight matching text
           if (post.content) {
             const excerpt = post.content.substring(0, 150);
             const highlighted = excerpt.replace(
               new RegExp(query, "gi"),
-              (match) => chalk.bgYellow.black(match)
+              (match) => chalk.bgYellow.black(match),
             );
             console.log(chalk.gray(`   ${highlighted}...`));
           }
@@ -535,7 +578,7 @@ async function handleSearch(query: string, options: any): Promise<void> {
     // Display comments
     if (comments.length > 0) {
       console.log(chalk.cyan(`💬 Comments (${comments.length} results):\n`));
-      
+
       if (options.format === "json") {
         console.log(JSON.stringify(comments, null, 2));
       } else {
@@ -543,9 +586,9 @@ async function handleSearch(query: string, options: any): Promise<void> {
           const excerpt = comment.content.substring(0, 150);
           const highlighted = excerpt.replace(
             new RegExp(query, "gi"),
-            (match) => chalk.bgYellow.black(match)
+            (match) => chalk.bgYellow.black(match),
           );
-          
+
           console.log(chalk.yellow(`${index + 1}. ${comment.author}:`));
           console.log(chalk.gray(`   ${highlighted}...`));
           console.log(chalk.gray(`   Platform: ${comment.platform}`));
@@ -554,10 +597,11 @@ async function handleSearch(query: string, options: any): Promise<void> {
       }
     }
 
-    console.log(chalk.gray(`\nTotal results: ${posts.length + comments.length}`));
+    console.log(
+      chalk.gray(`\nTotal results: ${posts.length + comments.length}`),
+    );
 
     await dbManager.close();
-
   } catch (error) {
     console.error(chalk.red("❌ Search failed:"));
     console.error(chalk.red(`Error: ${formatError(error)}`));

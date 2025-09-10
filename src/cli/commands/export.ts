@@ -46,10 +46,13 @@ export function createExportCommand(): Command {
     .option(
       "-f, --format <format>",
       "Export format (json, csv, markdown, html)",
-      "json"
+      "json",
     )
     .option("-o, --output <path>", "Output file path")
-    .option("-p, --platform <platform>", "Filter by platform (reddit, hackernews)")
+    .option(
+      "-p, --platform <platform>",
+      "Filter by platform (reddit, hackernews)",
+    )
     .option("--start-date <date>", "Start date for export (YYYY-MM-DD)")
     .option("--end-date <date>", "End date for export (YYYY-MM-DD)")
     .option("-l, --limit <number>", "Maximum items to export", parseInt)
@@ -61,10 +64,13 @@ export function createExportCommand(): Command {
     .option(
       "--sort-by <field>",
       "Sort by field (date, score, comments)",
-      "date"
+      "date",
     )
     .option("--sort-order <order>", "Sort order (asc, desc)", "desc")
-    .option("--group-by <field>", "Group results by field (platform, author, date)")
+    .option(
+      "--group-by <field>",
+      "Group results by field (platform, author, date)",
+    )
     .option("--aggregate", "Include aggregated statistics")
     .option("--pretty", "Pretty print JSON output", false)
     .option("--overwrite", "Overwrite existing output file", false)
@@ -82,7 +88,11 @@ export function createExportCommand(): Command {
     .option("-p, --platform <platform>", "Filter by platform")
     .option("--limit <number>", "Maximum posts to export", parseInt)
     .action(async (options) => {
-      await handleExport({ ...options, includeComments: false, includeUsers: false });
+      await handleExport({
+        ...options,
+        includeComments: false,
+        includeUsers: false,
+      });
     });
 
   command
@@ -124,7 +134,9 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
     // Validate format
     const validFormats = ["json", "csv", "markdown", "html"];
     if (options.format && !validFormats.includes(options.format)) {
-      throw new Error(`Invalid format: ${options.format}. Valid formats: ${validFormats.join(", ")}`);
+      throw new Error(
+        `Invalid format: ${options.format}. Valid formats: ${validFormats.join(", ")}`,
+      );
     }
 
     // Connect to database
@@ -152,7 +164,7 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
     // Query posts
     console.log(chalk.gray("  Querying posts..."));
     const posts = dbManager.queryPosts(queryOptions);
-    
+
     if (posts.length === 0) {
       console.log(chalk.yellow("⚠️  No posts found matching criteria"));
       return;
@@ -162,7 +174,7 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
     let comments: any[] = [];
     if (options.includeComments && posts.length > 0) {
       console.log(chalk.gray("  Querying comments..."));
-      const postIds = posts.map(p => p.id);
+      const postIds = posts.map((p) => p.id);
       comments = dbManager.queryComments({
         postIds: postIds.slice(0, 1000), // Limit for performance
       });
@@ -173,13 +185,13 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
     if (options.includeUsers) {
       console.log(chalk.gray("  Querying users..."));
       const userIds = new Set<string>();
-      posts.forEach(p => {
+      posts.forEach((p) => {
         if (p.authorId) userIds.add(p.authorId);
       });
-      comments.forEach(c => {
+      comments.forEach((c) => {
         if (c.authorId) userIds.add(c.authorId);
       });
-      
+
       if (userIds.size > 0) {
         users = dbManager.queryUsers({
           userIds: Array.from(userIds).slice(0, 1000),
@@ -227,7 +239,9 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
 
     // Check if file exists
     if (existsSync(outputPath) && !options.overwrite) {
-      throw new Error(`Output file already exists: ${outputPath}. Use --overwrite to replace.`);
+      throw new Error(
+        `Output file already exists: ${outputPath}. Use --overwrite to replace.`,
+      );
     }
 
     // Ensure output directory exists
@@ -264,11 +278,13 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
     };
 
     // Export data
-    console.log(chalk.gray(`  Exporting to ${options.format || "json"} format...`));
+    console.log(
+      chalk.gray(`  Exporting to ${options.format || "json"} format...`),
+    );
     const resultPath = await exportManager.exportData(
       exportData,
       options.format || "json",
-      outputPath
+      outputPath,
     );
 
     // Success message
@@ -287,7 +303,6 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
     const stats = statSync(resultPath as string);
     const sizeInKB = (stats.size / 1024).toFixed(2);
     console.log(chalk.gray(`   File size: ${sizeInKB} KB`));
-
   } catch (error) {
     console.error(chalk.red("❌ Export failed:"));
     console.error(chalk.red(formatError(error)));
@@ -341,11 +356,12 @@ async function handleExportComments(options: any): Promise<void> {
     const resultPath = await exportManager.exportData(
       { comments, metadata: { totalComments: comments.length } },
       options.format || "json",
-      outputPath
+      outputPath,
     );
 
-    console.log(chalk.green(`✅ Exported ${comments.length} comments to ${resultPath}`));
-
+    console.log(
+      chalk.green(`✅ Exported ${comments.length} comments to ${resultPath}`),
+    );
   } catch (error) {
     console.error(chalk.red("❌ Export failed:"));
     console.error(chalk.red(formatError(error)));
@@ -399,11 +415,12 @@ async function handleExportUsers(options: any): Promise<void> {
     const resultPath = await exportManager.exportData(
       { users, metadata: { totalUsers: users.length } },
       options.format || "json",
-      outputPath
+      outputPath,
     );
 
-    console.log(chalk.green(`✅ Exported ${users.length} users to ${resultPath}`));
-
+    console.log(
+      chalk.green(`✅ Exported ${users.length} users to ${resultPath}`),
+    );
   } catch (error) {
     console.error(chalk.red("❌ Export failed:"));
     console.error(chalk.red(formatError(error)));

@@ -122,7 +122,7 @@ export class RedditParsers {
     if (!text) return null;
 
     // Remove Reddit-specific markdown
-    let cleaned = text
+    const cleaned = text
       .replace(/^&gt;!(.+?)!&lt;/gm, "$1") // Spoiler tags
       .replace(/^&gt;\s*/gm, "") // Quote markers
       .replace(/\\/g, "") // Escaped characters

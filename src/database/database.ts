@@ -506,10 +506,10 @@ export class DatabaseManager {
         `SELECT * FROM scraping_sessions 
          WHERE status IN ('running', 'pending') 
          ORDER BY started_at DESC 
-         LIMIT ?`
+         LIMIT ?`,
       )
       .all(limit);
-    
+
     return rows.map((row) => this.mapRowToSession(row as any));
   }
 
@@ -525,11 +525,11 @@ export class DatabaseManager {
       : `SELECT * FROM scraping_sessions 
          ORDER BY started_at DESC 
          LIMIT ?`;
-    
+
     const rows = platform
       ? this.db.prepare(query).all(platform, limit)
       : this.db.prepare(query).all(limit);
-    
+
     return rows.map((row) => this.mapRowToSession(row as any));
   }
 
@@ -814,10 +814,11 @@ export class DatabaseManager {
   /**
    * Count items that would be deleted
    */
-  countOldData(options: {
-    olderThanDays: number;
-    platform?: Platform;
-  }): { posts: number; comments: number; users: number } {
+  countOldData(options: { olderThanDays: number; platform?: Platform }): {
+    posts: number;
+    comments: number;
+    users: number;
+  } {
     const cutoffTime = Date.now() - options.olderThanDays * 24 * 60 * 60 * 1000;
     let platformClause = "";
     const params: any[] = [cutoffTime];
@@ -828,15 +829,21 @@ export class DatabaseManager {
     }
 
     const postCount = this.db
-      .prepare(`SELECT COUNT(*) as count FROM forum_posts WHERE created_at < ?${platformClause}`)
+      .prepare(
+        `SELECT COUNT(*) as count FROM forum_posts WHERE created_at < ?${platformClause}`,
+      )
       .get(...params) as { count: number };
 
     const commentCount = this.db
-      .prepare(`SELECT COUNT(*) as count FROM comments WHERE created_at < ?${platformClause}`)
+      .prepare(
+        `SELECT COUNT(*) as count FROM comments WHERE created_at < ?${platformClause}`,
+      )
       .get(...params) as { count: number };
 
     const userCount = this.db
-      .prepare(`SELECT COUNT(*) as count FROM users WHERE last_seen_at < ?${platformClause}`)
+      .prepare(
+        `SELECT COUNT(*) as count FROM users WHERE last_seen_at < ?${platformClause}`,
+      )
       .get(...params) as { count: number };
 
     return {
@@ -849,10 +856,11 @@ export class DatabaseManager {
   /**
    * Delete old data from database
    */
-  deleteOldData(options: {
-    olderThanDays: number;
-    platform?: Platform;
-  }): { deletedPosts: number; deletedComments: number; deletedUsers: number } {
+  deleteOldData(options: { olderThanDays: number; platform?: Platform }): {
+    deletedPosts: number;
+    deletedComments: number;
+    deletedUsers: number;
+  } {
     const cutoffTime = Date.now() - options.olderThanDays * 24 * 60 * 60 * 1000;
     let platformClause = "";
     const params: any[] = [cutoffTime];
@@ -871,21 +879,21 @@ export class DatabaseManager {
     const transaction = this.db.transaction(() => {
       // Delete old comments
       const deleteComments = this.db.prepare(
-        `DELETE FROM comments WHERE created_at < ?${platformClause}`
+        `DELETE FROM comments WHERE created_at < ?${platformClause}`,
       );
       const commentResult = deleteComments.run(...params);
       result.deletedComments = commentResult.changes;
 
       // Delete old posts
       const deletePosts = this.db.prepare(
-        `DELETE FROM forum_posts WHERE created_at < ?${platformClause}`
+        `DELETE FROM forum_posts WHERE created_at < ?${platformClause}`,
       );
       const postResult = deletePosts.run(...params);
       result.deletedPosts = postResult.changes;
 
       // Delete old users (based on last_seen_at)
       const deleteUsers = this.db.prepare(
-        `DELETE FROM users WHERE last_seen_at < ?${platformClause}`
+        `DELETE FROM users WHERE last_seen_at < ?${platformClause}`,
       );
       const userResult = deleteUsers.run(...params);
       result.deletedUsers = userResult.changes;

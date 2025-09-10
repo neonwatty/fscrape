@@ -2,7 +2,13 @@
  * Data filtering utilities for export operations
  */
 
-import type { ForumPost, Comment, User, ScrapeResult, Platform } from "../types/core.js";
+import type {
+  ForumPost,
+  Comment,
+  User,
+  ScrapeResult,
+  Platform,
+} from "../types/core.js";
 
 export interface FilterOptions {
   // Platform filters
@@ -55,21 +61,21 @@ export class DataFilter {
    */
   filterScrapeResult(data: ScrapeResult): ScrapeResult {
     const filteredPosts = this.filterPosts(data.posts);
-    const postIds = new Set(filteredPosts.map(p => p.id));
+    const postIds = new Set(filteredPosts.map((p) => p.id));
 
     // Filter comments to only include those for filtered posts
     const filteredComments = data.comments
-      ? data.comments.filter(c => postIds.has(c.postId))
+      ? data.comments.filter((c) => postIds.has(c.postId))
       : undefined;
 
     // Filter users to only include those who authored filtered content
     const authorNames = new Set([
-      ...filteredPosts.map(p => p.author),
-      ...(filteredComments?.map(c => c.author) || []),
+      ...filteredPosts.map((p) => p.author),
+      ...(filteredComments?.map((c) => c.author) || []),
     ]);
 
     const filteredUsers = data.users
-      ? data.users.filter(u => authorNames.has(u.username))
+      ? data.users.filter((u) => authorNames.has(u.username))
       : undefined;
 
     // Update metadata
@@ -97,70 +103,89 @@ export class DataFilter {
 
     // Platform filters
     if (this.options.platforms && this.options.platforms.length > 0) {
-      filtered = filtered.filter(p => this.options.platforms!.includes(p.platform));
+      filtered = filtered.filter((p) =>
+        this.options.platforms!.includes(p.platform),
+      );
     }
 
-    if (this.options.excludePlatforms && this.options.excludePlatforms.length > 0) {
-      filtered = filtered.filter(p => !this.options.excludePlatforms!.includes(p.platform));
+    if (
+      this.options.excludePlatforms &&
+      this.options.excludePlatforms.length > 0
+    ) {
+      filtered = filtered.filter(
+        (p) => !this.options.excludePlatforms!.includes(p.platform),
+      );
     }
 
     // Date filters
     if (this.options.startDate) {
       const startDate = this.parseDate(this.options.startDate);
-      filtered = filtered.filter(p => new Date(p.createdAt) >= startDate);
+      filtered = filtered.filter((p) => new Date(p.createdAt) >= startDate);
     }
 
     if (this.options.endDate) {
       const endDate = this.parseDate(this.options.endDate);
-      filtered = filtered.filter(p => new Date(p.createdAt) <= endDate);
+      filtered = filtered.filter((p) => new Date(p.createdAt) <= endDate);
     }
 
     // Score filters
     if (this.options.minScore !== undefined) {
-      filtered = filtered.filter(p => p.score >= this.options.minScore!);
+      filtered = filtered.filter((p) => p.score >= this.options.minScore!);
     }
 
     if (this.options.maxScore !== undefined) {
-      filtered = filtered.filter(p => p.score <= this.options.maxScore!);
+      filtered = filtered.filter((p) => p.score <= this.options.maxScore!);
     }
 
     // Comment count filters
     if (this.options.minComments !== undefined) {
-      filtered = filtered.filter(p => p.commentCount >= this.options.minComments!);
+      filtered = filtered.filter(
+        (p) => p.commentCount >= this.options.minComments!,
+      );
     }
 
     if (this.options.maxComments !== undefined) {
-      filtered = filtered.filter(p => p.commentCount <= this.options.maxComments!);
+      filtered = filtered.filter(
+        (p) => p.commentCount <= this.options.maxComments!,
+      );
     }
 
     // Author filters
     if (this.options.authors && this.options.authors.length > 0) {
-      const authors = new Set(this.options.authors.map(a => 
-        this.options.caseSensitive ? a : a.toLowerCase()
-      ));
-      filtered = filtered.filter(p => {
-        const author = this.options.caseSensitive ? p.author : p.author.toLowerCase();
+      const authors = new Set(
+        this.options.authors.map((a) =>
+          this.options.caseSensitive ? a : a.toLowerCase(),
+        ),
+      );
+      filtered = filtered.filter((p) => {
+        const author = this.options.caseSensitive
+          ? p.author
+          : p.author.toLowerCase();
         return authors.has(author);
       });
     }
 
     if (this.options.excludeAuthors && this.options.excludeAuthors.length > 0) {
-      const excludeAuthors = new Set(this.options.excludeAuthors.map(a => 
-        this.options.caseSensitive ? a : a.toLowerCase()
-      ));
-      filtered = filtered.filter(p => {
-        const author = this.options.caseSensitive ? p.author : p.author.toLowerCase();
+      const excludeAuthors = new Set(
+        this.options.excludeAuthors.map((a) =>
+          this.options.caseSensitive ? a : a.toLowerCase(),
+        ),
+      );
+      filtered = filtered.filter((p) => {
+        const author = this.options.caseSensitive
+          ? p.author
+          : p.author.toLowerCase();
         return !excludeAuthors.has(author);
       });
     }
 
     // Content filters
     if (this.options.searchTerms && this.options.searchTerms.length > 0) {
-      filtered = filtered.filter(p => this.matchesSearchTerms(p));
+      filtered = filtered.filter((p) => this.matchesSearchTerms(p));
     }
 
     if (this.options.excludeTerms && this.options.excludeTerms.length > 0) {
-      filtered = filtered.filter(p => !this.matchesExcludeTerms(p));
+      filtered = filtered.filter((p) => !this.matchesExcludeTerms(p));
     }
 
     // Sort
@@ -186,32 +211,38 @@ export class DataFilter {
 
     // Platform filters
     if (this.options.platforms && this.options.platforms.length > 0) {
-      filtered = filtered.filter(c => this.options.platforms!.includes(c.platform));
+      filtered = filtered.filter((c) =>
+        this.options.platforms!.includes(c.platform),
+      );
     }
 
     // Date filters
     if (this.options.startDate) {
       const startDate = this.parseDate(this.options.startDate);
-      filtered = filtered.filter(c => new Date(c.createdAt) >= startDate);
+      filtered = filtered.filter((c) => new Date(c.createdAt) >= startDate);
     }
 
     if (this.options.endDate) {
       const endDate = this.parseDate(this.options.endDate);
-      filtered = filtered.filter(c => new Date(c.createdAt) <= endDate);
+      filtered = filtered.filter((c) => new Date(c.createdAt) <= endDate);
     }
 
     // Score filters
     if (this.options.minScore !== undefined) {
-      filtered = filtered.filter(c => c.score >= this.options.minScore!);
+      filtered = filtered.filter((c) => c.score >= this.options.minScore!);
     }
 
     // Author filters
     if (this.options.authors && this.options.authors.length > 0) {
-      const authors = new Set(this.options.authors.map(a => 
-        this.options.caseSensitive ? a : a.toLowerCase()
-      ));
-      filtered = filtered.filter(c => {
-        const author = this.options.caseSensitive ? c.author : c.author.toLowerCase();
+      const authors = new Set(
+        this.options.authors.map((a) =>
+          this.options.caseSensitive ? a : a.toLowerCase(),
+        ),
+      );
+      filtered = filtered.filter((c) => {
+        const author = this.options.caseSensitive
+          ? c.author
+          : c.author.toLowerCase();
         return authors.has(author);
       });
     }
@@ -227,7 +258,9 @@ export class DataFilter {
 
     // Platform filters
     if (this.options.platforms && this.options.platforms.length > 0) {
-      filtered = filtered.filter(u => this.options.platforms!.includes(u.platform));
+      filtered = filtered.filter((u) =>
+        this.options.platforms!.includes(u.platform),
+      );
     }
 
     // Sort by karma if available
@@ -253,7 +286,7 @@ export class DataFilter {
       ? `${post.title} ${post.content || ""}`
       : `${post.title} ${post.content || ""}`.toLowerCase();
 
-    return this.options.searchTerms.some(term => {
+    return this.options.searchTerms.some((term) => {
       const searchTerm = this.options.caseSensitive ? term : term.toLowerCase();
       return searchableText.includes(searchTerm);
     });
@@ -271,8 +304,10 @@ export class DataFilter {
       ? `${post.title} ${post.content || ""}`
       : `${post.title} ${post.content || ""}`.toLowerCase();
 
-    return this.options.excludeTerms.some(term => {
-      const excludeTerm = this.options.caseSensitive ? term : term.toLowerCase();
+    return this.options.excludeTerms.some((term) => {
+      const excludeTerm = this.options.caseSensitive
+        ? term
+        : term.toLowerCase();
       return searchableText.includes(excludeTerm);
     });
   }
@@ -286,8 +321,10 @@ export class DataFilter {
 
     switch (this.options.sortBy) {
       case "date":
-        sorted.sort((a, b) => 
-          multiplier * (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        sorted.sort(
+          (a, b) =>
+            multiplier *
+            (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
         );
         break;
       case "score":
@@ -301,8 +338,9 @@ export class DataFilter {
         break;
       default:
         // Default to date descending
-        sorted.sort((a, b) => 
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        sorted.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         );
     }
 
@@ -389,14 +427,16 @@ export class FilterChain {
   }
 
   apply(data: ScrapeResult): ScrapeResult {
-    return this.filters.reduce((result, filter) => 
-      filter.filterScrapeResult(result), data
+    return this.filters.reduce(
+      (result, filter) => filter.filterScrapeResult(result),
+      data,
     );
   }
 
   applyToPosts(posts: ForumPost[]): ForumPost[] {
-    return this.filters.reduce((result, filter) => 
-      filter.filterPosts(result), posts
+    return this.filters.reduce(
+      (result, filter) => filter.filterPosts(result),
+      posts,
     );
   }
 }

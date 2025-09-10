@@ -20,10 +20,10 @@ declare module "csv-writer" {
   }
 
   export function createObjectCsvWriter<T = any>(
-    params: ObjectCsvWriterParams
+    params: ObjectCsvWriterParams,
   ): CsvWriter<T>;
 
   export function createArrayCsvWriter<T extends any[] = any[]>(
-    params: ArrayCsvWriterParams
+    params: ArrayCsvWriterParams,
   ): CsvWriter<T>;
 }

@@ -251,93 +251,120 @@ export function formatInfo(message: string): string {
 /**
  * Export options schema
  */
-export const ExportOptionsSchema = z.object({
-  database: z.string().optional().transform(val => val ? validatePath(val, true) : undefined),
-  format: z.enum(["json", "csv", "markdown", "html"]).default("json"),
-  output: z.string().optional(),
-  platform: z.enum([
-    "reddit",
-    "hackernews",
-    "discourse",
-    "lemmy",
-    "lobsters",
-    "custom",
-  ]).optional(),
-  startDate: z.string().optional().transform(val => {
-    if (!val) return undefined;
-    const date = new Date(val);
-    if (isNaN(date.getTime())) {
-      throw new Error(`Invalid start date: ${val}`);
+export const ExportOptionsSchema = z
+  .object({
+    database: z
+      .string()
+      .optional()
+      .transform((val) => (val ? validatePath(val, true) : undefined)),
+    format: z.enum(["json", "csv", "markdown", "html"]).default("json"),
+    output: z.string().optional(),
+    platform: z
+      .enum([
+        "reddit",
+        "hackernews",
+        "discourse",
+        "lemmy",
+        "lobsters",
+        "custom",
+      ])
+      .optional(),
+    startDate: z
+      .string()
+      .optional()
+      .transform((val) => {
+        if (!val) return undefined;
+        const date = new Date(val);
+        if (isNaN(date.getTime())) {
+          throw new Error(`Invalid start date: ${val}`);
+        }
+        return date;
+      }),
+    endDate: z
+      .string()
+      .optional()
+      .transform((val) => {
+        if (!val) return undefined;
+        const date = new Date(val);
+        if (isNaN(date.getTime())) {
+          throw new Error(`Invalid end date: ${val}`);
+        }
+        return date;
+      }),
+    limit: z.number().int().positive().max(10000).optional(),
+  })
+  .refine((data) => {
+    if (data.startDate && data.endDate && data.startDate > data.endDate) {
+      throw new Error("Start date must be before end date");
     }
-    return date;
-  }),
-  endDate: z.string().optional().transform(val => {
-    if (!val) return undefined;
-    const date = new Date(val);
-    if (isNaN(date.getTime())) {
-      throw new Error(`Invalid end date: ${val}`);
-    }
-    return date;
-  }),
-  limit: z.number().int().positive().max(10000).optional(),
-}).refine(data => {
-  if (data.startDate && data.endDate && data.startDate > data.endDate) {
-    throw new Error("Start date must be before end date");
-  }
-  return true;
-});
+    return true;
+  });
 
 export type ExportOptions = z.infer<typeof ExportOptionsSchema>;
 
 /**
  * Clean options schema
  */
-export const CleanOptionsSchema = z.object({
-  database: z.string().optional().transform(val => val ? validatePath(val, true) : undefined),
-  olderThan: z.number().int().positive().max(365).optional(),
-  platform: z.enum([
-    "reddit",
-    "hackernews",
-    "discourse",
-    "lemmy",
-    "lobsters",
-    "custom",
-  ]).optional(),
-  dryRun: z.boolean().default(false),
-  force: z.boolean().default(false),
-}).refine(data => {
-  if (!data.olderThan && !data.force) {
-    throw new Error("Must specify --older-than <days> or use --force to clean all data");
-  }
-  return true;
-});
+export const CleanOptionsSchema = z
+  .object({
+    database: z
+      .string()
+      .optional()
+      .transform((val) => (val ? validatePath(val, true) : undefined)),
+    olderThan: z.number().int().positive().max(365).optional(),
+    platform: z
+      .enum([
+        "reddit",
+        "hackernews",
+        "discourse",
+        "lemmy",
+        "lobsters",
+        "custom",
+      ])
+      .optional(),
+    dryRun: z.boolean().default(false),
+    force: z.boolean().default(false),
+  })
+  .refine((data) => {
+    if (!data.olderThan && !data.force) {
+      throw new Error(
+        "Must specify --older-than <days> or use --force to clean all data",
+      );
+    }
+    return true;
+  });
 
 export type CleanOptions = z.infer<typeof CleanOptionsSchema>;
 
 /**
  * Config options schema
  */
-export const ConfigOptionsSchema = z.object({
-  key: z.string().optional(),
-  value: z.string().optional(),
-  set: z.boolean().default(false),
-  get: z.boolean().default(false),
-  list: z.boolean().default(false),
-  config: z.string().optional().transform(val => val ? validatePath(val, false) : undefined),
-  format: z.enum(["json", "yaml", "env"]).default("json"),
-}).refine(data => {
-  const actionCount = [data.set, data.get, data.list].filter(Boolean).length;
-  if (actionCount > 1) {
-    throw new Error("Can only specify one of --set, --get, or --list");
-  }
-  if (data.set && (!data.key || !data.value)) {
-    throw new Error("Both key and value are required when using --set");
-  }
-  if (data.get && !data.key) {
-    throw new Error("Key is required when using --get");
-  }
-  return true;
-});
+export const ConfigOptionsSchema = z
+  .object({
+    key: z.string().optional(),
+    value: z.string().optional(),
+    set: z.boolean().default(false),
+    get: z.boolean().default(false),
+    list: z.boolean().default(false),
+    config: z
+      .string()
+      .optional()
+      .transform((val) => (val ? validatePath(val, false) : undefined)),
+    format: z.enum(["json", "yaml", "env"]).default("json"),
+  })
+  .refine((data) => {
+    const actionCount = [data.set, data.get, data.list].filter(Boolean).length;
+    if (actionCount > 1) {
+      throw new Error("Can only specify one of --set, --get, or --list");
+    }
+    if (data.set && (!data.key || !data.value)) {
+      throw new Error("Both key and value are required when using --set");
+    }
+    if (data.get && !data.key) {
+      throw new Error("Key is required when using --get");
+    }
+    return true;
+  });
 
 export type ConfigOptions = z.infer<typeof ConfigOptionsSchema>;
 
@@ -417,7 +444,7 @@ export function validateFileExtension(
  */
 export function validateDirectory(path: string, create = false): string {
   const resolvedPath = resolve(path);
-  
+
   if (!existsSync(resolvedPath)) {
     if (create) {
       try {
@@ -429,12 +456,12 @@ export function validateDirectory(path: string, create = false): string {
       throw new Error(`Directory does not exist: ${resolvedPath}`);
     }
   }
-  
+
   const stats = require("fs").statSync(resolvedPath);
   if (!stats.isDirectory()) {
     throw new Error(`Path is not a directory: ${resolvedPath}`);
   }
-  
+
   return resolvedPath;
 }
 
@@ -446,7 +473,7 @@ export function validateDatabaseConnection(connStr: string): string {
   if (!connStr.includes("://")) {
     return validatePath(connStr, false);
   }
-  
+
   // URL-based connection string
   try {
     const url = new URL(connStr);
@@ -473,23 +500,23 @@ export function validateCronExpression(expr: string): string {
       "Invalid cron expression. Expected format: '* * * * *' or '* * * * * *'",
     );
   }
-  
+
   // Basic validation of each field
   const limits = [
     { min: 0, max: 59 }, // minute
     { min: 0, max: 23 }, // hour
     { min: 1, max: 31 }, // day of month
     { min: 1, max: 12 }, // month
-    { min: 0, max: 7 },  // day of week
+    { min: 0, max: 7 }, // day of week
   ];
-  
+
   for (let i = 0; i < Math.min(parts.length, 5); i++) {
     const part = parts[i];
     if (!part || part === "*") continue;
-    
+
     const limit = limits[i];
     if (!limit) continue;
-    
+
     // Handle step values (e.g., */5, 0-23/2)
     if (part.includes("/")) {
       const stepParts = part.split("/");
@@ -511,14 +538,21 @@ export function validateCronExpression(expr: string): string {
         if (rangeParts.length === 2) {
           const start = Number(rangeParts[0]);
           const end = Number(rangeParts[1]);
-          if (isNaN(start) || isNaN(end) || start < limit.min || end > limit.max) {
-            throw new Error(`Invalid range in step at position ${i + 1}: ${part}`);
+          if (
+            isNaN(start) ||
+            isNaN(end) ||
+            start < limit.min ||
+            end > limit.max
+          ) {
+            throw new Error(
+              `Invalid range in step at position ${i + 1}: ${part}`,
+            );
           }
         }
       }
       continue;
     }
-    
+
     // Handle ranges (e.g., "1-5")
     if (part.includes("-")) {
       const rangeParts = part.split("-");
@@ -532,7 +566,7 @@ export function validateCronExpression(expr: string): string {
       }
       continue;
     }
-    
+
     // Handle lists (e.g., "1,3,5")
     if (part.includes(",")) {
       const values = part.split(",").map(Number);
@@ -543,14 +577,14 @@ export function validateCronExpression(expr: string): string {
       }
       continue;
     }
-    
+
     // Single value
     const val = Number(part);
     if (isNaN(val) || val < limit.min || val > limit.max) {
       throw new Error(`Invalid cron field at position ${i + 1}: ${part}`);
     }
   }
-  
+
   return expr;
 }
 
@@ -564,20 +598,20 @@ export function validateMemorySize(size: string): string {
       "Invalid memory size format. Expected format: <number><unit> (e.g., '512MB', '2GB')",
     );
   }
-  
+
   const valueStr = match[1];
   const unitStr = match[2];
-  
+
   if (!valueStr || !unitStr) {
     throw new Error("Invalid memory size format");
   }
-  
+
   const numValue = parseInt(valueStr, 10);
-  
+
   if (numValue <= 0) {
     throw new Error("Memory size must be greater than 0");
   }
-  
+
   // Convert to bytes for validation
   const multipliers: Record<string, number> = {
     KB: 1024,
@@ -585,19 +619,19 @@ export function validateMemorySize(size: string): string {
     GB: 1024 * 1024 * 1024,
     TB: 1024 * 1024 * 1024 * 1024,
   };
-  
+
   const multiplier = multipliers[unitStr.toUpperCase()];
   if (!multiplier) {
     throw new Error("Invalid memory unit");
   }
-  
+
   const bytes = numValue * multiplier;
-  
+
   // Check reasonable limits (1KB to 1TB)
   if (bytes < 1024 || bytes > 1024 * 1024 * 1024 * 1024) {
     throw new Error("Memory size must be between 1KB and 1TB");
   }
-  
+
   return size;
 }
 
@@ -676,93 +710,124 @@ export type BatchOptions = z.infer<typeof BatchOptionsSchema>;
 /**
  * Filter criteria schema for queries
  */
-export const FilterCriteriaSchema = z.object({
-  platforms: z.array(z.enum([
-    "reddit",
-    "hackernews",
-    "discourse",
-    "lemmy",
-    "lobsters",
-    "custom",
-  ])).optional(),
-  authors: z.array(z.string()).optional(),
-  keywords: z.array(z.string()).optional(),
-  excludeKeywords: z.array(z.string()).optional(),
-  scoreMin: z.number().optional(),
-  scoreMax: z.number().optional(),
-  commentCountMin: z.number().int().min(0).optional(),
-  commentCountMax: z.number().int().optional(),
-  dateFrom: z.date().optional(),
-  dateTo: z.date().optional(),
-  hasComments: z.boolean().optional(),
-  isDeleted: z.boolean().optional(),
-  isRemoved: z.boolean().optional(),
-}).refine(data => {
-  if (data.scoreMin !== undefined && data.scoreMax !== undefined && data.scoreMin > data.scoreMax) {
-    throw new Error("Minimum score cannot be greater than maximum score");
-  }
-  if (data.commentCountMin !== undefined && data.commentCountMax !== undefined && 
-      data.commentCountMin > data.commentCountMax) {
-    throw new Error("Minimum comment count cannot be greater than maximum comment count");
-  }
-  if (data.dateFrom && data.dateTo && data.dateFrom > data.dateTo) {
-    throw new Error("Start date cannot be after end date");
-  }
-  return true;
-});
+export const FilterCriteriaSchema = z
+  .object({
+    platforms: z
+      .array(
+        z.enum([
+          "reddit",
+          "hackernews",
+          "discourse",
+          "lemmy",
+          "lobsters",
+          "custom",
+        ]),
+      )
+      .optional(),
+    authors: z.array(z.string()).optional(),
+    keywords: z.array(z.string()).optional(),
+    excludeKeywords: z.array(z.string()).optional(),
+    scoreMin: z.number().optional(),
+    scoreMax: z.number().optional(),
+    commentCountMin: z.number().int().min(0).optional(),
+    commentCountMax: z.number().int().optional(),
+    dateFrom: z.date().optional(),
+    dateTo: z.date().optional(),
+    hasComments: z.boolean().optional(),
+    isDeleted: z.boolean().optional(),
+    isRemoved: z.boolean().optional(),
+  })
+  .refine((data) => {
+    if (
+      data.scoreMin !== undefined &&
+      data.scoreMax !== undefined &&
+      data.scoreMin > data.scoreMax
+    ) {
+      throw new Error("Minimum score cannot be greater than maximum score");
+    }
+    if (
+      data.commentCountMin !== undefined &&
+      data.commentCountMax !== undefined &&
+      data.commentCountMin > data.commentCountMax
+    ) {
+      throw new Error(
+        "Minimum comment count cannot be greater than maximum comment count",
+      );
+    }
+    if (data.dateFrom && data.dateTo && data.dateFrom > data.dateTo) {
+      throw new Error("Start date cannot be after end date");
+    }
+    return true;
+  });
 
 export type FilterCriteria = z.infer<typeof FilterCriteriaSchema>;
 
 /**
  * Scheduling options schema
  */
-export const ScheduleOptionsSchema = z.object({
-  enabled: z.boolean().default(false),
-  cron: z.string().optional().transform(val => val ? validateCronExpression(val) : undefined),
-  interval: z.object({
-    value: z.number().int().positive(),
-    unit: z.enum(["seconds", "minutes", "hours", "days"]),
-  }).optional(),
-  timezone: z.string().default("UTC"),
-  maxRuns: z.number().int().positive().optional(),
-  startTime: z.date().optional(),
-  endTime: z.date().optional(),
-}).refine(data => {
-  if (data.enabled && !data.cron && !data.interval) {
-    throw new Error("Schedule must have either cron expression or interval when enabled");
-  }
-  if (data.cron && data.interval) {
-    throw new Error("Cannot specify both cron and interval");
-  }
-  if (data.startTime && data.endTime && data.startTime >= data.endTime) {
-    throw new Error("Schedule start time must be before end time");
-  }
-  return true;
-});
+export const ScheduleOptionsSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    cron: z
+      .string()
+      .optional()
+      .transform((val) => (val ? validateCronExpression(val) : undefined)),
+    interval: z
+      .object({
+        value: z.number().int().positive(),
+        unit: z.enum(["seconds", "minutes", "hours", "days"]),
+      })
+      .optional(),
+    timezone: z.string().default("UTC"),
+    maxRuns: z.number().int().positive().optional(),
+    startTime: z.date().optional(),
+    endTime: z.date().optional(),
+  })
+  .refine((data) => {
+    if (data.enabled && !data.cron && !data.interval) {
+      throw new Error(
+        "Schedule must have either cron expression or interval when enabled",
+      );
+    }
+    if (data.cron && data.interval) {
+      throw new Error("Cannot specify both cron and interval");
+    }
+    if (data.startTime && data.endTime && data.startTime >= data.endTime) {
+      throw new Error("Schedule start time must be before end time");
+    }
+    return true;
+  });
 
 export type ScheduleOptions = z.infer<typeof ScheduleOptionsSchema>;
 
 /**
  * Proxy configuration schema
  */
-export const ProxyConfigSchema = z.object({
-  enabled: z.boolean().default(false),
-  host: z.string().optional(),
-  port: z.number().int().min(1).max(65535).optional(),
-  protocol: z.enum(["http", "https", "socks4", "socks5"]).default("http"),
-  username: z.string().optional(),
-  password: z.string().optional(),
-  rotateOnError: z.boolean().default(false),
-  rotateInterval: z.number().int().positive().optional(),
-}).refine(data => {
-  if (data.enabled && (!data.host || !data.port)) {
-    throw new Error("Proxy host and port are required when proxy is enabled");
-  }
-  if ((data.username && !data.password) || (!data.username && data.password)) {
-    throw new Error("Both username and password are required for proxy authentication");
-  }
-  return true;
-});
+export const ProxyConfigSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    host: z.string().optional(),
+    port: z.number().int().min(1).max(65535).optional(),
+    protocol: z.enum(["http", "https", "socks4", "socks5"]).default("http"),
+    username: z.string().optional(),
+    password: z.string().optional(),
+    rotateOnError: z.boolean().default(false),
+    rotateInterval: z.number().int().positive().optional(),
+  })
+  .refine((data) => {
+    if (data.enabled && (!data.host || !data.port)) {
+      throw new Error("Proxy host and port are required when proxy is enabled");
+    }
+    if (
+      (data.username && !data.password) ||
+      (!data.username && data.password)
+    ) {
+      throw new Error(
+        "Both username and password are required for proxy authentication",
+      );
+    }
+    return true;
+  });
 
 export type ProxyConfig = z.infer<typeof ProxyConfigSchema>;
 

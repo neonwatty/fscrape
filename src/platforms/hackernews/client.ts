@@ -47,12 +47,12 @@ export interface HNUser {
 /**
  * Story list types available on HackerNews
  */
-export type StoryListType = 
-  | "topstories" 
-  | "newstories" 
-  | "beststories" 
-  | "askstories" 
-  | "showstories" 
+export type StoryListType =
+  | "topstories"
+  | "newstories"
+  | "beststories"
+  | "askstories"
+  | "showstories"
   | "jobstories";
 
 /**
@@ -75,11 +75,13 @@ export class HackerNewsClient {
 
   constructor(config: HNClientConfig = {}) {
     this.baseUrl = config.baseUrl || "https://hacker-news.firebaseio.com/v0";
-    this.logger = config.logger || winston.createLogger({
-      level: "info",
-      format: winston.format.simple(),
-      transports: [new winston.transports.Console()],
-    });
+    this.logger =
+      config.logger ||
+      winston.createLogger({
+        level: "info",
+        format: winston.format.simple(),
+        transports: [new winston.transports.Console()],
+      });
 
     this.client = axios.create({
       baseURL: this.baseUrl,
@@ -99,7 +101,7 @@ export class HackerNewsClient {
           message: error.message,
         });
         throw error;
-      }
+      },
     );
   }
 
@@ -120,7 +122,7 @@ export class HackerNewsClient {
    * Get multiple items by IDs
    */
   async getItems(ids: number[]): Promise<(HNItem | null)[]> {
-    const promises = ids.map(id => this.getItem(id));
+    const promises = ids.map((id) => this.getItem(id));
     return Promise.all(promises);
   }
 
@@ -212,7 +214,7 @@ export class HackerNewsClient {
   async getComments(itemId: number, maxDepth: number = 10): Promise<HNItem[]> {
     const comments: HNItem[] = [];
     const queue: Array<{ id: number; depth: number }> = [];
-    
+
     const item = await this.getItem(itemId);
     if (!item || !item.kids) {
       return comments;
@@ -226,15 +228,20 @@ export class HackerNewsClient {
     // Process queue
     while (queue.length > 0) {
       const batch = queue.splice(0, 10); // Process in batches
-      const items = await this.getItems(batch.map(b => b.id));
-      
+      const items = await this.getItems(batch.map((b) => b.id));
+
       for (let i = 0; i < items.length; i++) {
         const comment = items[i];
         const depth = batch[i].depth;
-        
-        if (comment && comment.type === "comment" && !comment.deleted && !comment.dead) {
+
+        if (
+          comment &&
+          comment.type === "comment" &&
+          !comment.deleted &&
+          !comment.dead
+        ) {
           comments.push(comment);
-          
+
           // Add child comments to queue if within depth limit
           if (comment.kids && depth < maxDepth) {
             for (const kidId of comment.kids) {
@@ -243,10 +250,10 @@ export class HackerNewsClient {
           }
         }
       }
-      
+
       // Small delay to avoid hammering the API
       if (queue.length > 0) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
 
@@ -258,7 +265,9 @@ export class HackerNewsClient {
    * In a real implementation, you might want to use Algolia's HN Search API
    */
   async searchStories(query: string, limit: number = 30): Promise<HNItem[]> {
-    this.logger.warn("Native HN API doesn't support search. Consider using Algolia HN Search API.");
+    this.logger.warn(
+      "Native HN API doesn't support search. Consider using Algolia HN Search API.",
+    );
     // For now, return top stories as a fallback
     const storyIds = await this.getTopStories(limit);
     const stories = await this.getItems(storyIds);
@@ -271,15 +280,15 @@ export class HackerNewsClient {
   async getStoriesInRange(
     startTime: number,
     endTime: number,
-    limit: number = 100
+    limit: number = 100,
   ): Promise<HNItem[]> {
     const stories: HNItem[] = [];
     const maxId = await this.getMaxItem();
-    
+
     // Walk backwards from max item
     for (let id = maxId; id > 0 && stories.length < limit; id--) {
       const item = await this.getItem(id);
-      
+
       if (item && item.type === "story" && !item.deleted && !item.dead) {
         if (item.time >= startTime && item.time <= endTime) {
           stories.push(item);
@@ -288,13 +297,13 @@ export class HackerNewsClient {
           break;
         }
       }
-      
+
       // Rate limiting
       if (id % 10 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
-    
+
     return stories;
   }
 
@@ -303,9 +312,10 @@ export class HackerNewsClient {
    */
   async getUpdates(): Promise<{ items: number[]; profiles: string[] }> {
     try {
-      const response = await this.client.get<{ items: number[]; profiles: string[] }>(
-        "/updates.json"
-      );
+      const response = await this.client.get<{
+        items: number[];
+        profiles: string[];
+      }>("/updates.json");
       return response.data || { items: [], profiles: [] };
     } catch (error) {
       this.logger.error("Failed to get updates:", error);

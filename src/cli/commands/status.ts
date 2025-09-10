@@ -111,11 +111,22 @@ async function gatherStatistics(
   if (allPlatformStats && allPlatformStats.length > 0) {
     // Aggregate overall stats
     stats.overview = {
-      totalPosts: allPlatformStats.reduce((sum: number, p: any) => sum + p.totalPosts, 0),
-      totalComments: allPlatformStats.reduce((sum: number, p: any) => sum + p.totalComments, 0),
-      totalUsers: allPlatformStats.reduce((sum: number, p: any) => sum + p.totalUsers, 0),
+      totalPosts: allPlatformStats.reduce(
+        (sum: number, p: any) => sum + p.totalPosts,
+        0,
+      ),
+      totalComments: allPlatformStats.reduce(
+        (sum: number, p: any) => sum + p.totalComments,
+        0,
+      ),
+      totalUsers: allPlatformStats.reduce(
+        (sum: number, p: any) => sum + p.totalUsers,
+        0,
+      ),
       databaseSize: 0, // Will be set from health metrics
-      lastActivity: Math.max(...allPlatformStats.map((p: any) => p.lastUpdateTime?.getTime() || 0)),
+      lastActivity: Math.max(
+        ...allPlatformStats.map((p: any) => p.lastUpdateTime?.getTime() || 0),
+      ),
     };
   }
 
@@ -150,13 +161,19 @@ async function gatherStatistics(
   const days = options.days || 7;
 
   // Get engagement over time
-  const engagementData = analytics.getEngagementOverTime(days, options.platform);
+  const engagementData = analytics.getEngagementOverTime(
+    days,
+    options.platform,
+  );
   if (engagementData && engagementData.length > 0) {
     // Process engagement data into daily stats
-    const dailyStats: { [date: string]: { posts: number; comments: number } } = {};
-    
+    const dailyStats: { [date: string]: { posts: number; comments: number } } =
+      {};
+
     engagementData.forEach((item: any) => {
-      const dateStr = item.date ? new Date(item.date).toISOString().split('T')[0] : '';
+      const dateStr = item.date
+        ? new Date(item.date).toISOString().split("T")[0]
+        : "";
       if (dateStr) {
         if (!dailyStats[dateStr]) {
           dailyStats[dateStr] = { posts: 0, comments: 0 };
@@ -181,9 +198,11 @@ async function gatherStatistics(
   }
 
   // Get top content
-  const trendingPosts = analytics.getTrendingPosts ? analytics.getTrendingPosts(5) : [];
+  const trendingPosts = analytics.getTrendingPosts
+    ? analytics.getTrendingPosts(5)
+    : [];
   const topUsers = analytics.getTopUsersByKarma(5, options.platform);
-  
+
   stats.topContent = {
     posts: trendingPosts.map((post: any) => ({
       id: post.id,
@@ -205,12 +224,18 @@ async function gatherStatistics(
 
   // Get active and recent sessions if dbManager provided
   if (dbManager) {
-    stats.activeSessions = dbManager.getActiveSessions ? dbManager.getActiveSessions(5) : [];
-    stats.recentSessions = dbManager.getRecentSessions ? dbManager.getRecentSessions(10, options.platform) : [];
+    stats.activeSessions = dbManager.getActiveSessions
+      ? dbManager.getActiveSessions(5)
+      : [];
+    stats.recentSessions = dbManager.getRecentSessions
+      ? dbManager.getRecentSessions(10, options.platform)
+      : [];
   }
 
   // Get system health metrics
-  const healthDetailed = analytics.getDatabaseHealthDetailed ? analytics.getDatabaseHealthDetailed() : null;
+  const healthDetailed = analytics.getDatabaseHealthDetailed
+    ? analytics.getDatabaseHealthDetailed()
+    : null;
   if (healthDetailed && healthDetailed.size) {
     stats.systemHealth = {
       databaseSize: healthDetailed.size.totalSize || 0,
@@ -224,7 +249,9 @@ async function gatherStatistics(
     stats.overview.databaseSize = healthDetailed.size.totalSize || 0;
   } else {
     // Provide basic health metrics if detailed not available
-    const health = analytics.getDatabaseHealth ? analytics.getDatabaseHealth() : null;
+    const health = analytics.getDatabaseHealth
+      ? analytics.getDatabaseHealth()
+      : null;
     if (health) {
       stats.systemHealth = {
         databaseSize: health.size || 0,
@@ -252,12 +279,18 @@ function displaySummary(stats: any): void {
 
   // Overview
   console.log(chalk.yellow("Overview:"));
-  console.log(`  Total Posts: ${stats.overview.totalPosts?.toLocaleString() || 0}`);
+  console.log(
+    `  Total Posts: ${stats.overview.totalPosts?.toLocaleString() || 0}`,
+  );
   console.log(
     `  Total Comments: ${stats.overview.totalComments?.toLocaleString() || 0}`,
   );
-  console.log(`  Total Users: ${stats.overview.totalUsers?.toLocaleString() || 0}`);
-  console.log(`  Database Size: ${formatBytes(stats.overview.databaseSize || 0)}`);
+  console.log(
+    `  Total Users: ${stats.overview.totalUsers?.toLocaleString() || 0}`,
+  );
+  console.log(
+    `  Database Size: ${formatBytes(stats.overview.databaseSize || 0)}`,
+  );
   if (stats.overview.lastActivity) {
     console.log(
       `  Last Activity: ${new Date(stats.overview.lastActivity).toLocaleString()}`,
@@ -268,8 +301,12 @@ function displaySummary(stats: any): void {
   if (stats.activeSessions && stats.activeSessions.length > 0) {
     console.log(chalk.yellow("\nActive Sessions:"));
     stats.activeSessions.forEach((session: any) => {
-      console.log(`  ${chalk.green("●")} ${session.platform} - ${session.status}`);
-      console.log(`    Started: ${new Date(session.startedAt).toLocaleString()}`);
+      console.log(
+        `  ${chalk.green("●")} ${session.platform} - ${session.status}`,
+      );
+      console.log(
+        `    Started: ${new Date(session.startedAt).toLocaleString()}`,
+      );
       console.log(`    Items scraped: ${session.totalItemsScraped || 0}`);
     });
   } else {
@@ -283,12 +320,20 @@ function displaySummary(stats: any): void {
     console.log(`  Tables: ${stats.systemHealth.tableCount || 0}`);
     console.log(`  Indexes: ${stats.systemHealth.indexCount || 0}`);
     if (stats.systemHealth.cacheHitRate !== undefined) {
-      console.log(`  Cache Hit Rate: ${(stats.systemHealth.cacheHitRate * 100).toFixed(1)}%`);
+      console.log(
+        `  Cache Hit Rate: ${(stats.systemHealth.cacheHitRate * 100).toFixed(1)}%`,
+      );
     }
     if (stats.systemHealth.fragmentation !== undefined) {
-      const fragColor = stats.systemHealth.fragmentation > 30 ? chalk.red : 
-                       stats.systemHealth.fragmentation > 10 ? chalk.yellow : chalk.green;
-      console.log(`  Fragmentation: ${fragColor(stats.systemHealth.fragmentation.toFixed(1) + '%')}`);
+      const fragColor =
+        stats.systemHealth.fragmentation > 30
+          ? chalk.red
+          : stats.systemHealth.fragmentation > 10
+            ? chalk.yellow
+            : chalk.green;
+      console.log(
+        `  Fragmentation: ${fragColor(stats.systemHealth.fragmentation.toFixed(1) + "%")}`,
+      );
     }
   }
 
@@ -299,7 +344,9 @@ function displaySummary(stats: any): void {
       const pStats = platformStats as any;
       console.log(`  ${chalk.cyan(platform)}:`);
       console.log(`    Posts: ${pStats.postCount?.toLocaleString() || 0}`);
-      console.log(`    Comments: ${pStats.commentCount?.toLocaleString() || 0}`);
+      console.log(
+        `    Comments: ${pStats.commentCount?.toLocaleString() || 0}`,
+      );
       console.log(`    Users: ${pStats.userCount?.toLocaleString() || 0}`);
       if (pStats.avgScore !== undefined) {
         console.log(`    Avg Score: ${pStats.avgScore.toFixed(1)}`);
@@ -314,10 +361,11 @@ function displaySummary(stats: any): void {
       (sum: number, day: any) => sum + day.count,
       0,
     );
-    const recentComments = stats.recent.comments?.data?.reduce(
-      (sum: number, day: any) => sum + day.count,
-      0,
-    ) || 0;
+    const recentComments =
+      stats.recent.comments?.data?.reduce(
+        (sum: number, day: any) => sum + day.count,
+        0,
+      ) || 0;
     console.log(
       `  Posts (last ${stats.recent.posts.data.length} days): ${recentPosts.toLocaleString()}`,
     );
@@ -327,7 +375,11 @@ function displaySummary(stats: any): void {
   }
 
   // Top content
-  if (stats.topContent && stats.topContent.posts && stats.topContent.posts.length > 0) {
+  if (
+    stats.topContent &&
+    stats.topContent.posts &&
+    stats.topContent.posts.length > 0
+  ) {
     console.log(chalk.yellow("\nTop Posts:"));
     stats.topContent.posts.forEach((post: any, index: number) => {
       console.log(`  ${index + 1}. ${truncateString(post.title, 50)}`);
@@ -353,21 +405,32 @@ function displayTable(stats: any, verbose: boolean): void {
     ["Total Comments", stats.overview.totalComments?.toLocaleString() || "0"],
     ["Total Users", stats.overview.totalUsers?.toLocaleString() || "0"],
     ["Database Size", formatBytes(stats.overview.databaseSize || 0)],
-    ["Last Activity", stats.overview.lastActivity ? new Date(stats.overview.lastActivity).toLocaleString() : "N/A"],
+    [
+      "Last Activity",
+      stats.overview.lastActivity
+        ? new Date(stats.overview.lastActivity).toLocaleString()
+        : "N/A",
+    ],
   );
-  
+
   // Add system health metrics
   if (stats.systemHealth && stats.systemHealth.cacheHitRate !== undefined) {
-    overviewTable.push(
-      ["Cache Hit Rate", `${(stats.systemHealth.cacheHitRate * 100).toFixed(1)}%`]
-    );
+    overviewTable.push([
+      "Cache Hit Rate",
+      `${(stats.systemHealth.cacheHitRate * 100).toFixed(1)}%`,
+    ]);
   }
   if (stats.systemHealth && stats.systemHealth.fragmentation !== undefined) {
-    const fragColor = stats.systemHealth.fragmentation > 30 ? chalk.red : 
-                     stats.systemHealth.fragmentation > 10 ? chalk.yellow : chalk.green;
-    overviewTable.push(
-      ["DB Fragmentation", fragColor(`${stats.systemHealth.fragmentation.toFixed(1)}%`)]
-    );
+    const fragColor =
+      stats.systemHealth.fragmentation > 30
+        ? chalk.red
+        : stats.systemHealth.fragmentation > 10
+          ? chalk.yellow
+          : chalk.green;
+    overviewTable.push([
+      "DB Fragmentation",
+      fragColor(`${stats.systemHealth.fragmentation.toFixed(1)}%`),
+    ]);
   }
 
   console.log(overviewTable.toString());
@@ -414,17 +477,22 @@ function displayTable(stats: any, verbose: boolean): void {
     });
 
     stats.activeSessions.forEach((session: any) => {
-      const statusColor = session.status === 'running' ? chalk.green :
-                         session.status === 'pending' ? chalk.yellow :
-                         session.status === 'failed' ? chalk.red : chalk.gray;
+      const statusColor =
+        session.status === "running"
+          ? chalk.green
+          : session.status === "pending"
+            ? chalk.yellow
+            : session.status === "failed"
+              ? chalk.red
+              : chalk.gray;
       sessionsTable.push([
         session.platform,
         statusColor(session.status),
-        new Date(session.startedAt).toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit' 
+        new Date(session.startedAt).toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
         }),
         session.totalItemsScraped?.toString() || "0",
         session.errorCount?.toString() || "0",
@@ -442,7 +510,11 @@ function displayTable(stats: any, verbose: boolean): void {
   }
 
   // Top posts table
-  if (stats.topContent && stats.topContent.posts && stats.topContent.posts.length > 0) {
+  if (
+    stats.topContent &&
+    stats.topContent.posts &&
+    stats.topContent.posts.length > 0
+  ) {
     const topPostsTable = new Table({
       head: [
         chalk.yellow("#"),
@@ -467,7 +539,12 @@ function displayTable(stats: any, verbose: boolean): void {
   }
 
   // Top users table
-  if (verbose && stats.topContent && stats.topContent.users && stats.topContent.users.length > 0) {
+  if (
+    verbose &&
+    stats.topContent &&
+    stats.topContent.users &&
+    stats.topContent.users.length > 0
+  ) {
     const topUsersTable = new Table({
       head: [
         chalk.yellow("#"),

@@ -10,7 +10,8 @@ import { createScrapeCommand } from "./commands/scrape.js";
 import { createStatusCommand } from "./commands/status.js";
 import { createExportCommand } from "./commands/export.js";
 import { createListCommand } from "./commands/list.js";
-import { 
+import { createConfigCommand } from "./commands/config.js";
+import {
   formatError,
   validateCleanOptions,
   validateConfigOptions,
@@ -65,22 +66,21 @@ function createProgram(): Command {
   program.addCommand(createStatusCommand());
   program.addCommand(createExportCommand());
   program.addCommand(createListCommand());
+  program.addCommand(createConfigCommand());
 
-  // Add additional utility commands
+  // Add batch command
   program
-    .command("config")
-    .description("Display or modify configuration")
-    .argument("[key]", "Configuration key to display")
-    .option("-s, --set <value>", "Set configuration value")
-    .option(
-      "-c, --config <path>",
-      "Configuration file path",
-      "fscrape.config.json",
-    )
-    .action(async (key: string | undefined, options: any) => {
-      await handleConfig(key, options);
+    .command("batch")
+    .description("Execute batch operations from file or interactively")
+    .argument("[file]", "Batch file path (JSON or text format)")
+    .option("-i, --interactive", "Interactive batch creation", false)
+    .option("-d, --dry-run", "Perform dry run without making changes", false)
+    .option("-p, --parallel", "Run operations in parallel", false)
+    .option("--max-concurrency <number>", "Maximum concurrent operations", parseInt, 5)
+    .option("-v, --verbose", "Verbose output", false)
+    .action(async (file: string | undefined, options: any) => {
+      await handleBatch(file, options);
     });
-
 
   program
     .command("clean")
@@ -100,53 +100,54 @@ function createProgram(): Command {
   return program;
 }
 
+
 /**
- * Handle config command
+ * Handle batch command
  */
-async function handleConfig(
-  key: string | undefined,
-  options: any,
-): Promise<void> {
+async function handleBatch(file: string | undefined, options: any): Promise<void> {
   try {
-    // Validate options
-    const validatedOptions = validateConfigOptions({
-      key,
-      value: options.set,
-      set: !!options.set,
-      get: !options.set && !!key,
-      list: !options.set && !key,
-      config: options.config,
-      format: "json",
-    });
-
-    const { ConfigManager } = await import("../config/manager.js");
-    const configManager = new ConfigManager(validatedOptions.config || options.config);
-    const config = configManager.loadConfig();
-
-    if (validatedOptions.set && key) {
-      // Set configuration value
-      const { set: _set, ...configData } = config as any;
-      configData[key] = options.set;
-      configManager.saveConfig(configData);
-      console.log(chalk.green(`✓ Set ${key} = ${options.set}`));
-    } else if (validatedOptions.get && key) {
-      // Display specific key
-      const value = (config as any)[key];
-      if (value !== undefined) {
-        console.log(JSON.stringify(value, null, 2));
-      } else {
-        console.log(chalk.yellow(`Key not found: ${key}`));
-      }
+    const { BatchProcessor } = await import("./batch-processor.js");
+    
+    let batchConfig;
+    
+    if (options.interactive) {
+      // Create batch configuration interactively
+      batchConfig = await BatchProcessor.createInteractive();
+    } else if (file) {
+      // Load batch configuration from file
+      batchConfig = await BatchProcessor.loadFromFile(file);
     } else {
-      // Display entire config
-      console.log(JSON.stringify(config, null, 2));
+      console.log(chalk.yellow("Please provide a batch file or use --interactive mode"));
+      console.log(chalk.gray("Example: fscrape batch operations.json"));
+      console.log(chalk.gray("Example: fscrape batch --interactive"));
+      return;
     }
+    
+    // Apply command-line options
+    if (options.dryRun !== undefined) batchConfig.dryRun = options.dryRun;
+    if (options.parallel !== undefined) batchConfig.parallel = options.parallel;
+    if (options.maxConcurrency !== undefined) batchConfig.maxConcurrency = options.maxConcurrency;
+    if (options.verbose !== undefined) batchConfig.verbose = options.verbose;
+    
+    // Create and execute batch processor
+    const processor = new BatchProcessor(batchConfig);
+    const results = await processor.execute();
+    
+    // Save results if requested
+    if (options.output) {
+      await processor.saveResults(options.output);
+    }
+    
+    // Exit with appropriate code
+    const hasFailures = results.some(r => r.status === "failed");
+    process.exit(hasFailures ? 1 : 0);
+    
   } catch (error) {
+    console.error(chalk.red("❌ Batch execution failed:"));
     console.error(chalk.red(formatError(error)));
     process.exit(1);
   }
 }
-
 
 /**
  * Handle clean command
@@ -156,7 +157,9 @@ async function handleClean(options: any): Promise<void> {
     // Validate options
     const validatedOptions = validateCleanOptions({
       database: options.database,
-      olderThan: options.olderThan ? parseInt(options.olderThan, 10) : undefined,
+      olderThan: options.olderThan
+        ? parseInt(options.olderThan, 10)
+        : undefined,
       platform: options.platform,
       dryRun: options.dryRun || false,
       force: false,
@@ -205,7 +208,7 @@ async function handleClean(options: any): Promise<void> {
         console.log(`  Posts: ${result.deletedPosts}`);
         console.log(`  Comments: ${result.deletedComments}`);
         console.log(`  Users: ${result.deletedUsers}`);
-        
+
         // Run vacuum to reclaim space
         dbManager.vacuum();
         console.log(chalk.green("✓ Database optimized"));

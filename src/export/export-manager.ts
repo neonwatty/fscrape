@@ -20,13 +20,13 @@ export interface ExportConfig {
   outputDirectory: string;
   defaultFormat: string;
   includeMetadata?: boolean;
-  
+
   // Filter options
   filterOptions?: FilterOptions;
-  
+
   // Transform options
   transformOptions?: TransformOptions;
-  
+
   // Format-specific options
   csvOptions?: CsvExportOptions;
   jsonOptions?: JsonExportOptions;
@@ -43,18 +43,17 @@ export class ExportManager {
   private dataTransformer?: DataTransformer;
 
   constructor(config: ExportConfig) {
-    
     // Initialize exporters with their specific options
     this.csvExporter = new CsvExporter(config.csvOptions);
     this.jsonExporter = new JsonExporter(config.jsonOptions);
     this.markdownExporter = new MarkdownExporter(config.markdownOptions);
     this.htmlExporter = new HtmlExporter(config.htmlOptions);
-    
+
     // Initialize filter and transformer if options provided
     if (config.filterOptions) {
       this.dataFilter = new DataFilter(config.filterOptions);
     }
-    
+
     if (config.transformOptions) {
       this.dataTransformer = new DataTransformer(config.transformOptions);
     }
@@ -73,29 +72,35 @@ export class ExportManager {
     if (this.dataFilter) {
       processedData = this.dataFilter.filterScrapeResult(data);
     }
-    
+
     // Apply transformation if configured
     if (this.dataTransformer) {
       processedData = this.dataTransformer.transformScrapeResult(processedData);
     }
-    
+
     // Export using the appropriate exporter
     switch (format.toLowerCase()) {
       case "json":
-        const jsonFiles = await this.jsonExporter.export(processedData, outputPath);
+        const jsonFiles = await this.jsonExporter.export(
+          processedData,
+          outputPath,
+        );
         return jsonFiles.length === 1 ? jsonFiles[0]! : jsonFiles;
-        
+
       case "csv":
-        const csvFiles = await this.csvExporter.export(processedData, outputPath);
+        const csvFiles = await this.csvExporter.export(
+          processedData,
+          outputPath,
+        );
         return csvFiles.length === 1 ? csvFiles[0]! : csvFiles;
-        
+
       case "markdown":
       case "md":
         return await this.markdownExporter.export(processedData, outputPath);
-        
+
       case "html":
         return await this.htmlExporter.export(processedData, outputPath);
-        
+
       default:
         throw new Error(`Unsupported format: ${format}`);
     }
@@ -112,13 +117,13 @@ export class ExportManager {
   ): Promise<string | string[]> {
     const filter = new DataFilter(filterOptions);
     const filteredData = filter.filterScrapeResult(data);
-    
+
     // Apply transformation if configured
     let processedData = filteredData;
     if (this.dataTransformer) {
       processedData = this.dataTransformer.transformScrapeResult(filteredData);
     }
-    
+
     return this.exportData(processedData, format, outputPath);
   }
 
@@ -132,16 +137,16 @@ export class ExportManager {
     transformOptions: TransformOptions,
   ): Promise<string | string[]> {
     const transformer = new DataTransformer(transformOptions);
-    
+
     // Apply filtering first if configured
     let processedData = data;
     if (this.dataFilter) {
       processedData = this.dataFilter.filterScrapeResult(data);
     }
-    
+
     // Apply transformation
     processedData = transformer.transformScrapeResult(processedData);
-    
+
     return this.exportData(processedData, format, outputPath);
   }
 
@@ -154,12 +159,12 @@ export class ExportManager {
     baseOutputPath: string,
   ): Promise<Record<string, string | string[]>> {
     const results: Record<string, string | string[]> = {};
-    
+
     for (const format of formats) {
       const outputPath = `${baseOutputPath}.${format}`;
       results[format] = await this.exportData(data, format, outputPath);
     }
-    
+
     return results;
   }
 

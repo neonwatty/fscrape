@@ -26,11 +26,17 @@ import type winston from "winston";
  * HackerNews platform constructor for platform registry
  * Wraps HackerNewsScraper to match the expected PlatformConstructor interface
  */
-export const HackerNewsPlatform: PlatformConstructor = class implements BasePlatform {
+export const HackerNewsPlatform: PlatformConstructor = class
+  implements BasePlatform
+{
   private scraper: HackerNewsScraper;
   public readonly platform = "hackernews" as const;
 
-  constructor(_platform: string, config: BasePlatformConfig, logger?: winston.Logger) {
+  constructor(
+    _platform: string,
+    config: BasePlatformConfig,
+    logger?: winston.Logger,
+  ) {
     this.scraper = new HackerNewsScraper({
       ...config,
       logger,

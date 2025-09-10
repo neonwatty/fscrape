@@ -157,10 +157,10 @@ export class MigrationManager {
   async runAllMigrations(): Promise<number> {
     // Load the schema first
     this.loadSchemaFromFile();
-    
+
     // Get built-in migrations
     const migrations: Migration[] = this.getBuiltInMigrations();
-    
+
     // Run migrations that haven't been applied
     let appliedCount = 0;
     for (const migration of migrations) {
@@ -169,7 +169,7 @@ export class MigrationManager {
         appliedCount++;
       }
     }
-    
+
     return appliedCount;
   }
 
@@ -183,8 +183,8 @@ export class MigrationManager {
         name: "initial_schema",
         up: (_db: Database.Database) => {
           // Initial schema is handled by loadSchemaFromFile
-        }
-      }
+        },
+      },
     ];
   }
 

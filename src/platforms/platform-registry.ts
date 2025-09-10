@@ -317,7 +317,7 @@ export class PlatformRegistry {
    */
   static async initializeAsync(): Promise<void> {
     if (this.initialized) return;
-    
+
     // Return existing promise if already initializing
     if (this.initializing && this.initPromise) {
       return this.initPromise;
@@ -325,7 +325,7 @@ export class PlatformRegistry {
 
     this.initializing = true;
     this.initPromise = this.doInitialize();
-    
+
     try {
       await this.initPromise;
     } finally {
@@ -354,7 +354,8 @@ export class PlatformRegistry {
       const { HackerNewsPlatform } = await import("./hackernews/index.js");
       this.register("hackernews", HackerNewsPlatform, {
         version: "1.0.0",
-        description: "Hacker News platform scraper with Firebase API integration",
+        description:
+          "Hacker News platform scraper with Firebase API integration",
         author: "fscrape",
       });
     } catch (error) {
@@ -370,13 +371,13 @@ export class PlatformRegistry {
    */
   private static initializeDefaultsSync(): void {
     if (this.initialized) return;
-    
+
     // Mark as initialized to prevent loops
     // Platforms will need to be registered manually or via initializeAsync
     this.initialized = true;
-    
+
     // Start async initialization in background
-    this.initializeAsync().catch(error => {
+    this.initializeAsync().catch((error) => {
       this.logger.error("Background initialization failed", error);
     });
   }

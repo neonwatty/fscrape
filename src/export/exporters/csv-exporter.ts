@@ -3,7 +3,12 @@
  */
 
 import { createObjectCsvWriter } from "csv-writer";
-import type { ForumPost, Comment, User, ScrapeResult } from "../../types/core.js";
+import type {
+  ForumPost,
+  Comment,
+  User,
+  ScrapeResult,
+} from "../../types/core.js";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { dirname } from "path";
 
@@ -46,16 +51,25 @@ export class CsvExporter {
 
     if (this.options.separateFiles) {
       // Export to separate files
-      const postsFile = await this.exportPosts(data.posts, `${basePath}_posts.csv`);
+      const postsFile = await this.exportPosts(
+        data.posts,
+        `${basePath}_posts.csv`,
+      );
       exportedFiles.push(postsFile);
 
       if (this.options.includeComments && data.comments) {
-        const commentsFile = await this.exportComments(data.comments, `${basePath}_comments.csv`);
+        const commentsFile = await this.exportComments(
+          data.comments,
+          `${basePath}_comments.csv`,
+        );
         exportedFiles.push(commentsFile);
       }
 
       if (this.options.includeUsers && data.users) {
-        const usersFile = await this.exportUsers(data.users, `${basePath}_users.csv`);
+        const usersFile = await this.exportUsers(
+          data.users,
+          `${basePath}_users.csv`,
+        );
         exportedFiles.push(usersFile);
       }
     } else {
@@ -115,7 +129,10 @@ export class CsvExporter {
   /**
    * Export comments to CSV
    */
-  async exportComments(comments: Comment[], outputPath: string): Promise<string> {
+  async exportComments(
+    comments: Comment[],
+    outputPath: string,
+  ): Promise<string> {
     if (comments.length === 0) {
       writeFileSync(outputPath, "");
       return outputPath;

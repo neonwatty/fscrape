@@ -17,16 +17,12 @@ export { HtmlExporter } from "./exporters/html-exporter.js";
 export type { HtmlExportOptions } from "./exporters/html-exporter.js";
 
 // Filters and transformers
-export { 
-  DataFilter, 
-  FilterPresets, 
-  FilterChain 
-} from "./filters.js";
+export { DataFilter, FilterPresets, FilterChain } from "./filters.js";
 export type { FilterOptions } from "./filters.js";
 
-export { 
-  DataTransformer, 
-  TransformPresets, 
-  TransformChain 
+export {
+  DataTransformer,
+  TransformPresets,
+  TransformChain,
 } from "./transformers.js";
 export type { TransformOptions } from "./transformers.js";

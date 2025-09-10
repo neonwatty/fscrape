@@ -2,7 +2,12 @@
  * HTML exporter for forum data with rich formatting
  */
 
-import type { ForumPost, Comment, User, ScrapeResult } from "../../types/core.js";
+import type {
+  ForumPost,
+  Comment,
+  User,
+  ScrapeResult,
+} from "../../types/core.js";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { dirname } from "path";
 
@@ -465,18 +470,31 @@ export class HtmlExporter {
     // metadata variable removed - not used
     const stats = [
       { label: "Total Posts", value: data.posts.length.toLocaleString() },
-      { label: "Total Comments", value: (data.comments?.length || 0).toLocaleString() },
-      { label: "Unique Users", value: (data.users?.length || 0).toLocaleString() },
-      { label: "Average Score", value: this.calculateAverageScore(data.posts).toFixed(1) },
+      {
+        label: "Total Comments",
+        value: (data.comments?.length || 0).toLocaleString(),
+      },
+      {
+        label: "Unique Users",
+        value: (data.users?.length || 0).toLocaleString(),
+      },
+      {
+        label: "Average Score",
+        value: this.calculateAverageScore(data.posts).toFixed(1),
+      },
     ];
 
     return `<section class="metadata">
-        ${stats.map(stat => `
+        ${stats
+          .map(
+            (stat) => `
             <div class="stat-card">
                 <div class="stat-label">${stat.label}</div>
                 <div class="stat-value">${stat.value}</div>
             </div>
-        `).join("")}
+        `,
+          )
+          .join("")}
     </section>`;
   }
 
@@ -493,8 +511,10 @@ export class HtmlExporter {
    * Generate posts section
    */
   private generatePostsSection(data: ScrapeResult): string {
-    const postsHtml = data.posts.map(post => this.generatePost(post, data.comments)).join("");
-    
+    const postsHtml = data.posts
+      .map((post) => this.generatePost(post, data.comments))
+      .join("");
+
     return `<section class="posts-section">
         <h2>Posts</h2>
         ${postsHtml}
@@ -505,7 +525,7 @@ export class HtmlExporter {
    * Generate single post
    */
   private generatePost(post: ForumPost, allComments?: Comment[]): string {
-    const postComments = allComments?.filter(c => c.postId === post.id) || [];
+    const postComments = allComments?.filter((c) => c.postId === post.id) || [];
     const scoreClass = post.score >= 0 ? "score-positive" : "score-negative";
 
     return `<article class="post">
@@ -529,7 +549,7 @@ export class HtmlExporter {
    */
   private generateCommentsSection(comments: Comment[]): string {
     const tree = this.buildCommentTree(comments);
-    
+
     return `<div class="comments-section">
         <h3 ${this.options.collapsibleComments ? 'class="collapsible"' : ""}>Comments (${comments.length})</h3>
         <div class="comment-thread">
@@ -543,15 +563,15 @@ export class HtmlExporter {
    */
   private buildCommentTree(comments: Comment[]): Map<string | null, Comment[]> {
     const tree = new Map<string | null, Comment[]>();
-    
-    comments.forEach(comment => {
+
+    comments.forEach((comment) => {
       const parentId = comment.parentId;
       if (!tree.has(parentId)) {
         tree.set(parentId, []);
       }
       tree.get(parentId)!.push(comment);
     });
-    
+
     return tree;
   }
 
@@ -561,24 +581,32 @@ export class HtmlExporter {
   private renderCommentTree(
     tree: Map<string | null, Comment[]>,
     parentId: string | null = null,
-    depth: number = 0
+    depth: number = 0,
   ): string {
     const comments = tree.get(parentId) || [];
-    
-    return comments.map(comment => {
-      const children = depth < this.options.maxCommentDepth! ? 
-        this.renderCommentTree(tree, comment.id, depth + 1) : "";
-      
-      return this.renderComment(comment, children, depth);
-    }).join("");
+
+    return comments
+      .map((comment) => {
+        const children =
+          depth < this.options.maxCommentDepth!
+            ? this.renderCommentTree(tree, comment.id, depth + 1)
+            : "";
+
+        return this.renderComment(comment, children, depth);
+      })
+      .join("");
   }
 
   /**
    * Render single comment
    */
-  private renderComment(comment: Comment, children: string, depth: number): string {
+  private renderComment(
+    comment: Comment,
+    children: string,
+    depth: number,
+  ): string {
     const nestedClass = depth > 0 ? "comment-nested" : "";
-    
+
     return `<div class="comment ${nestedClass}">
         <div class="comment-header">
             <span>👤 <strong>${this.escapeHtml(comment.author)}</strong></span>
@@ -593,7 +621,9 @@ export class HtmlExporter {
    * Generate users section
    */
   private generateUsersSection(users: User[]): string {
-    const sortedUsers = [...users].sort((a, b) => (b.karma || 0) - (a.karma || 0));
+    const sortedUsers = [...users].sort(
+      (a, b) => (b.karma || 0) - (a.karma || 0),
+    );
     const topUsers = sortedUsers.slice(0, 100);
 
     return `<section class="users-section">
@@ -608,14 +638,18 @@ export class HtmlExporter {
                 </tr>
             </thead>
             <tbody>
-                ${topUsers.map(user => `
+                ${topUsers
+                  .map(
+                    (user) => `
                     <tr>
                         <td>${this.escapeHtml(user.username)}</td>
                         <td><span class="platform-badge">${user.platform}</span></td>
                         <td>${user.karma?.toLocaleString() || "N/A"}</td>
                         <td>${user.createdAt ? this.formatDate(user.createdAt) : "N/A"}</td>
                     </tr>
-                `).join("")}
+                `,
+                  )
+                  .join("")}
             </tbody>
         </table>
         ${users.length > 100 ? `<p><em>Showing top 100 of ${users.length} users</em></p>` : ""}
@@ -657,6 +691,6 @@ export class HtmlExporter {
       '"': "&quot;",
       "'": "&#39;",
     };
-    return text.replace(/[&<>"']/g, m => map[m] || m);
+    return text.replace(/[&<>"']/g, (m) => map[m] || m);
   }
 }

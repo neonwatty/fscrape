@@ -153,13 +153,21 @@ async function handleScrape(url: string, options: any): Promise<void> {
 
     if (scrapeTarget.type === "category") {
       const categoryOptions: any = {};
-      if (scrapeOptions.limit !== undefined) categoryOptions.limit = scrapeOptions.limit;
-      if (scrapeOptions.sortBy !== undefined) categoryOptions.sortBy = scrapeOptions.sortBy as SortOption;
-      if (scrapeOptions.timeRange !== undefined) categoryOptions.timeRange = scrapeOptions.timeRange;
-      if (scrapeOptions.includeComments !== undefined) categoryOptions.includeComments = scrapeOptions.includeComments;
-      if (scrapeOptions.maxDepth !== undefined) categoryOptions.maxDepth = scrapeOptions.maxDepth;
-      
-      const posts = await scraper.scrapeCategory(scrapeTarget.value, categoryOptions);
+      if (scrapeOptions.limit !== undefined)
+        categoryOptions.limit = scrapeOptions.limit;
+      if (scrapeOptions.sortBy !== undefined)
+        categoryOptions.sortBy = scrapeOptions.sortBy as SortOption;
+      if (scrapeOptions.timeRange !== undefined)
+        categoryOptions.timeRange = scrapeOptions.timeRange;
+      if (scrapeOptions.includeComments !== undefined)
+        categoryOptions.includeComments = scrapeOptions.includeComments;
+      if (scrapeOptions.maxDepth !== undefined)
+        categoryOptions.maxDepth = scrapeOptions.maxDepth;
+
+      const posts = await scraper.scrapeCategory(
+        scrapeTarget.value,
+        categoryOptions,
+      );
 
       result = {
         posts,
@@ -178,7 +186,9 @@ async function handleScrape(url: string, options: any): Promise<void> {
       let comments: any[] | undefined = undefined;
       if (scrapeOptions.includeComments) {
         comments = await scraper.scrapeComments(scrapeTarget.value, {
-          ...(scrapeOptions.maxDepth !== undefined && { maxDepth: scrapeOptions.maxDepth }),
+          ...(scrapeOptions.maxDepth !== undefined && {
+            maxDepth: scrapeOptions.maxDepth,
+          }),
         });
       }
 
@@ -195,12 +205,17 @@ async function handleScrape(url: string, options: any): Promise<void> {
     } else {
       // General scrape
       const generalOptions: any = {};
-      if (scrapeOptions.limit !== undefined) generalOptions.limit = scrapeOptions.limit;
-      if (scrapeOptions.sortBy !== undefined) generalOptions.sortBy = scrapeOptions.sortBy as SortOption;
-      if (scrapeOptions.timeRange !== undefined) generalOptions.timeRange = scrapeOptions.timeRange;
-      if (scrapeOptions.includeComments !== undefined) generalOptions.includeComments = scrapeOptions.includeComments;
-      if (scrapeOptions.maxDepth !== undefined) generalOptions.maxDepth = scrapeOptions.maxDepth;
-      
+      if (scrapeOptions.limit !== undefined)
+        generalOptions.limit = scrapeOptions.limit;
+      if (scrapeOptions.sortBy !== undefined)
+        generalOptions.sortBy = scrapeOptions.sortBy as SortOption;
+      if (scrapeOptions.timeRange !== undefined)
+        generalOptions.timeRange = scrapeOptions.timeRange;
+      if (scrapeOptions.includeComments !== undefined)
+        generalOptions.includeComments = scrapeOptions.includeComments;
+      if (scrapeOptions.maxDepth !== undefined)
+        generalOptions.maxDepth = scrapeOptions.maxDepth;
+
       result = await scraper.scrape(generalOptions);
     }
 

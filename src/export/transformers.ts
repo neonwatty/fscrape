@@ -10,25 +10,25 @@ export interface TransformOptions {
   stripHtml?: boolean;
   normalizeWhitespace?: boolean;
   removeEmojis?: boolean;
-  
+
   // Data enrichment
   addStatistics?: boolean;
   addRankings?: boolean;
   addTimestamps?: boolean;
-  
+
   // Anonymization
   anonymizeUsers?: boolean;
   hashUserIds?: boolean;
-  
+
   // Format conversions
   convertDates?: "timestamp" | "iso" | "locale" | "relative";
   convertUrls?: "absolute" | "relative" | "domain";
-  
+
   // Content processing
   extractLinks?: boolean;
   extractMentions?: boolean;
   summarizeContent?: boolean;
-  
+
   // Aggregation
   groupByPlatform?: boolean;
   groupByDate?: boolean;
@@ -52,7 +52,9 @@ export class DataTransformer {
   transformScrapeResult(data: ScrapeResult): ScrapeResult {
     const transformed: ScrapeResult = {
       posts: this.transformPosts(data.posts),
-      comments: data.comments ? this.transformComments(data.comments) : undefined,
+      comments: data.comments
+        ? this.transformComments(data.comments)
+        : undefined,
       users: data.users ? this.transformUsers(data.users) : undefined,
       metadata: this.transformMetadata(data),
     };
@@ -63,7 +65,11 @@ export class DataTransformer {
     }
 
     // Group data if requested
-    if (this.options.groupByPlatform || this.options.groupByDate || this.options.groupByAuthor) {
+    if (
+      this.options.groupByPlatform ||
+      this.options.groupByDate ||
+      this.options.groupByAuthor
+    ) {
       return this.groupData(transformed);
     }
 
@@ -130,7 +136,7 @@ export class DataTransformer {
    * Transform comments
    */
   transformComments(comments: Comment[]): Comment[] {
-    return comments.map(comment => {
+    return comments.map((comment) => {
       const transformed: any = { ...comment };
 
       // Content transformations
@@ -224,7 +230,10 @@ export class DataTransformer {
 
     // Truncate if requested
     if (this.options.truncateContent && this.options.truncateContent > 0) {
-      transformed = this.truncateText(transformed, this.options.truncateContent);
+      transformed = this.truncateText(
+        transformed,
+        this.options.truncateContent,
+      );
     }
 
     // Summarize if requested (simplified version)
@@ -308,25 +317,29 @@ export class DataTransformer {
       posts: {
         total: posts.length,
         averageScore: posts.reduce((sum, p) => sum + p.score, 0) / posts.length,
-        averageComments: posts.reduce((sum, p) => sum + p.commentCount, 0) / posts.length,
-        topScore: Math.max(...posts.map(p => p.score)),
+        averageComments:
+          posts.reduce((sum, p) => sum + p.commentCount, 0) / posts.length,
+        topScore: Math.max(...posts.map((p) => p.score)),
         platforms: this.countByField(posts, "platform"),
       },
       comments: {
         total: comments.length,
-        averageScore: comments.length > 0 
-          ? comments.reduce((sum, c) => sum + c.score, 0) / comments.length 
-          : 0,
-        averageDepth: comments.length > 0
-          ? comments.reduce((sum, c) => sum + c.depth, 0) / comments.length
-          : 0,
+        averageScore:
+          comments.length > 0
+            ? comments.reduce((sum, c) => sum + c.score, 0) / comments.length
+            : 0,
+        averageDepth:
+          comments.length > 0
+            ? comments.reduce((sum, c) => sum + c.depth, 0) / comments.length
+            : 0,
       },
       users: {
         total: users.length,
-        averageKarma: users.length > 0
-          ? users.reduce((sum, u) => sum + (u.karma || 0), 0) / users.length
-          : 0,
-        topKarma: Math.max(...users.map(u => u.karma || 0)),
+        averageKarma:
+          users.length > 0
+            ? users.reduce((sum, u) => sum + (u.karma || 0), 0) / users.length
+            : 0,
+        topKarma: Math.max(...users.map((u) => u.karma || 0)),
       },
     };
   }
@@ -337,8 +350,8 @@ export class DataTransformer {
   private groupData(data: ScrapeResult): ScrapeResult {
     if (this.options.groupByPlatform) {
       const grouped: any = {};
-      
-      data.posts.forEach(post => {
+
+      data.posts.forEach((post) => {
         if (!grouped[post.platform]) {
           grouped[post.platform] = {
             posts: [],
@@ -355,8 +368,8 @@ export class DataTransformer {
 
     if (this.options.groupByDate) {
       const grouped: any = {};
-      
-      data.posts.forEach(post => {
+
+      data.posts.forEach((post) => {
         const date = new Date(post.createdAt).toISOString().split("T")[0];
         if (date && !grouped[date]) {
           grouped[date] = [];
@@ -371,8 +384,8 @@ export class DataTransformer {
 
     if (this.options.groupByAuthor) {
       const grouped: any = {};
-      
-      data.posts.forEach(post => {
+
+      data.posts.forEach((post) => {
         if (!grouped[post.author]) {
           grouped[post.author] = [];
         }
@@ -408,7 +421,7 @@ export class DataTransformer {
   private removeEmojis(text: string): string {
     return text.replace(
       /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu,
-      ""
+      "",
     );
   }
 
@@ -429,15 +442,15 @@ export class DataTransformer {
     // Simple summarization: take first paragraph or first 200 chars
     const paragraphs = text.split("\n\n");
     const firstParagraph = paragraphs[0];
-    
+
     if (!firstParagraph) {
       return "";
     }
-    
+
     if (firstParagraph.length > 200) {
       return this.truncateText(firstParagraph, 200);
     }
-    
+
     return firstParagraph;
   }
 
@@ -463,7 +476,7 @@ export class DataTransformer {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash).toString(16);
@@ -507,7 +520,7 @@ export class DataTransformer {
    */
   private countByField(items: any[], field: string): Record<string, number> {
     const counts: Record<string, number> = {};
-    items.forEach(item => {
+    items.forEach((item) => {
       const value = item[field];
       counts[value] = (counts[value] || 0) + 1;
     });
@@ -586,14 +599,16 @@ export class TransformChain {
   }
 
   apply(data: ScrapeResult): ScrapeResult {
-    return this.transformers.reduce((result, transformer) => 
-      transformer.transformScrapeResult(result), data
+    return this.transformers.reduce(
+      (result, transformer) => transformer.transformScrapeResult(result),
+      data,
     );
   }
 
   applyToPosts(posts: ForumPost[]): ForumPost[] {
-    return this.transformers.reduce((result, transformer) => 
-      transformer.transformPosts(result), posts
+    return this.transformers.reduce(
+      (result, transformer) => transformer.transformPosts(result),
+      posts,
     );
   }
 }

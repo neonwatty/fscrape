@@ -44,7 +44,7 @@ export class HackerNewsScraper {
       batchSize: 10,
       ...config,
     };
-    
+
     this.logger = winston.createLogger({
       level: "info",
       format: winston.format.simple(),
@@ -94,7 +94,7 @@ export class HackerNewsScraper {
    */
   async scrapePosts(
     category: string,
-    options: ScrapeOptions = {}
+    options: ScrapeOptions = {},
   ): Promise<ScrapeResult> {
     const startTime = Date.now();
     const errors: ScrapeError[] = [];
@@ -106,49 +106,55 @@ export class HackerNewsScraper {
       // Map category to story list type
       const storyType = this.mapCategoryToStoryType(category);
       const limit = options.limit || 30;
-      
+
       this.logger.info(`Scraping ${limit} ${storyType} from HackerNews`);
-      
+
       // Get story IDs
       const storyIds = await this.client.getStoryList(storyType, limit);
-      
+
       if (storyIds.length === 0) {
         this.logger.warn(`No stories found for ${storyType}`);
-        return this.createResult(posts, comments, Array.from(users.values()), errors, startTime);
+        return this.createResult(
+          posts,
+          comments,
+          Array.from(users.values()),
+          errors,
+          startTime,
+        );
       }
 
       // Fetch stories in batches
       for (let i = 0; i < storyIds.length; i += this.config.batchSize!) {
         const batch = storyIds.slice(i, i + this.config.batchSize!);
         const items = await this.client.getItems(batch);
-        
+
         for (const item of items) {
           if (!item) continue;
-          
+
           // Parse post
           const post = HackerNewsParsers.parsePost(item);
           if (post) {
             posts.push(post);
-            
+
             // Collect user
             if (item.by) {
               const user = await this.fetchUser(item.by);
               if (user) users.set(user.id, user);
             }
-            
+
             // Fetch comments if requested
             if (options.includeComments && item.kids) {
               const postComments = await this.fetchComments(
                 item.id,
                 item.kids,
-                options.maxDepth || 10
+                options.maxDepth || 10,
               );
-              
+
               // Collect users from comments
               for (const comment of postComments) {
                 comment.postId = post.id;
                 comments.push(comment);
-                
+
                 if (comment.authorId && comment.authorId !== "deleted") {
                   const user = await this.fetchUser(comment.authorId);
                   if (user) users.set(user.id, user);
@@ -157,14 +163,16 @@ export class HackerNewsScraper {
             }
           }
         }
-        
+
         // Rate limiting
         if (i + this.config.batchSize! < storyIds.length) {
           await this.delay(100);
         }
       }
 
-      this.logger.info(`Scraped ${posts.length} posts and ${comments.length} comments`);
+      this.logger.info(
+        `Scraped ${posts.length} posts and ${comments.length} comments`,
+      );
     } catch (error) {
       this.logger.error("Error scraping posts:", error);
       errors.push({
@@ -174,7 +182,13 @@ export class HackerNewsScraper {
       });
     }
 
-    return this.createResult(posts, comments, Array.from(users.values()), errors, startTime);
+    return this.createResult(
+      posts,
+      comments,
+      Array.from(users.values()),
+      errors,
+      startTime,
+    );
   }
 
   /**
@@ -182,7 +196,7 @@ export class HackerNewsScraper {
    */
   async scrapePost(
     postId: string,
-    options: ScrapeOptions = {}
+    options: ScrapeOptions = {},
   ): Promise<ScrapeResult> {
     const startTime = Date.now();
     const errors: ScrapeError[] = [];
@@ -197,7 +211,7 @@ export class HackerNewsScraper {
       }
 
       this.logger.info(`Scraping post ${postId} from HackerNews`);
-      
+
       // Fetch the post
       const item = await this.client.getItem(itemId);
       if (!item) {
@@ -208,25 +222,25 @@ export class HackerNewsScraper {
       const post = HackerNewsParsers.parsePost(item);
       if (post) {
         posts.push(post);
-        
+
         // Collect user
         if (item.by) {
           const user = await this.fetchUser(item.by);
           if (user) users.set(user.id, user);
         }
-        
+
         // Fetch comments
         if (options.includeComments !== false && item.kids) {
           const postComments = await this.fetchComments(
             item.id,
             item.kids,
-            options.maxDepth || 10
+            options.maxDepth || 10,
           );
-          
+
           for (const comment of postComments) {
             comment.postId = post.id;
             comments.push(comment);
-            
+
             if (comment.authorId && comment.authorId !== "deleted") {
               const user = await this.fetchUser(comment.authorId);
               if (user) users.set(user.id, user);
@@ -245,7 +259,13 @@ export class HackerNewsScraper {
       });
     }
 
-    return this.createResult(posts, comments, Array.from(users.values()), errors, startTime);
+    return this.createResult(
+      posts,
+      comments,
+      Array.from(users.values()),
+      errors,
+      startTime,
+    );
   }
 
   /**
@@ -260,7 +280,7 @@ export class HackerNewsScraper {
 
     try {
       this.logger.info(`Scraping user ${username} from HackerNews`);
-      
+
       // Fetch user
       const hnUser = await this.client.getUser(username);
       if (!hnUser) {
@@ -269,22 +289,29 @@ export class HackerNewsScraper {
 
       const user = HackerNewsParsers.parseUser(hnUser);
       users.push(user);
-      
+
       // Optionally fetch recent submissions
       if (hnUser.submitted && hnUser.submitted.length > 0) {
         const recentIds = hnUser.submitted.slice(0, 30); // Get last 30 submissions
         const items = await this.client.getItems(recentIds);
-        
+
         for (const item of items) {
           if (!item) continue;
-          
-          if (item.type === "story" || item.type === "job" || item.type === "poll") {
+
+          if (
+            item.type === "story" ||
+            item.type === "job" ||
+            item.type === "poll"
+          ) {
             const post = HackerNewsParsers.parsePost(item);
             if (post) {
               posts.push(post);
             }
           } else if (item.type === "comment") {
-            const comment = HackerNewsParsers.parseComment(item, item.parent?.toString() || "unknown");
+            const comment = HackerNewsParsers.parseComment(
+              item,
+              item.parent?.toString() || "unknown",
+            );
             if (comment) {
               comments.push(comment);
             }
@@ -292,7 +319,9 @@ export class HackerNewsScraper {
         }
       }
 
-      this.logger.info(`Scraped user with ${posts.length} posts and ${comments.length} comments`);
+      this.logger.info(
+        `Scraped user with ${posts.length} posts and ${comments.length} comments`,
+      );
     } catch (error) {
       this.logger.error("Error scraping user:", error);
       errors.push({
@@ -310,18 +339,19 @@ export class HackerNewsScraper {
    */
   async search(
     query: string,
-    options: ScrapeOptions = {}
+    options: ScrapeOptions = {},
   ): Promise<ScrapeResult> {
     const startTime = Date.now();
     const errors: ScrapeError[] = [];
-    
+
     this.logger.warn("HackerNews API doesn't support native search");
     errors.push({
       code: "NOT_SUPPORTED",
-      message: "Search is not supported by HackerNews API. Consider using Algolia HN Search API.",
+      message:
+        "Search is not supported by HackerNews API. Consider using Algolia HN Search API.",
       timestamp: new Date(),
     });
-    
+
     return this.createResult([], [], [], errors, startTime);
   }
 
@@ -350,7 +380,7 @@ export class HackerNewsScraper {
       job: "jobstories",
       jobs: "jobstories",
     };
-    
+
     return categoryMap[category.toLowerCase()] || "topstories";
   }
 
@@ -360,37 +390,41 @@ export class HackerNewsScraper {
   private async fetchComments(
     postId: number,
     kidIds: number[],
-    maxDepth: number
+    maxDepth: number,
   ): Promise<Comment[]> {
     const comments: Comment[] = [];
     const queue: Array<{ id: number; depth: number; parentId?: string }> = [];
     const commentMap = new Map<string, Comment>();
-    
+
     // Initialize with top-level comments
     for (const kidId of kidIds) {
       queue.push({ id: kidId, depth: 1 });
     }
-    
+
     // Process comments in breadth-first order to maintain hierarchy
     while (queue.length > 0) {
       const batch = queue.splice(0, this.config.batchSize!);
-      
+
       try {
-        const items = await this.client.getItems(batch.map(b => b.id));
-        
+        const items = await this.client.getItems(batch.map((b) => b.id));
+
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
           const { depth, parentId } = batch[i];
-          
+
           if (!item || item.type !== "comment") continue;
-          
-          const comment = HackerNewsParsers.parseComment(item, postId.toString(), depth);
+
+          const comment = HackerNewsParsers.parseComment(
+            item,
+            postId.toString(),
+            depth,
+          );
           if (comment) {
             // Ensure proper parent-child relationship
             comment.parentId = parentId || comment.parentId;
             comments.push(comment);
             commentMap.set(comment.id, comment);
-            
+
             // Add child comments if within depth limit
             if (item.kids && depth < maxDepth) {
               for (const kidId of item.kids) {
@@ -407,13 +441,13 @@ export class HackerNewsScraper {
         this.logger.warn(`Failed to fetch comment batch: ${error}`);
         // Continue with remaining comments
       }
-      
+
       // Rate limiting
       if (queue.length > 0) {
         await this.delay(100);
       }
     }
-    
+
     // Sort comments to maintain thread order (parent before children)
     return this.sortCommentsByHierarchy(comments, commentMap);
   }
@@ -423,37 +457,39 @@ export class HackerNewsScraper {
    */
   private sortCommentsByHierarchy(
     comments: Comment[],
-    commentMap: Map<string, Comment>
+    commentMap: Map<string, Comment>,
   ): Comment[] {
     const sorted: Comment[] = [];
     const visited = new Set<string>();
-    
+
     // Helper function to add comment and its children in order
     const addCommentAndChildren = (comment: Comment) => {
       if (visited.has(comment.id)) return;
       visited.add(comment.id);
       sorted.push(comment);
-      
+
       // Find and add children
-      const children = comments.filter(c => c.parentId === comment.id);
+      const children = comments.filter((c) => c.parentId === comment.id);
       for (const child of children) {
         addCommentAndChildren(child);
       }
     };
-    
+
     // Start with top-level comments
-    const topLevel = comments.filter(c => !c.parentId || !commentMap.has(c.parentId));
+    const topLevel = comments.filter(
+      (c) => !c.parentId || !commentMap.has(c.parentId),
+    );
     for (const comment of topLevel) {
       addCommentAndChildren(comment);
     }
-    
+
     // Add any orphaned comments that weren't processed
     for (const comment of comments) {
       if (!visited.has(comment.id)) {
         sorted.push(comment);
       }
     }
-    
+
     return sorted;
   }
 
@@ -462,7 +498,7 @@ export class HackerNewsScraper {
    */
   private async fetchUser(username: string): Promise<User | null> {
     if (!username || username === "[deleted]") return null;
-    
+
     try {
       const hnUser = await this.client.getUser(username);
       return hnUser ? HackerNewsParsers.parseUser(hnUser) : null;
@@ -479,7 +515,7 @@ export class HackerNewsScraper {
     comments: Comment[],
     users: User[],
     errors: ScrapeError[],
-    startTime: number
+    startTime: number,
   ): ScrapeResult {
     return {
       posts,
@@ -504,6 +540,6 @@ export class HackerNewsScraper {
    * Helper: Delay for rate limiting
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

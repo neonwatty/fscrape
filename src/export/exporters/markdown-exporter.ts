@@ -2,7 +2,12 @@
  * Markdown exporter for forum data
  */
 
-import type { ForumPost, Comment, User, ScrapeResult } from "../../types/core.js";
+import type {
+  ForumPost,
+  Comment,
+  User,
+  ScrapeResult,
+} from "../../types/core.js";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { dirname } from "path";
 
@@ -93,28 +98,26 @@ export class MarkdownExporter {
    * Generate metadata section
    */
   private generateMetadataSection(metadata: any): string {
-    const lines: string[] = [
-      "## Export Metadata\n",
-    ];
+    const lines: string[] = ["## Export Metadata\n"];
 
     const metaItems: string[] = [];
-    
+
     if (metadata.platform) {
       metaItems.push(`**Platform:** ${metadata.platform}`);
     }
-    
+
     if (metadata.scrapedAt) {
       metaItems.push(`**Scraped At:** ${this.formatDate(metadata.scrapedAt)}`);
     }
-    
+
     if (metadata.query) {
       metaItems.push(`**Query:** ${metadata.query}`);
     }
-    
+
     if (metadata.subreddit) {
       metaItems.push(`**Subreddit:** r/${metadata.subreddit}`);
     }
-    
+
     if (metadata.category) {
       metaItems.push(`**Category:** ${metadata.category}`);
     }
@@ -129,9 +132,7 @@ export class MarkdownExporter {
    * Generate statistics section
    */
   private generateStatsSection(data: ScrapeResult): string {
-    const lines: string[] = [
-      "## Statistics\n",
-    ];
+    const lines: string[] = ["## Statistics\n"];
 
     const stats: string[] = [];
 
@@ -144,7 +145,10 @@ export class MarkdownExporter {
       const avgScore = Math.round(totalScore / totalPosts);
       stats.push(`⬆️ **Average Score:** ${avgScore}`);
 
-      const totalCommentCount = data.posts.reduce((sum, post) => sum + post.commentCount, 0);
+      const totalCommentCount = data.posts.reduce(
+        (sum, post) => sum + post.commentCount,
+        0,
+      );
       const avgComments = Math.round(totalCommentCount / totalPosts);
       stats.push(`💬 **Average Comments per Post:** ${avgComments}`);
     }
@@ -169,9 +173,7 @@ export class MarkdownExporter {
    * Generate table of contents
    */
   private generateTableOfContents(posts: ForumPost[]): string {
-    const lines: string[] = [
-      "## Table of Contents\n",
-    ];
+    const lines: string[] = ["## Table of Contents\n"];
 
     posts.slice(0, 20).forEach((post, index) => {
       const title = this.escapeMarkdown(post.title);
@@ -191,16 +193,14 @@ export class MarkdownExporter {
    * Generate posts section
    */
   private generatePostsSection(data: ScrapeResult): string {
-    const lines: string[] = [
-      "## Posts\n",
-    ];
+    const lines: string[] = ["## Posts\n"];
 
     data.posts.forEach((post, index) => {
       lines.push(this.generatePost(post, index));
 
       // Add comments if available and enabled
       if (this.options.includeComments && data.comments) {
-        const postComments = data.comments.filter(c => c.postId === post.id);
+        const postComments = data.comments.filter((c) => c.postId === post.id);
         if (postComments.length > 0) {
           lines.push(this.generateCommentsSection(postComments));
         }
@@ -233,7 +233,7 @@ export class MarkdownExporter {
     metadata.push(`💬 ${post.commentCount} comments`);
     metadata.push(`📅 ${this.formatDate(post.createdAt)}`);
     metadata.push(`🔗 [View Original](${post.url})`);
-    
+
     lines.push(metadata.join(" | "));
     lines.push("");
 
@@ -251,9 +251,7 @@ export class MarkdownExporter {
    * Generate comments section
    */
   private generateCommentsSection(comments: Comment[]): string {
-    const lines: string[] = [
-      "#### Comments\n",
-    ];
+    const lines: string[] = ["#### Comments\n"];
 
     if (this.options.commentThreading) {
       // Build comment tree
@@ -302,7 +300,11 @@ export class MarkdownExporter {
 
       // Render children if within max depth
       if (depth < this.options.maxCommentDepth!) {
-        const childrenOutput = this.renderCommentTree(tree, comment.id, depth + 1);
+        const childrenOutput = this.renderCommentTree(
+          tree,
+          comment.id,
+          depth + 1,
+        );
         if (childrenOutput) {
           lines.push(childrenOutput);
         }
@@ -345,14 +347,21 @@ export class MarkdownExporter {
     ];
 
     // Sort users by karma (if available)
-    const sortedUsers = [...users].sort((a, b) => (b.karma || 0) - (a.karma || 0));
+    const sortedUsers = [...users].sort(
+      (a, b) => (b.karma || 0) - (a.karma || 0),
+    );
 
     sortedUsers.slice(0, 50).forEach((user) => {
       const username = this.escapeMarkdown(user.username);
-      const karma = user.karma !== undefined ? user.karma.toLocaleString() : "N/A";
-      const memberSince = user.createdAt ? this.formatDate(user.createdAt) : "N/A";
-      
-      lines.push(`| ${username} | ${user.platform} | ${karma} | ${memberSince} |`);
+      const karma =
+        user.karma !== undefined ? user.karma.toLocaleString() : "N/A";
+      const memberSince = user.createdAt
+        ? this.formatDate(user.createdAt)
+        : "N/A";
+
+      lines.push(
+        `| ${username} | ${user.platform} | ${karma} | ${memberSince} |`,
+      );
     });
 
     if (users.length > 50) {
@@ -411,7 +420,10 @@ export class MarkdownExporter {
 
     // Restore code blocks
     codeBlocks.forEach((block, index) => {
-      formattedContent = formattedContent.replace(`__CODE_BLOCK_${index}__`, block);
+      formattedContent = formattedContent.replace(
+        `__CODE_BLOCK_${index}__`,
+        block,
+      );
     });
 
     return formattedContent;
@@ -433,7 +445,7 @@ export class MarkdownExporter {
       .replace(/[^a-z0-9\s-]/g, "")
       .replace(/\s+/g, "-")
       .substring(0, 50);
-    
+
     return `post-${index + 1}-${slug}`;
   }
 }

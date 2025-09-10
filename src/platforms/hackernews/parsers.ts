@@ -47,7 +47,11 @@ export class HackerNewsParsers {
   /**
    * Convert HN comment to Comment
    */
-  static parseComment(item: HNItem, postId: string, depth: number = 0): Comment | null {
+  static parseComment(
+    item: HNItem,
+    postId: string,
+    depth: number = 0,
+  ): Comment | null {
     if (!item || item.deleted || item.dead) {
       return null;
     }
@@ -121,7 +125,7 @@ export class HackerNewsParsers {
 
     const urls: string[] = [];
     const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
-    
+
     let match;
     while ((match = urlRegex.exec(text)) !== null) {
       urls.push(match[0]);
@@ -159,7 +163,9 @@ export class HackerNewsParsers {
   /**
    * Determine story type from HN item
    */
-  static determineStoryType(item: HNItem): "link" | "text" | "job" | "poll" | "show" | "ask" {
+  static determineStoryType(
+    item: HNItem,
+  ): "link" | "text" | "job" | "poll" | "show" | "ask" {
     if (item.type === "job") {
       return "job";
     }
@@ -237,9 +243,9 @@ export class HackerNewsParsers {
       };
     }
 
-    const authors = new Set(comments.map(c => c.author));
-    const scores = comments.map(c => c.score || 0);
-    const depths = comments.map(c => c.depth);
+    const authors = new Set(comments.map((c) => c.author));
+    const scores = comments.map((c) => c.score || 0);
+    const depths = comments.map((c) => c.depth);
 
     return {
       totalComments: comments.length,
@@ -281,7 +287,10 @@ export class HackerNewsParsers {
   /**
    * Parse poll options if present
    */
-  static parsePollOptions(item: HNItem, pollOptions: HNItem[]): {
+  static parsePollOptions(
+    item: HNItem,
+    pollOptions: HNItem[],
+  ): {
     question: string;
     options: Array<{
       id: string;
@@ -294,8 +303,8 @@ export class HackerNewsParsers {
     }
 
     const options = pollOptions
-      .filter(opt => opt.type === "pollopt" && !opt.deleted && !opt.dead)
-      .map(opt => ({
+      .filter((opt) => opt.type === "pollopt" && !opt.deleted && !opt.dead)
+      .map((opt) => ({
         id: opt.id.toString(),
         text: this.cleanContent(opt.text || ""),
         score: opt.score || 0,
@@ -349,7 +358,8 @@ export class HackerNewsParsers {
     if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
     if (seconds < 2592000) return `${Math.floor(seconds / 86400)} days ago`;
-    if (seconds < 31536000) return `${Math.floor(seconds / 2592000)} months ago`;
+    if (seconds < 31536000)
+      return `${Math.floor(seconds / 2592000)} months ago`;
     return `${Math.floor(seconds / 31536000)} years ago`;
   }
 
@@ -392,7 +402,10 @@ export class HackerNewsParsers {
           break;
         case "comment":
           // For batch parsing, we don't have postId context
-          const comment = this.parseComment(item, item.parent?.toString() || "unknown");
+          const comment = this.parseComment(
+            item,
+            item.parent?.toString() || "unknown",
+          );
           if (comment) comments.push(comment);
           break;
       }
@@ -447,7 +460,7 @@ export class HackerNewsValidators {
   static extractItemIdFromUrl(url: string): number | null {
     const pattern = /[?&]id=(\d+)/;
     const match = url.match(pattern);
-    
+
     if (match && match[1]) {
       const id = parseInt(match[1], 10);
       return isNaN(id) ? null : id;
@@ -462,7 +475,7 @@ export class HackerNewsValidators {
   static extractUsernameFromUrl(url: string): string | null {
     const pattern = /[?&]id=([^&]+)/;
     const match = url.match(pattern);
-    
+
     return match && match[1] ? decodeURIComponent(match[1]) : null;
   }
 }
