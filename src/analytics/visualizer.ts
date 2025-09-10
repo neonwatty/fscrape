@@ -527,6 +527,354 @@ export class AnalyticsVisualizer {
     return lines.join("\n");
   }
 
+  /**
+   * Create a scatter plot
+   */
+  public createScatterPlot(
+    data: Array<{ x: number; y: number; label?: string }>,
+    title?: string,
+    options?: ChartOptions,
+  ): string {
+    const opts = { ...this.defaultOptions, ...options };
+    const lines: string[] = [];
+
+    if (title) {
+      lines.push(this.centerText(title, opts.width));
+      lines.push("");
+    }
+
+    if (data.length === 0) {
+      return "No data available";
+    }
+
+    // Find bounds
+    const xValues = data.map(d => d.x);
+    const yValues = data.map(d => d.y);
+    const xMin = Math.min(...xValues);
+    const xMax = Math.max(...xValues);
+    const yMin = Math.min(...yValues);
+    const yMax = Math.max(...yValues);
+    const xRange = xMax - xMin || 1;
+    const yRange = yMax - yMin || 1;
+
+    // Create chart dimensions
+    const chartHeight = opts.height - (opts.showLabels ? 4 : 2);
+    const chartWidth = opts.width - 10;
+
+    // Create grid
+    const grid: string[][] = [];
+    for (let y = 0; y < chartHeight; y++) {
+      grid[y] = [];
+      for (let x = 0; x < chartWidth; x++) {
+        grid[y][x] = opts.showGrid && (x % 10 === 0 || y % 5 === 0) ? "·" : " ";
+      }
+    }
+
+    // Plot points
+    data.forEach((point, index) => {
+      const xPos = Math.floor(((point.x - xMin) / xRange) * (chartWidth - 1));
+      const yPos = Math.floor((1 - (point.y - yMin) / yRange) * (chartHeight - 1));
+      
+      if (xPos >= 0 && xPos < chartWidth && yPos >= 0 && yPos < chartHeight) {
+        grid[yPos][xPos] = this.getScatterCharacter(index);
+      }
+    });
+
+    // Y-axis labels
+    const yLabels = this.generateYAxisLabels(yMin, yMax, chartHeight);
+
+    // Build chart
+    for (let y = 0; y < chartHeight; y++) {
+      let line = "";
+
+      // Y-axis label
+      if (opts.showLabels && y % Math.floor(chartHeight / 5) === 0) {
+        const labelIndex = Math.floor((y / chartHeight) * (yLabels.length - 1));
+        line += this.padRight(
+          yLabels[yLabels.length - 1 - labelIndex].toFixed(1),
+          8,
+        );
+      } else {
+        line += "        ";
+      }
+
+      // Y-axis
+      line += "│";
+
+      // Grid content
+      line += grid[y].join("");
+
+      lines.push(line);
+    }
+
+    // X-axis
+    lines.push("        └" + "─".repeat(chartWidth));
+
+    // X-axis labels
+    if (opts.showLabels) {
+      const xLabels = [];
+      for (let i = 0; i <= 4; i++) {
+        xLabels.push((xMin + (xRange * i) / 4).toFixed(1));
+      }
+      lines.push("         " + xLabels.join("     ".padEnd(Math.floor(chartWidth / 4))));
+    }
+
+    // Legend
+    if (opts.showLegend && data.some(d => d.label)) {
+      lines.push("");
+      lines.push("Points:");
+      data.slice(0, 10).forEach((point, i) => {
+        if (point.label) {
+          lines.push(`  ${this.getScatterCharacter(i)} ${point.label}`);
+        }
+      });
+    }
+
+    return lines.join("\n");
+  }
+
+  /**
+   * Create a histogram
+   */
+  public createHistogram(
+    data: number[],
+    bins = 10,
+    title?: string,
+    options?: ChartOptions,
+  ): string {
+    const opts = { ...this.defaultOptions, ...options };
+    const lines: string[] = [];
+
+    if (title) {
+      lines.push(this.centerText(title, opts.width));
+      lines.push("");
+    }
+
+    if (data.length === 0) {
+      return "No data available";
+    }
+
+    // Calculate bins
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const binWidth = (max - min) / bins || 1;
+    const histogram: number[] = new Array(bins).fill(0);
+
+    // Populate bins
+    data.forEach(value => {
+      const binIndex = Math.min(
+        Math.floor((value - min) / binWidth),
+        bins - 1
+      );
+      histogram[binIndex]++;
+    });
+
+    // Find max frequency for scaling
+    const maxFreq = Math.max(...histogram);
+    const scale = (opts.height - 5) / (maxFreq || 1);
+
+    // Create chart
+    for (let y = opts.height - 5; y >= 0; y--) {
+      let line = "";
+
+      // Y-axis label
+      if (y % 5 === 0) {
+        const value = (y / scale).toFixed(0);
+        line += this.padRight(value, 8);
+      } else {
+        line += "        ";
+      }
+
+      // Y-axis
+      line += "│";
+
+      // Draw bins
+      const barWidth = Math.floor((opts.width - 10) / bins);
+      histogram.forEach((freq) => {
+        const barHeight = Math.floor(freq * scale);
+        if (y < barHeight) {
+          line += "█".repeat(barWidth - 1) + " ";
+        } else {
+          line += " ".repeat(barWidth);
+        }
+      });
+
+      lines.push(line);
+    }
+
+    // X-axis
+    lines.push("        └" + "─".repeat(opts.width - 10));
+
+    // X-axis labels
+    if (opts.showLabels) {
+      let labelLine = "         ";
+      for (let i = 0; i <= bins; i += Math.ceil(bins / 5)) {
+        const value = min + i * binWidth;
+        labelLine += this.padRight(value.toFixed(1), Math.floor((opts.width - 10) / 5));
+      }
+      lines.push(labelLine);
+    }
+
+    // Statistics
+    if (opts.showLegend) {
+      const mean = data.reduce((a, b) => a + b, 0) / data.length;
+      const stdDev = Math.sqrt(
+        data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length
+      );
+      lines.push("");
+      lines.push(`Count: ${data.length} | Mean: ${mean.toFixed(2)} | StdDev: ${stdDev.toFixed(2)}`);
+      lines.push(`Min: ${min.toFixed(2)} | Max: ${max.toFixed(2)} | Bins: ${bins}`);
+    }
+
+    return lines.join("\n");
+  }
+
+  /**
+   * Create a box plot
+   */
+  public createBoxPlot(
+    datasets: Array<{ label: string; values: number[] }>,
+    title?: string,
+    options?: ChartOptions,
+  ): string {
+    const opts = { ...this.defaultOptions, ...options };
+    const lines: string[] = [];
+
+    if (title) {
+      lines.push(this.centerText(title, opts.width));
+      lines.push("");
+    }
+
+    if (datasets.length === 0) {
+      return "No data available";
+    }
+
+    // Calculate statistics for each dataset
+    const stats = datasets.map(dataset => {
+      const sorted = [...dataset.values].sort((a, b) => a - b);
+      const n = sorted.length;
+      
+      return {
+        label: dataset.label,
+        min: sorted[0],
+        q1: sorted[Math.floor(n * 0.25)],
+        median: sorted[Math.floor(n * 0.5)],
+        q3: sorted[Math.floor(n * 0.75)],
+        max: sorted[n - 1],
+        outliers: this.findOutliers(sorted),
+      };
+    });
+
+    // Find overall min/max for scaling
+    const allValues = datasets.flatMap(d => d.values);
+    const overallMin = Math.min(...allValues);
+    const overallMax = Math.max(...allValues);
+    const range = overallMax - overallMin || 1;
+
+    // Chart dimensions
+    const chartHeight = opts.height - 4;
+    const chartWidth = opts.width - 10;
+    const boxHeight = Math.floor(chartHeight / datasets.length) - 1;
+    const boxCenter = Math.floor(boxHeight / 2);
+
+    // Y-axis scale
+    const scale = (chartWidth - 2) / range;
+
+    // Draw each box plot
+    stats.forEach((stat, index) => {
+      const yStart = index * (boxHeight + 1) + 2;
+
+      // Label
+      if (opts.showLabels) {
+        lines.push(this.padRight(stat.label.substring(0, 8), 10));
+      }
+
+      // Create box plot line
+      const boxLine = new Array(chartWidth).fill(" ");
+      
+      // Whiskers and box positions
+      const minPos = Math.floor((stat.min - overallMin) * scale);
+      const q1Pos = Math.floor((stat.q1 - overallMin) * scale);
+      const medianPos = Math.floor((stat.median - overallMin) * scale);
+      const q3Pos = Math.floor((stat.q3 - overallMin) * scale);
+      const maxPos = Math.floor((stat.max - overallMin) * scale);
+
+      // Draw whiskers
+      for (let i = minPos; i <= maxPos; i++) {
+        if (i === minPos || i === maxPos) {
+          boxLine[i] = "│";
+        } else if (i > minPos && i < q1Pos) {
+          boxLine[i] = "─";
+        } else if (i > q3Pos && i < maxPos) {
+          boxLine[i] = "─";
+        }
+      }
+
+      // Draw box
+      for (let i = q1Pos; i <= q3Pos; i++) {
+        if (i === q1Pos || i === q3Pos) {
+          boxLine[i] = "│";
+        } else if (i === medianPos) {
+          boxLine[i] = "┊";
+        } else {
+          boxLine[i] = "█";
+        }
+      }
+
+      // Draw outliers
+      stat.outliers.forEach(outlier => {
+        const pos = Math.floor((outlier - overallMin) * scale);
+        if (pos >= 0 && pos < chartWidth) {
+          boxLine[pos] = "◦";
+        }
+      });
+
+      lines.push("        │" + boxLine.join(""));
+    });
+
+    // X-axis
+    lines.push("        └" + "─".repeat(chartWidth));
+
+    // X-axis labels
+    if (opts.showLabels) {
+      const labels = [];
+      for (let i = 0; i <= 4; i++) {
+        labels.push((overallMin + (range * i) / 4).toFixed(1));
+      }
+      lines.push("         " + labels.join("     ".padEnd(Math.floor(chartWidth / 4))));
+    }
+
+    // Legend
+    if (opts.showLegend) {
+      lines.push("");
+      lines.push("Box Plot Legend: │ = whisker/quartile, █ = box, ┊ = median, ◦ = outlier");
+    }
+
+    return lines.join("\n");
+  }
+
+  /**
+   * Find outliers using IQR method
+   */
+  private findOutliers(sorted: number[]): number[] {
+    const n = sorted.length;
+    const q1 = sorted[Math.floor(n * 0.25)];
+    const q3 = sorted[Math.floor(n * 0.75)];
+    const iqr = q3 - q1;
+    const lowerBound = q1 - 1.5 * iqr;
+    const upperBound = q3 + 1.5 * iqr;
+    
+    return sorted.filter(v => v < lowerBound || v > upperBound);
+  }
+
+  /**
+   * Get character for scatter plot points
+   */
+  private getScatterCharacter(index: number): string {
+    const chars = ["●", "◆", "▲", "■", "◉", "★", "✦", "◈"];
+    return chars[index % chars.length];
+  }
+
   // Helper methods
 
   private generateYAxisLabels(
