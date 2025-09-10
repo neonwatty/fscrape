@@ -1,4 +1,8 @@
 import { logger } from "./logger.js";
+import pRetry, {
+  type Options as PRetryOptions,
+  type FailedAttemptError,
+} from "p-retry";
 
 /**
  * Backoff strategy types
@@ -352,4 +356,259 @@ export async function retryWithBackoff<T>(
 ): Promise<T> {
   const backoff = BackoffFactory.create(config);
   return backoff.execute(fn, shouldRetry);
+}
+
+/**
+ * Advanced retry configuration with p-retry integration
+ */
+export interface AdvancedRetryConfig {
+  /** Base retry configuration */
+  retries?: number;
+  /** Minimum delay between retries in ms */
+  minTimeout?: number;
+  /** Maximum delay between retries in ms */
+  maxTimeout?: number;
+  /** Exponential factor for retry delays */
+  factor?: number;
+  /** Randomization factor for delays */
+  randomize?: boolean;
+  /** Called on each retry attempt */
+  onFailedAttempt?: (error: FailedAttemptError) => void | Promise<void>;
+  /** Custom retry logic */
+  shouldRetry?: (error: FailedAttemptError) => boolean | Promise<boolean>;
+  /** Abort signal for cancellation */
+  signal?: AbortSignal;
+}
+
+/**
+ * P-Retry wrapper with advanced backoff strategies
+ */
+export class AdvancedRetry {
+  private readonly config: AdvancedRetryConfig;
+  private readonly backoffStrategy: BaseBackoffStrategy | undefined;
+
+  constructor(
+    config: AdvancedRetryConfig = {},
+    backoffStrategy?: BaseBackoffStrategy,
+  ) {
+    this.config = config;
+    this.backoffStrategy = backoffStrategy;
+  }
+
+  /**
+   * Execute function with p-retry and custom backoff
+   */
+  async execute<T>(fn: () => Promise<T>): Promise<T> {
+    const options: PRetryOptions = {
+      retries: this.config.retries ?? 10,
+      minTimeout: this.config.minTimeout ?? 1000,
+      maxTimeout: this.config.maxTimeout ?? 60000,
+      factor: this.config.factor ?? 2,
+      randomize: this.config.randomize ?? true,
+      ...(this.config.signal && { signal: this.config.signal }),
+      onFailedAttempt: async (error) => {
+        // Log the failed attempt
+        logger.warn(
+          `Retry attempt ${error.attemptNumber} failed: ${error.message}`,
+        );
+
+        // Call user's handler if provided
+        if (this.config.onFailedAttempt) {
+          await this.config.onFailedAttempt(error);
+        }
+
+        // Apply custom backoff if provided
+        if (
+          this.backoffStrategy &&
+          error.attemptNumber <= error.retriesLeft + error.attemptNumber
+        ) {
+          const delay = this.backoffStrategy.getNextDelay();
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      },
+    };
+
+    // Add custom retry logic if provided
+    if (this.config.shouldRetry) {
+      const originalShouldRetry = this.config.shouldRetry;
+      const extendedOptions = {
+        ...options,
+        shouldRetry: async (error: FailedAttemptError) => {
+          return originalShouldRetry(error);
+        },
+      };
+      return pRetry(fn, extendedOptions);
+    }
+
+    return pRetry(fn, options);
+  }
+
+  /**
+   * Create an instance with exponential backoff
+   */
+  static withExponentialBackoff(
+    config?: AdvancedRetryConfig,
+    backoffConfig?: Partial<BackoffConfig>,
+  ): AdvancedRetry {
+    const backoff = BackoffFactory.exponential(
+      backoffConfig?.initialDelayMs,
+      backoffConfig?.maxDelayMs,
+      backoffConfig?.multiplier,
+    );
+    return new AdvancedRetry(config ?? {}, backoff);
+  }
+
+  /**
+   * Create an instance with linear backoff
+   */
+  static withLinearBackoff(
+    config?: AdvancedRetryConfig,
+    backoffConfig?: Partial<BackoffConfig>,
+  ): AdvancedRetry {
+    const backoff = BackoffFactory.linear(
+      backoffConfig?.initialDelayMs,
+      backoffConfig?.maxDelayMs,
+    );
+    return new AdvancedRetry(config ?? {}, backoff);
+  }
+
+  /**
+   * Create an instance with decorrelated backoff
+   */
+  static withDecorrelatedBackoff(
+    config?: AdvancedRetryConfig,
+    backoffConfig?: Partial<BackoffConfig>,
+  ): AdvancedRetry {
+    const backoff = BackoffFactory.decorrelated(
+      backoffConfig?.initialDelayMs,
+      backoffConfig?.maxDelayMs,
+    );
+    return new AdvancedRetry(config ?? {}, backoff);
+  }
+}
+
+/**
+ * Error classification for intelligent retry decisions
+ */
+export class ErrorClassifier {
+  private static readonly RETRYABLE_ERROR_CODES = new Set([
+    "ECONNRESET",
+    "ETIMEDOUT",
+    "ECONNREFUSED",
+    "ENOTFOUND",
+    "ENETUNREACH",
+    "EHOSTUNREACH",
+    "EPIPE",
+    "EAI_AGAIN",
+  ]);
+
+  private static readonly RETRYABLE_HTTP_CODES = new Set([
+    408, // Request Timeout
+    429, // Too Many Requests
+    500, // Internal Server Error
+    502, // Bad Gateway
+    503, // Service Unavailable
+    504, // Gateway Timeout
+    509, // Bandwidth Limit Exceeded
+    520, // Unknown Error (Cloudflare)
+    521, // Web Server Is Down (Cloudflare)
+    522, // Connection Timed Out (Cloudflare)
+    523, // Origin Is Unreachable (Cloudflare)
+    524, // A Timeout Occurred (Cloudflare)
+  ]);
+
+  /**
+   * Check if an error is retryable based on its characteristics
+   */
+  static isRetryable(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    // Check for network errors
+    if ("code" in error && typeof error.code === "string") {
+      if (this.RETRYABLE_ERROR_CODES.has(error.code)) {
+        return true;
+      }
+    }
+
+    // Check for HTTP status codes
+    if ("statusCode" in error && typeof error.statusCode === "number") {
+      if (this.RETRYABLE_HTTP_CODES.has(error.statusCode)) {
+        return true;
+      }
+    }
+
+    // Check for rate limit errors
+    if (this.isRateLimitError(error)) {
+      return true;
+    }
+
+    // Check for temporary errors
+    if (this.isTemporaryError(error)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if error is a rate limit error
+   */
+  static isRateLimitError(error: Error): boolean {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes("rate limit") ||
+      message.includes("too many requests") ||
+      message.includes("429") ||
+      message.includes("quota exceeded")
+    );
+  }
+
+  /**
+   * Check if error is temporary
+   */
+  static isTemporaryError(error: Error): boolean {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes("temporary") ||
+      message.includes("try again") ||
+      message.includes("temporarily unavailable") ||
+      message.includes("timeout")
+    );
+  }
+
+  /**
+   * Extract retry delay from error if available
+   */
+  static extractRetryDelay(error: Error): number | undefined {
+    // Check for Retry-After header value in error
+    if ("retryAfter" in error && typeof error.retryAfter === "number") {
+      return error.retryAfter * 1000; // Convert to milliseconds
+    }
+
+    // Try to extract from error message
+    const match = error.message.match(/retry[- ]?after:?\s*(\d+)/i);
+    if (match && match[1]) {
+      return parseInt(match[1], 10) * 1000;
+    }
+
+    return undefined;
+  }
+}
+
+/**
+ * Utility function for creating a retry-enabled function
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function withRetry<T extends (...args: any[]) => Promise<any>>(
+  fn: T,
+  config?: AdvancedRetryConfig,
+  backoffStrategy?: BaseBackoffStrategy,
+): T {
+  const retry = new AdvancedRetry(config ?? {}, backoffStrategy);
+
+  return (async (...args: Parameters<T>) => {
+    return retry.execute(() => fn(...args));
+  }) as T;
 }
