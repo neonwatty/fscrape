@@ -2,9 +2,9 @@
  * Enhanced logger using Winston with comprehensive error handling
  */
 
-import winston from 'winston';
-import path from 'path';
-import { BaseError, ErrorSeverity } from './errors.js';
+import winston from "winston";
+import path from "path";
+import { BaseError, ErrorSeverity } from "./errors.js";
 
 /**
  * Custom log levels matching error severity
@@ -16,28 +16,28 @@ const customLevels = {
     warn: 2,
     info: 3,
     debug: 4,
-    trace: 5
+    trace: 5,
   },
   colors: {
-    critical: 'red bold',
-    error: 'red',
-    warn: 'yellow',
-    info: 'green',
-    debug: 'blue',
-    trace: 'gray'
-  }
+    critical: "red bold",
+    error: "red",
+    warn: "yellow",
+    info: "green",
+    debug: "blue",
+    trace: "gray",
+  },
 };
 
 /**
  * Format for console output with colors
  */
 const consoleFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
   winston.format.errors({ stack: true }),
   winston.format.colorize(),
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
     let output = `${timestamp} [${level}]: ${message}`;
-    
+
     // Add metadata if present
     if (Object.keys(meta).length > 0) {
       // Handle error objects specially
@@ -52,16 +52,16 @@ const consoleFormat = winston.format.combine(
         }
       } else if (meta.error instanceof Error) {
         output += `\n  Error: ${meta.error.message}`;
-        if (meta.error.stack && process.env.LOG_STACK_TRACES === 'true') {
+        if (meta.error.stack && process.env.LOG_STACK_TRACES === "true") {
           output += `\n  Stack: ${meta.error.stack}`;
         }
       } else if (Object.keys(meta).length > 0) {
         output += `\n  Metadata: ${JSON.stringify(meta, null, 2)}`;
       }
     }
-    
+
     return output;
-  })
+  }),
 );
 
 /**
@@ -70,7 +70,7 @@ const consoleFormat = winston.format.combine(
 const fileFormat = winston.format.combine(
   winston.format.timestamp(),
   winston.format.errors({ stack: true }),
-  winston.format.json()
+  winston.format.json(),
 );
 
 /**
@@ -78,59 +78,59 @@ const fileFormat = winston.format.combine(
  */
 function createTransports(): winston.transport[] {
   const transports: winston.transport[] = [];
-  
+
   // Console transport (always enabled unless in test)
-  if (process.env.NODE_ENV !== 'test') {
+  if (process.env.NODE_ENV !== "test") {
     transports.push(
       new winston.transports.Console({
         format: consoleFormat,
-        level: process.env.LOG_LEVEL || 'info',
+        level: process.env.LOG_LEVEL || "info",
         handleExceptions: true,
-        handleRejections: true
-      })
+        handleRejections: true,
+      }),
     );
   }
-  
+
   // File transports (only in production)
-  if (process.env.NODE_ENV === 'production') {
-    const logDir = process.env.LOG_DIR || 'logs';
-    
+  if (process.env.NODE_ENV === "production") {
+    const logDir = process.env.LOG_DIR || "logs";
+
     // Error log file
     transports.push(
       new winston.transports.File({
-        filename: path.join(logDir, 'error.log'),
-        level: 'error',
+        filename: path.join(logDir, "error.log"),
+        level: "error",
         format: fileFormat,
         maxsize: 5242880, // 5MB
         maxFiles: 5,
-        tailable: true
-      })
+        tailable: true,
+      }),
     );
-    
+
     // Combined log file
     transports.push(
       new winston.transports.File({
-        filename: path.join(logDir, 'combined.log'),
+        filename: path.join(logDir, "combined.log"),
         format: fileFormat,
         maxsize: 5242880, // 5MB
         maxFiles: 5,
-        tailable: true
-      })
+        tailable: true,
+      }),
     );
-    
+
     // Critical errors log file
     transports.push(
       new winston.transports.File({
-        filename: path.join(logDir, 'critical.log'),
-        level: 'critical',
+        filename: path.join(logDir, "critical.log"),
+        level: "critical",
         format: fileFormat,
         maxsize: 5242880, // 5MB
         maxFiles: 10,
-        tailable: true
-      })
+        tailable: true,
+      }),
     );
   }
-  
+
   return transports;
 }
 
@@ -141,11 +141,11 @@ const winstonLogger = winston.createLogger({
   levels: customLevels.levels,
   transports: createTransports(),
   exitOnError: false,
-  silent: process.env.DISABLE_LOGGING === 'true'
+  silent: process.env.DISABLE_LOGGING === "true",
 });
 
 // Add colors if using console transport
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== "test") {
   winston.addColors(customLevels.colors);
 }
 
@@ -169,27 +169,39 @@ export interface Logger {
  */
 class EnhancedLogger implements Logger {
   private metadata: Record<string, any> = {};
-  
+
   constructor(metadata?: Record<string, any>) {
     this.metadata = metadata || {};
   }
-  
+
   trace(message: string, ...meta: any[]): void {
-    winstonLogger.log('trace', message, { ...this.metadata, ...this.extractMeta(meta) });
+    winstonLogger.log("trace", message, {
+      ...this.metadata,
+      ...this.extractMeta(meta),
+    });
   }
-  
+
   debug(message: string, ...meta: any[]): void {
-    winstonLogger.debug(message, { ...this.metadata, ...this.extractMeta(meta) });
+    winstonLogger.debug(message, {
+      ...this.metadata,
+      ...this.extractMeta(meta),
+    });
   }
-  
+
   info(message: string, ...meta: any[]): void {
-    winstonLogger.info(message, { ...this.metadata, ...this.extractMeta(meta) });
+    winstonLogger.info(message, {
+      ...this.metadata,
+      ...this.extractMeta(meta),
+    });
   }
-  
+
   warn(message: string, ...meta: any[]): void {
-    winstonLogger.warn(message, { ...this.metadata, ...this.extractMeta(meta) });
+    winstonLogger.warn(message, {
+      ...this.metadata,
+      ...this.extractMeta(meta),
+    });
   }
-  
+
   error(message: string, error?: Error | BaseError, ...meta: any[]): void {
     const metadata = { ...this.metadata, ...this.extractMeta(meta) };
     if (error) {
@@ -197,7 +209,7 @@ class EnhancedLogger implements Logger {
     }
     winstonLogger.error(message, metadata);
   }
-  
+
   critical(message: string, error?: Error | BaseError, ...meta: any[]): void {
     const metadata = { ...this.metadata, ...this.extractMeta(meta) };
     if (error) {
@@ -207,18 +219,18 @@ class EnhancedLogger implements Logger {
         metadata.stack = error.stack;
       }
     }
-    winstonLogger.log('critical', message, metadata);
+    winstonLogger.log("critical", message, metadata);
   }
-  
+
   /**
    * Log an error with automatic severity detection
    */
   logError(error: Error | BaseError, context?: Record<string, any>): void {
     const metadata = { ...this.metadata, ...context, error };
-    
+
     if (error instanceof BaseError) {
       const message = `[${error.code}] ${error.message}`;
-      
+
       switch (error.severity) {
         case ErrorSeverity.CRITICAL:
           this.critical(message, error);
@@ -239,14 +251,14 @@ class EnhancedLogger implements Logger {
       this.error(error.message, error);
     }
   }
-  
+
   /**
    * Create a child logger with additional metadata
    */
   child(metadata: Record<string, any>): Logger {
     return new EnhancedLogger({ ...this.metadata, ...metadata });
   }
-  
+
   /**
    * Start a timer for performance logging
    */
@@ -257,17 +269,21 @@ class EnhancedLogger implements Logger {
       return duration;
     };
   }
-  
+
   /**
    * Extract metadata from variadic arguments
    */
   private extractMeta(args: any[]): Record<string, any> {
     if (args.length === 0) return {};
-    
-    if (args.length === 1 && typeof args[0] === 'object' && !Array.isArray(args[0])) {
+
+    if (
+      args.length === 1 &&
+      typeof args[0] === "object" &&
+      !Array.isArray(args[0])
+    ) {
       return args[0];
     }
-    
+
     return { data: args };
   }
 }
@@ -280,24 +296,32 @@ export const logger: Logger = new EnhancedLogger();
 /**
  * Create a scoped logger with context
  */
-export function createLogger(scope: string, metadata?: Record<string, any>): Logger {
+export function createLogger(
+  scope: string,
+  metadata?: Record<string, any>,
+): Logger {
   return logger.child({ scope, ...metadata });
 }
 
 /**
  * Middleware for Express/Koa error logging
  */
-export function errorLoggingMiddleware(err: Error, req: any, res: any, next: any): void {
+export function errorLoggingMiddleware(
+  err: Error,
+  req: any,
+  res: any,
+  next: any,
+): void {
   const metadata = {
     method: req.method,
     url: req.url,
     ip: req.ip,
-    userAgent: req.get('user-agent'),
-    correlationId: req.id || req.correlationId
+    userAgent: req.get("user-agent"),
+    correlationId: req.id || req.correlationId,
   };
-  
+
   logger.logError(err, metadata);
-  
+
   next(err);
 }
 
@@ -306,27 +330,27 @@ export function errorLoggingMiddleware(err: Error, req: any, res: any, next: any
  */
 export function setupGlobalErrorHandlers(): void {
   // Handle uncaught exceptions
-  process.on('uncaughtException', (error: Error) => {
-    logger.critical('Uncaught Exception', error);
+  process.on("uncaughtException", (error: Error) => {
+    logger.critical("Uncaught Exception", error);
     // Give logger time to write before exiting
     setTimeout(() => {
       process.exit(1);
     }, 1000);
   });
-  
+
   // Handle unhandled promise rejections
-  process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
-    logger.critical('Unhandled Promise Rejection', new Error(String(reason)), {
-      promise: promise.toString()
+  process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
+    logger.critical("Unhandled Promise Rejection", new Error(String(reason)), {
+      promise: promise.toString(),
     });
   });
-  
+
   // Handle warnings
-  process.on('warning', (warning: Error) => {
-    logger.warn('Process Warning', undefined, {
+  process.on("warning", (warning: Error) => {
+    logger.warn("Process Warning", undefined, {
       name: warning.name,
       message: warning.message,
-      stack: warning.stack
+      stack: warning.stack,
     });
   });
 }

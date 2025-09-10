@@ -3,30 +3,30 @@
  * Uses winston for structured logging with multiple transports
  */
 
-import { 
-  AdvancedLogger, 
-  LoggerConfig, 
+import {
+  AdvancedLogger,
+  LoggerConfig,
   LogMetadata,
   initializeLogger,
   getLogger,
   setupGlobalErrorLogging,
-  createSimpleLogger
-} from './advanced-logger.js';
+  createSimpleLogger,
+} from "./advanced-logger.js";
 
 // Initialize the advanced logger with default configuration
 const advancedLogger = initializeLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  silent: process.env.NODE_ENV === 'test',
-  enableConsoleInProduction: process.env.ENABLE_CONSOLE_IN_PROD === 'true',
-  logDirectory: process.env.LOG_DIR || 'logs',
+  level: process.env.LOG_LEVEL || "info",
+  silent: process.env.NODE_ENV === "test",
+  enableConsoleInProduction: process.env.ENABLE_CONSOLE_IN_PROD === "true",
+  logDirectory: process.env.LOG_DIR || "logs",
   defaultMeta: {
-    service: 'fscrape',
-    environment: process.env.NODE_ENV || 'development'
-  }
+    service: "fscrape",
+    environment: process.env.NODE_ENV || "development",
+  },
 });
 
 // Setup global error logging if not in test environment
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== "test") {
   setupGlobalErrorLogging();
 }
 
@@ -79,9 +79,9 @@ export const logger = {
         error: {
           message: error.message,
           stack: error.stack,
-          name: error.name
+          name: error.name,
         },
-        data: additionalArgs.length > 0 ? additionalArgs : undefined
+        data: additionalArgs.length > 0 ? additionalArgs : undefined,
       });
     } else if (args.length > 0) {
       advancedLogger.error(message, { data: args });
@@ -99,7 +99,7 @@ export const logger = {
       metadata.error = {
         message: error.message,
         stack: error.stack,
-        name: error.name
+        name: error.name,
       };
     }
     advancedLogger.critical(message, metadata);
@@ -140,17 +140,25 @@ export const logger = {
     const childAdvancedLogger = advancedLogger.child(metadata);
     return {
       debug: (message: string, ...args: any[]) => {
-        childAdvancedLogger.debug(message, { data: args.length > 0 ? args : undefined });
+        childAdvancedLogger.debug(message, {
+          data: args.length > 0 ? args : undefined,
+        });
       },
       info: (message: string, ...args: any[]) => {
-        childAdvancedLogger.info(message, { data: args.length > 0 ? args : undefined });
+        childAdvancedLogger.info(message, {
+          data: args.length > 0 ? args : undefined,
+        });
       },
       warn: (message: string, ...args: any[]) => {
-        childAdvancedLogger.warn(message, { data: args.length > 0 ? args : undefined });
+        childAdvancedLogger.warn(message, {
+          data: args.length > 0 ? args : undefined,
+        });
       },
       error: (message: string, ...args: any[]) => {
-        childAdvancedLogger.error(message, { data: args.length > 0 ? args : undefined });
-      }
+        childAdvancedLogger.error(message, {
+          data: args.length > 0 ? args : undefined,
+        });
+      },
     };
   },
 
@@ -166,18 +174,22 @@ export const logger = {
    */
   isLevelEnabled: (level: string) => {
     return advancedLogger.isLevelEnabled(level);
-  }
+  },
 };
 
 // Export the advanced logger instance for direct access
 export { advancedLogger };
 
 // Re-export types and utilities from advanced-logger
-export type { LoggerConfig, LogMetadata, TransportConfig } from './advanced-logger.js';
-export { LogLevel } from './advanced-logger.js';
-export { 
+export type {
+  LoggerConfig,
+  LogMetadata,
+  TransportConfig,
+} from "./advanced-logger.js";
+export { LogLevel } from "./advanced-logger.js";
+export {
   getLogger,
   initializeLogger as configureLogger,
   requestLoggingMiddleware,
-  setupGlobalErrorLogging 
-} from './advanced-logger.js';
+  setupGlobalErrorLogging,
+} from "./advanced-logger.js";

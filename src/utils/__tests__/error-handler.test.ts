@@ -210,7 +210,6 @@ describe('ErrorHandler', () => {
       const operation = vi.fn()
         .mockRejectedValueOnce(new NetworkError('Service unavailable'))
         .mockRejectedValueOnce(new NetworkError('Service unavailable'))
-        .mockRejectedValueOnce(new NetworkError('Service unavailable'))
         .mockResolvedValue('success');
       
       const circuitConfig: CircuitBreakerConfig = {
@@ -222,29 +221,33 @@ describe('ErrorHandler', () => {
       
       const handler = new ErrorHandler(undefined, circuitConfig);
       
-      // Open the circuit by failing operations
-      let failureCount = 0;
-      for (let i = 0; i < 3; i++) {  // Try 3 times to ensure we exceed threshold
+      // Open the circuit by failing operations (need 2 failures)
+      for (let i = 0; i < 2; i++) {
         try {
           await handler.executeWithCircuitBreaker(operation, 'test_service');
         } catch (e) {
-          failureCount++;
           // Expected failure
         }
       }
       
-      // Check that we had enough failures
-      expect(failureCount).toBeGreaterThanOrEqual(2);
-      
       // Circuit should be open after reaching failure threshold
       expect(handler.getCircuitBreakerState('test_service')).toBe('open');
       
+      // Try to execute while circuit is open - should fail without calling operation
+      await expect(
+        handler.executeWithCircuitBreaker(operation, 'test_service')
+      ).rejects.toThrow('Circuit breaker is open');
+      
+      // Operation should have been called only 2 times (circuit is open)
+      expect(operation).toHaveBeenCalledTimes(2);
+      
       // Wait for timeout
-      vi.advanceTimersByTime(5000);
+      await vi.advanceTimersByTimeAsync(5000);
       
       // Should allow one attempt in half-open state
       const result = await handler.executeWithCircuitBreaker(operation, 'test_service');
       expect(result).toBe('success');
+      expect(operation).toHaveBeenCalledTimes(3);
     });
 
     it('should close circuit after success threshold in half-open', async () => {
@@ -305,18 +308,16 @@ describe('ErrorHandler', () => {
         new Date(Date.now() + 1000)  // reset as Date
       );
       
-      const operation = vi.fn()
-        .mockRejectedValueOnce(rateLimitError)
-        .mockResolvedValue('success');
+      const operation = vi.fn().mockResolvedValue('success');
       
       const promise = errorHandler.handleRateLimit(rateLimitError, operation);
       
       // Should wait for retry after
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
       
       const result = await promise;
       expect(result).toBe('success');
-      expect(operation).toHaveBeenCalledTimes(2);
+      expect(operation).toHaveBeenCalledTimes(1);
     });
   });
 

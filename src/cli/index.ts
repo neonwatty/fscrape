@@ -76,7 +76,12 @@ function createProgram(): Command {
     .option("-i, --interactive", "Interactive batch creation", false)
     .option("-d, --dry-run", "Perform dry run without making changes", false)
     .option("-p, --parallel", "Run operations in parallel", false)
-    .option("--max-concurrency <number>", "Maximum concurrent operations", parseInt, 5)
+    .option(
+      "--max-concurrency <number>",
+      "Maximum concurrent operations",
+      parseInt,
+      5,
+    )
     .option("-v, --verbose", "Verbose output", false)
     .action(async (file: string | undefined, options: any) => {
       await handleBatch(file, options);
@@ -100,16 +105,18 @@ function createProgram(): Command {
   return program;
 }
 
-
 /**
  * Handle batch command
  */
-async function handleBatch(file: string | undefined, options: any): Promise<void> {
+async function handleBatch(
+  file: string | undefined,
+  options: any,
+): Promise<void> {
   try {
     const { BatchProcessor } = await import("./batch-processor.js");
-    
+
     let batchConfig;
-    
+
     if (options.interactive) {
       // Create batch configuration interactively
       batchConfig = await BatchProcessor.createInteractive();
@@ -117,31 +124,33 @@ async function handleBatch(file: string | undefined, options: any): Promise<void
       // Load batch configuration from file
       batchConfig = await BatchProcessor.loadFromFile(file);
     } else {
-      console.log(chalk.yellow("Please provide a batch file or use --interactive mode"));
+      console.log(
+        chalk.yellow("Please provide a batch file or use --interactive mode"),
+      );
       console.log(chalk.gray("Example: fscrape batch operations.json"));
       console.log(chalk.gray("Example: fscrape batch --interactive"));
       return;
     }
-    
+
     // Apply command-line options
     if (options.dryRun !== undefined) batchConfig.dryRun = options.dryRun;
     if (options.parallel !== undefined) batchConfig.parallel = options.parallel;
-    if (options.maxConcurrency !== undefined) batchConfig.maxConcurrency = options.maxConcurrency;
+    if (options.maxConcurrency !== undefined)
+      batchConfig.maxConcurrency = options.maxConcurrency;
     if (options.verbose !== undefined) batchConfig.verbose = options.verbose;
-    
+
     // Create and execute batch processor
     const processor = new BatchProcessor(batchConfig);
     const results = await processor.execute();
-    
+
     // Save results if requested
     if (options.output) {
       await processor.saveResults(options.output);
     }
-    
+
     // Exit with appropriate code
-    const hasFailures = results.some(r => r.status === "failed");
+    const hasFailures = results.some((r) => r.status === "failed");
     process.exit(hasFailures ? 1 : 0);
-    
   } catch (error) {
     console.error(chalk.red("❌ Batch execution failed:"));
     console.error(chalk.red(formatError(error)));

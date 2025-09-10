@@ -7,38 +7,38 @@
  * Error severity levels
  */
 export enum ErrorSeverity {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical'
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
 }
 
 /**
  * Error categories for classification
  */
 export enum ErrorCategory {
-  NETWORK = 'network',
-  DATABASE = 'database',
-  VALIDATION = 'validation',
-  AUTHENTICATION = 'authentication',
-  RATE_LIMIT = 'rate_limit',
-  PARSING = 'parsing',
-  FILE_SYSTEM = 'file_system',
-  CONFIGURATION = 'configuration',
-  PLATFORM = 'platform',
-  UNKNOWN = 'unknown'
+  NETWORK = "network",
+  DATABASE = "database",
+  VALIDATION = "validation",
+  AUTHENTICATION = "authentication",
+  RATE_LIMIT = "rate_limit",
+  PARSING = "parsing",
+  FILE_SYSTEM = "file_system",
+  CONFIGURATION = "configuration",
+  PLATFORM = "platform",
+  UNKNOWN = "unknown",
 }
 
 /**
  * Recovery strategy types
  */
 export enum RecoveryStrategy {
-  RETRY = 'retry',
-  EXPONENTIAL_BACKOFF = 'exponential_backoff',
-  CIRCUIT_BREAKER = 'circuit_breaker',
-  FALLBACK = 'fallback',
-  IGNORE = 'ignore',
-  TERMINATE = 'terminate'
+  RETRY = "retry",
+  EXPONENTIAL_BACKOFF = "exponential_backoff",
+  CIRCUIT_BREAKER = "circuit_breaker",
+  FALLBACK = "fallback",
+  IGNORE = "ignore",
+  TERMINATE = "terminate",
 }
 
 /**
@@ -73,7 +73,7 @@ export class BaseError extends Error {
     category: ErrorCategory = ErrorCategory.UNKNOWN,
     recoveryStrategy: RecoveryStrategy = RecoveryStrategy.TERMINATE,
     isRetryable: boolean = false,
-    originalError?: Error
+    originalError?: Error,
   ) {
     super(message);
     this.name = this.constructor.name;
@@ -83,10 +83,10 @@ export class BaseError extends Error {
     this.recoveryStrategy = recoveryStrategy;
     this.isRetryable = isRetryable;
     this.originalError = originalError;
-    
+
     this.metadata = {
       timestamp: new Date(),
-      stackTrace: this.stack || undefined
+      stackTrace: this.stack || undefined,
     };
 
     // Maintain proper stack trace
@@ -131,7 +131,7 @@ export class BaseError extends Error {
       recoveryStrategy: this.recoveryStrategy,
       isRetryable: this.isRetryable,
       metadata: this.metadata,
-      stack: this.stack
+      stack: this.stack,
     };
   }
 }
@@ -142,8 +142,8 @@ export class BaseError extends Error {
 export class NetworkError extends BaseError {
   constructor(
     message: string,
-    code: string = 'NETWORK_ERROR',
-    originalError?: Error
+    code: string = "NETWORK_ERROR",
+    originalError?: Error,
   ) {
     super(
       message,
@@ -152,7 +152,7 @@ export class NetworkError extends BaseError {
       ErrorCategory.NETWORK,
       RecoveryStrategy.EXPONENTIAL_BACKOFF,
       true,
-      originalError
+      originalError,
     );
   }
 }
@@ -163,9 +163,9 @@ export class NetworkError extends BaseError {
 export class DatabaseError extends BaseError {
   constructor(
     message: string,
-    code: string = 'DATABASE_ERROR',
+    code: string = "DATABASE_ERROR",
     isRetryable: boolean = true,
-    originalError?: Error
+    originalError?: Error,
   ) {
     super(
       message,
@@ -174,7 +174,7 @@ export class DatabaseError extends BaseError {
       ErrorCategory.DATABASE,
       isRetryable ? RecoveryStrategy.RETRY : RecoveryStrategy.TERMINATE,
       isRetryable,
-      originalError
+      originalError,
     );
   }
 }
@@ -192,14 +192,9 @@ export class DatabaseConnectionError extends DatabaseError {
     host?: string,
     port?: number,
     database?: string,
-    originalError?: Error
+    originalError?: Error,
   ) {
-    super(
-      message,
-      'DB_CONNECTION_ERROR',
-      true,
-      originalError
-    );
+    super(message, "DB_CONNECTION_ERROR", true, originalError);
     this.host = host;
     this.port = port;
     this.database = database;
@@ -220,7 +215,7 @@ export class DatabaseQueryError extends DatabaseError {
     query?: string,
     params?: any[],
     sqlState?: string,
-    originalError?: Error
+    originalError?: Error,
   ) {
     // Determine if retryable based on SQL state
     // Only certain error classes are retryable (e.g., lock timeouts, connection issues)
@@ -229,17 +224,13 @@ export class DatabaseQueryError extends DatabaseError {
       // 40xxx = Transaction rollback
       // 08xxx = Connection exceptions
       // 57xxx = Operator intervention (like statement timeout)
-      isRetryable = sqlState.startsWith('40') || 
-                    sqlState.startsWith('08') || 
-                    sqlState.startsWith('57');
+      isRetryable =
+        sqlState.startsWith("40") ||
+        sqlState.startsWith("08") ||
+        sqlState.startsWith("57");
     }
-    
-    super(
-      message,
-      'DB_QUERY_ERROR',
-      isRetryable,
-      originalError
-    );
+
+    super(message, "DB_QUERY_ERROR", isRetryable, originalError);
     this.query = query;
     this.params = params;
     this.sqlState = sqlState;
@@ -257,14 +248,9 @@ export class DatabaseTransactionError extends DatabaseError {
     message: string,
     transactionId?: string,
     operation?: string,
-    originalError?: Error
+    originalError?: Error,
   ) {
-    super(
-      message,
-      'DB_TRANSACTION_ERROR',
-      true,
-      originalError
-    );
+    super(message, "DB_TRANSACTION_ERROR", true, originalError);
     this.transactionId = transactionId;
     this.operation = operation;
   }
@@ -283,14 +269,9 @@ export class DatabaseConstraintError extends DatabaseError {
     constraint?: string,
     table?: string,
     column?: string,
-    originalError?: Error
+    originalError?: Error,
   ) {
-    super(
-      message,
-      'DB_CONSTRAINT_VIOLATION',
-      false,
-      originalError
-    );
+    super(message, "DB_CONSTRAINT_VIOLATION", false, originalError);
     this.constraint = constraint;
     this.table = table;
     this.column = column;
@@ -307,7 +288,7 @@ export class ValidationError extends BaseError {
   constructor(
     message: string,
     validationErrors?: Record<string, string[]>,
-    code: string = 'VALIDATION_ERROR'
+    code: string = "VALIDATION_ERROR",
   ) {
     super(
       message,
@@ -315,7 +296,7 @@ export class ValidationError extends BaseError {
       ErrorSeverity.LOW,
       ErrorCategory.VALIDATION,
       RecoveryStrategy.IGNORE,
-      false
+      false,
     );
     this.validationErrors = validationErrors;
   }
@@ -333,14 +314,10 @@ export class FieldValidationError extends ValidationError {
     message: string,
     fieldName: string,
     fieldValue: any,
-    rules: string[]
+    rules: string[],
   ) {
     const fieldErrors = { [fieldName]: rules };
-    super(
-      message,
-      fieldErrors,
-      'FIELD_VALIDATION_ERROR'
-    );
+    super(message, fieldErrors, "FIELD_VALIDATION_ERROR");
     this.fieldName = fieldName;
     this.fieldValue = fieldValue;
     this.rules = rules;
@@ -360,13 +337,9 @@ export class SchemaValidationError extends ValidationError {
     schema: any,
     data: any,
     validationErrors?: Record<string, string[]>,
-    schemaPath?: string
+    schemaPath?: string,
   ) {
-    super(
-      message,
-      validationErrors,
-      'SCHEMA_VALIDATION_ERROR'
-    );
+    super(message, validationErrors, "SCHEMA_VALIDATION_ERROR");
     this.schema = schema;
     this.data = data;
     this.schemaPath = schemaPath;
@@ -385,13 +358,9 @@ export class InputSanitizationError extends ValidationError {
     message: string,
     input: any,
     sanitizationType: string,
-    detectedIssues: string[]
+    detectedIssues: string[],
   ) {
-    super(
-      message,
-      { input: detectedIssues },
-      'INPUT_SANITIZATION_ERROR'
-    );
+    super(message, { input: detectedIssues }, "INPUT_SANITIZATION_ERROR");
     this.input = input;
     this.sanitizationType = sanitizationType;
     this.detectedIssues = detectedIssues;
@@ -411,13 +380,9 @@ export class BusinessRuleError extends ValidationError {
     message: string,
     ruleName: string,
     ruleDescription?: string,
-    context?: Record<string, any>
+    context?: Record<string, any>,
   ) {
-    super(
-      message,
-      undefined,
-      'BUSINESS_RULE_ERROR'
-    );
+    super(message, undefined, "BUSINESS_RULE_ERROR");
     this.ruleName = ruleName;
     this.ruleDescription = ruleDescription;
     this.context = context;
@@ -431,8 +396,8 @@ export class BusinessRuleError extends ValidationError {
 export class AuthenticationError extends BaseError {
   constructor(
     message: string,
-    code: string = 'AUTH_ERROR',
-    originalError?: Error
+    code: string = "AUTH_ERROR",
+    originalError?: Error,
   ) {
     super(
       message,
@@ -441,7 +406,7 @@ export class AuthenticationError extends BaseError {
       ErrorCategory.AUTHENTICATION,
       RecoveryStrategy.TERMINATE,
       false,
-      originalError
+      originalError,
     );
   }
 }
@@ -460,15 +425,15 @@ export class RateLimitError extends BaseError {
     retryAfter?: number,
     limit?: number,
     remaining?: number,
-    reset?: Date
+    reset?: Date,
   ) {
     super(
       message,
-      'RATE_LIMIT_ERROR',
+      "RATE_LIMIT_ERROR",
       ErrorSeverity.MEDIUM,
       ErrorCategory.RATE_LIMIT,
       RecoveryStrategy.EXPONENTIAL_BACKOFF,
-      true
+      true,
     );
     this.retryAfter = retryAfter;
     this.limit = limit;
@@ -488,16 +453,16 @@ export class ParsingError extends BaseError {
     message: string,
     content?: string,
     position?: number,
-    originalError?: Error
+    originalError?: Error,
   ) {
     super(
       message,
-      'PARSING_ERROR',
+      "PARSING_ERROR",
       ErrorSeverity.MEDIUM,
       ErrorCategory.PARSING,
       RecoveryStrategy.FALLBACK,
       false,
-      originalError
+      originalError,
     );
     this.content = content;
     this.position = position;
@@ -515,16 +480,16 @@ export class FileSystemError extends BaseError {
     message: string,
     path?: string,
     operation?: string,
-    originalError?: Error
+    originalError?: Error,
   ) {
     super(
       message,
-      'FILE_SYSTEM_ERROR',
+      "FILE_SYSTEM_ERROR",
       ErrorSeverity.MEDIUM,
       ErrorCategory.FILE_SYSTEM,
       RecoveryStrategy.RETRY,
       true,
-      originalError
+      originalError,
     );
     this.path = path;
     this.operation = operation;
@@ -538,18 +503,14 @@ export class ConfigurationError extends BaseError {
   public readonly configKey: string | undefined;
   public readonly configValue: any;
 
-  constructor(
-    message: string,
-    configKey?: string,
-    configValue?: any
-  ) {
+  constructor(message: string, configKey?: string, configValue?: any) {
     super(
       message,
-      'CONFIG_ERROR',
+      "CONFIG_ERROR",
       ErrorSeverity.CRITICAL,
       ErrorCategory.CONFIGURATION,
       RecoveryStrategy.TERMINATE,
-      false
+      false,
     );
     this.configKey = configKey;
     this.configValue = configValue;
@@ -562,18 +523,10 @@ export class ConfigurationError extends BaseError {
 export class MissingConfigError extends ConfigurationError {
   public readonly requiredKeys: string[];
 
-  constructor(
-    message: string,
-    requiredKeys: string[],
-    configKey?: string
-  ) {
-    super(
-      message,
-      configKey,
-      undefined
-    );
+  constructor(message: string, requiredKeys: string[], configKey?: string) {
+    super(message, configKey, undefined);
     this.requiredKeys = requiredKeys;
-    (this as any).code = 'CONFIG_MISSING';
+    (this as any).code = "CONFIG_MISSING";
   }
 }
 
@@ -590,17 +543,13 @@ export class InvalidConfigError extends ConfigurationError {
     configKey: string,
     configValue: any,
     expectedType?: string,
-    validationRule?: string
+    validationRule?: string,
   ) {
-    super(
-      message,
-      configKey,
-      configValue
-    );
+    super(message, configKey, configValue);
     this.expectedType = expectedType;
     this.actualType = typeof configValue;
     this.validationRule = validationRule;
-    (this as any).code = 'CONFIG_INVALID';
+    (this as any).code = "CONFIG_INVALID";
   }
 }
 
@@ -614,16 +563,12 @@ export class EnvironmentConfigError extends ConfigurationError {
   constructor(
     message: string,
     environment?: string,
-    missingEnvVars?: string[]
+    missingEnvVars?: string[],
   ) {
-    super(
-      message,
-      undefined,
-      undefined
-    );
+    super(message, undefined, undefined);
     this.environment = environment || process.env.NODE_ENV;
     this.missingEnvVars = missingEnvVars;
-    (this as any).code = 'ENV_CONFIG_ERROR';
+    (this as any).code = "ENV_CONFIG_ERROR";
   }
 }
 
@@ -638,7 +583,7 @@ export class PlatformError extends BaseError {
     message: string,
     platform: string,
     platformCode?: string,
-    originalError?: Error
+    originalError?: Error,
   ) {
     super(
       message,
@@ -647,7 +592,7 @@ export class PlatformError extends BaseError {
       ErrorCategory.PLATFORM,
       RecoveryStrategy.RETRY,
       true,
-      originalError
+      originalError,
     );
     this.platform = platform;
     this.platformCode = platformCode;
@@ -669,13 +614,13 @@ export class APIError extends NetworkError {
     endpoint?: string,
     method?: string,
     responseBody?: any,
-    originalError?: Error
+    originalError?: Error,
   ) {
     // Determine recovery strategy based on status code before calling super
-    let code = `API_ERROR_${statusCode || 'UNKNOWN'}`;
+    const code = `API_ERROR_${statusCode || "UNKNOWN"}`;
     let recoveryStrategy = RecoveryStrategy.EXPONENTIAL_BACKOFF;
     let isRetryable = true;
-    
+
     if (statusCode) {
       if (statusCode >= 500 || statusCode === 429) {
         recoveryStrategy = RecoveryStrategy.EXPONENTIAL_BACKOFF;
@@ -685,14 +630,14 @@ export class APIError extends NetworkError {
         isRetryable = false;
       }
     }
-    
+
     // Call parent constructor through NetworkError which sets the right properties
     super(message, code, originalError);
-    
+
     // Override properties set by NetworkError if needed
     (this as any).recoveryStrategy = recoveryStrategy;
     (this as any).isRetryable = isRetryable;
-    
+
     this.statusCode = statusCode;
     this.endpoint = endpoint;
     this.method = method;
@@ -710,18 +655,11 @@ export class APITimeoutError extends APIError {
     message: string,
     endpoint: string,
     timeoutMs: number,
-    originalError?: Error
+    originalError?: Error,
   ) {
-    super(
-      message,
-      408,
-      endpoint,
-      undefined,
-      undefined,
-      originalError
-    );
+    super(message, 408, endpoint, undefined, undefined, originalError);
     this.timeoutMs = timeoutMs;
-    (this as any).code = 'API_TIMEOUT';
+    (this as any).code = "API_TIMEOUT";
     (this as any).isRetryable = true;
     (this as any).recoveryStrategy = RecoveryStrategy.RETRY;
   }
@@ -737,18 +675,11 @@ export class APIResponseError extends APIError {
     message: string,
     endpoint: string,
     rawResponse?: string,
-    originalError?: Error
+    originalError?: Error,
   ) {
-    super(
-      message,
-      undefined,
-      endpoint,
-      undefined,
-      undefined,
-      originalError
-    );
+    super(message, undefined, endpoint, undefined, undefined, originalError);
     this.rawResponse = rawResponse;
-    (this as any).code = 'API_RESPONSE_PARSE_ERROR';
+    (this as any).code = "API_RESPONSE_PARSE_ERROR";
     (this as any).category = ErrorCategory.PARSING;
   }
 }
@@ -760,14 +691,15 @@ export class AggregateError extends BaseError {
   public readonly errors: Error[];
 
   constructor(errors: Error[], message?: string) {
-    const errorMessage = message || `Multiple errors occurred: ${errors.length} errors`;
+    const errorMessage =
+      message || `Multiple errors occurred: ${errors.length} errors`;
     super(
       errorMessage,
-      'AGGREGATE_ERROR',
+      "AGGREGATE_ERROR",
       ErrorSeverity.HIGH,
       ErrorCategory.UNKNOWN,
       RecoveryStrategy.TERMINATE,
-      false
+      false,
     );
     this.errors = errors;
   }
@@ -776,16 +708,14 @@ export class AggregateError extends BaseError {
    * Get all error messages
    */
   public getAllMessages(): string[] {
-    return this.errors.map(e => e.message);
+    return this.errors.map((e) => e.message);
   }
 
   /**
    * Check if any error is retryable
    */
   public hasRetryableError(): boolean {
-    return this.errors.some(e => 
-      e instanceof BaseError && e.isRetryable
-    );
+    return this.errors.some((e) => e instanceof BaseError && e.isRetryable);
   }
 }
 
@@ -796,7 +726,10 @@ export class ErrorFactory {
   /**
    * Create error from unknown type
    */
-  static fromUnknown(error: unknown, defaultMessage: string = 'An unknown error occurred'): BaseError {
+  static fromUnknown(
+    error: unknown,
+    defaultMessage: string = "An unknown error occurred",
+  ): BaseError {
     if (error instanceof BaseError) {
       return error;
     }
@@ -804,33 +737,33 @@ export class ErrorFactory {
     if (error instanceof Error) {
       return new BaseError(
         error.message || defaultMessage,
-        'UNKNOWN_ERROR',
+        "UNKNOWN_ERROR",
         ErrorSeverity.MEDIUM,
         ErrorCategory.UNKNOWN,
         RecoveryStrategy.FALLBACK,
         false,
-        error
+        error,
       );
     }
 
-    if (typeof error === 'string') {
+    if (typeof error === "string") {
       return new BaseError(
         error,
-        'STRING_ERROR',
+        "STRING_ERROR",
         ErrorSeverity.MEDIUM,
         ErrorCategory.UNKNOWN,
         RecoveryStrategy.TERMINATE,
-        false
+        false,
       );
     }
 
     return new BaseError(
       defaultMessage,
-      'UNKNOWN_ERROR',
+      "UNKNOWN_ERROR",
       ErrorSeverity.MEDIUM,
       ErrorCategory.UNKNOWN,
       RecoveryStrategy.TERMINATE,
-      false
+      false,
     );
   }
 
@@ -841,7 +774,7 @@ export class ErrorFactory {
     message: string,
     url?: string,
     method?: string,
-    statusCode?: number
+    statusCode?: number,
   ): NetworkError {
     const error = new NetworkError(message);
     if (url || method || statusCode) {
@@ -857,7 +790,7 @@ export class ErrorFactory {
     message: string,
     operation?: string,
     table?: string,
-    query?: string
+    query?: string,
   ): DatabaseError {
     const error = new DatabaseError(message);
     if (operation || table || query) {
@@ -878,7 +811,9 @@ export function isRetryableError(error: unknown): boolean {
  * Type guard to check if error is critical
  */
 export function isCriticalError(error: unknown): boolean {
-  return error instanceof BaseError && error.severity === ErrorSeverity.CRITICAL;
+  return (
+    error instanceof BaseError && error.severity === ErrorSeverity.CRITICAL
+  );
 }
 
 /**
@@ -888,8 +823,8 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return error;
   }
-  return 'An unknown error occurred';
+  return "An unknown error occurred";
 }

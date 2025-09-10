@@ -575,27 +575,27 @@ export class BatchProcessor {
 
       if (dataType === "posts" || dataType === "all") {
         // Use the mocked method names
-        const posts = (dbManager as any).getAllPosts ? 
-          await (dbManager as any).getAllPosts() : 
-          await (dbManager as any).queryPosts?.({ limit: 10000 }) || [];
+        const posts = (dbManager as any).getAllPosts
+          ? await (dbManager as any).getAllPosts()
+          : (await (dbManager as any).queryPosts?.({ limit: 10000 })) || [];
         const filePath = await exporter.exportPosts(posts);
         results.posts = { count: posts.length, file: filePath };
       }
 
       if (dataType === "comments" || dataType === "all") {
         // Use the mocked method names
-        const comments = (dbManager as any).getAllComments ? 
-          await (dbManager as any).getAllComments() : 
-          await (dbManager as any).queryComments?.({ limit: 10000 }) || [];
+        const comments = (dbManager as any).getAllComments
+          ? await (dbManager as any).getAllComments()
+          : (await (dbManager as any).queryComments?.({ limit: 10000 })) || [];
         const filePath = await exporter.exportComments(comments);
         results.comments = { count: comments.length, file: filePath };
       }
 
       if (dataType === "users" || dataType === "all") {
         // Use the mocked method names
-        const users = (dbManager as any).getAllUsers ? 
-          await (dbManager as any).getAllUsers() : 
-          await (dbManager as any).queryUsers?.({ limit: 10000 }) || [];
+        const users = (dbManager as any).getAllUsers
+          ? await (dbManager as any).getAllUsers()
+          : (await (dbManager as any).queryUsers?.({ limit: 10000 })) || [];
         const filePath = await exporter.exportUsers(users);
         results.users = { count: users.length, file: filePath };
       }
@@ -626,11 +626,11 @@ export class BatchProcessor {
         // Using mocked methods
         const postsResult = await (dbManager as any).deletePosts();
         results.deletedPosts = postsResult?.deletedCount || 0;
-        
+
         if (operation.options?.data === "all" || !operation.options?.data) {
           const commentsResult = await (dbManager as any).deleteComments();
           results.deletedComments = commentsResult?.deletedCount || 0;
-          
+
           const usersResult = await (dbManager as any).deleteUsers();
           results.deletedUsers = usersResult?.deletedCount || 0;
         }

@@ -2,18 +2,18 @@
  * Error handler with recovery strategies and circuit breaker implementation
  */
 
-import { 
-  BaseError, 
-  ErrorSeverity, 
+import {
+  BaseError,
+  ErrorSeverity,
   RecoveryStrategy,
   NetworkError,
   RateLimitError,
   isRetryableError,
-  ErrorFactory
-} from './errors.js';
-import { logger, createLogger } from './enhanced-logger.js';
+  ErrorFactory,
+} from "./errors.js";
+import { logger, createLogger } from "./enhanced-logger.js";
 
-const errorLogger = createLogger('ErrorHandler');
+const errorLogger = createLogger("ErrorHandler");
 
 /**
  * Retry configuration
@@ -40,9 +40,9 @@ export interface CircuitBreakerConfig {
  * Circuit breaker states
  */
 enum CircuitState {
-  CLOSED = 'closed',
-  OPEN = 'open',
-  HALF_OPEN = 'half_open'
+  CLOSED = "closed",
+  OPEN = "open",
+  HALF_OPEN = "half_open",
 }
 
 /**
@@ -64,7 +64,10 @@ export interface NotificationConfig {
   showErrors: boolean;
   showWarnings: boolean;
   showRecoveryAttempts: boolean;
-  customNotifier?: (message: string, level: 'error' | 'warning' | 'info') => void;
+  customNotifier?: (
+    message: string,
+    level: "error" | "warning" | "info",
+  ) => void;
 }
 
 /**
@@ -86,7 +89,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   initialDelay: 1000,
   maxDelay: 30000,
   backoffMultiplier: 2,
-  jitter: true
+  jitter: true,
 };
 
 /**
@@ -96,7 +99,7 @@ const DEFAULT_CIRCUIT_CONFIG: CircuitBreakerConfig = {
   failureThreshold: 5,
   successThreshold: 2,
   timeout: 60000,
-  halfOpenMaxAttempts: 3
+  halfOpenMaxAttempts: 3,
 };
 
 /**
@@ -108,12 +111,12 @@ class CircuitBreaker {
   private successCount: number = 0;
   private lastFailureTime?: Date;
   private halfOpenAttempts: number = 0;
-  
+
   constructor(
     private readonly name: string,
-    private readonly config: CircuitBreakerConfig = DEFAULT_CIRCUIT_CONFIG
+    private readonly config: CircuitBreakerConfig = DEFAULT_CIRCUIT_CONFIG,
   ) {}
-  
+
   /**
    * Check if circuit allows request
    */
@@ -121,7 +124,7 @@ class CircuitBreaker {
     switch (this.state) {
       case CircuitState.CLOSED:
         return true;
-        
+
       case CircuitState.OPEN:
         // Check if timeout has passed
         if (this.lastFailureTime) {
@@ -132,15 +135,15 @@ class CircuitBreaker {
           }
         }
         return false;
-        
+
       case CircuitState.HALF_OPEN:
         return this.halfOpenAttempts < this.config.halfOpenMaxAttempts;
-        
+
       default:
         return false;
     }
   }
-  
+
   /**
    * Record successful execution
    */
@@ -149,7 +152,7 @@ class CircuitBreaker {
       case CircuitState.CLOSED:
         this.failureCount = 0;
         break;
-        
+
       case CircuitState.HALF_OPEN:
         this.successCount++;
         if (this.successCount >= this.config.successThreshold) {
@@ -158,13 +161,13 @@ class CircuitBreaker {
         break;
     }
   }
-  
+
   /**
    * Record failed execution
    */
   public recordFailure(): void {
     this.lastFailureTime = new Date();
-    
+
     switch (this.state) {
       case CircuitState.CLOSED:
         this.failureCount++;
@@ -172,27 +175,29 @@ class CircuitBreaker {
           this.transitionTo(CircuitState.OPEN);
         }
         break;
-        
+
       case CircuitState.HALF_OPEN:
         this.transitionTo(CircuitState.OPEN);
         break;
     }
   }
-  
+
   /**
    * Get current circuit state
    */
   public getState(): CircuitState {
     return this.state;
   }
-  
+
   /**
    * Transition to new state
    */
   private transitionTo(newState: CircuitState): void {
-    errorLogger.debug(`Circuit breaker ${this.name} transitioning from ${this.state} to ${newState}`);
+    errorLogger.debug(
+      `Circuit breaker ${this.name} transitioning from ${this.state} to ${newState}`,
+    );
     this.state = newState;
-    
+
     // Reset counters based on new state
     switch (newState) {
       case CircuitState.CLOSED:
@@ -200,12 +205,12 @@ class CircuitBreaker {
         this.successCount = 0;
         this.halfOpenAttempts = 0;
         break;
-        
+
       case CircuitState.HALF_OPEN:
         this.successCount = 0;
         this.halfOpenAttempts = 0;
         break;
-        
+
       case CircuitState.OPEN:
         this.halfOpenAttempts = 0;
         break;
@@ -225,12 +230,12 @@ export class ErrorHandler {
   private degradedServices: Set<string> = new Set();
   private errorCounts: Map<string, number> = new Map();
   private recoveryTimers: Map<string, NodeJS.Timeout> = new Map();
-  
+
   constructor(
     retryConfig?: Partial<RetryConfig>,
     circuitConfig?: Partial<CircuitBreakerConfig>,
     notificationConfig?: Partial<NotificationConfig>,
-    degradationConfig?: Partial<DegradationConfig>
+    degradationConfig?: Partial<DegradationConfig>,
   ) {
     this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig };
     this.circuitConfig = { ...DEFAULT_CIRCUIT_CONFIG, ...circuitConfig };
@@ -239,7 +244,7 @@ export class ErrorHandler {
       showErrors: true,
       showWarnings: true,
       showRecoveryAttempts: false,
-      ...notificationConfig
+      ...notificationConfig,
     };
     this.degradationConfig = {
       enabled: true,
@@ -247,175 +252,204 @@ export class ErrorHandler {
       degradationThreshold: 3,
       autoRecover: true,
       recoveryCheckInterval: 60000,
-      ...degradationConfig
+      ...degradationConfig,
     };
     // Ensure fallbackServices is properly set if provided
     if (degradationConfig?.fallbackServices) {
-      this.degradationConfig.fallbackServices = degradationConfig.fallbackServices;
+      this.degradationConfig.fallbackServices =
+        degradationConfig.fallbackServices;
     }
   }
-  
+
   /**
    * Handle error with appropriate recovery strategy
    */
   public async handle<T>(
     operation: () => Promise<T>,
-    context?: { 
-      name?: string; 
+    context?: {
+      name?: string;
       fallback?: () => T | Promise<T>;
       metadata?: Record<string, any>;
-    }
+    },
   ): Promise<T> {
-    const operationName = context?.name || 'unnamed_operation';
+    const operationName = context?.name || "unnamed_operation";
     const startTime = Date.now();
-    
+
     try {
       // Check if service is degraded
       if (this.checkDegradation(operationName)) {
-        const fallback = this.getFallbackForService(operationName) || context?.fallback;
+        const fallback =
+          this.getFallbackForService(operationName) || context?.fallback;
         if (fallback) {
-          this.notify(`Using fallback for degraded service: ${operationName}`, 'info');
+          this.notify(
+            `Using fallback for degraded service: ${operationName}`,
+            "info",
+          );
           return await fallback();
         }
       }
-      
+
       // Check circuit breaker if exists
       const circuitBreaker = this.getOrCreateCircuitBreaker(operationName);
       if (!circuitBreaker.canExecute()) {
-        this.notify(`Circuit breaker open for: ${operationName}`, 'warning');
+        this.notify(`Circuit breaker open for: ${operationName}`, "warning");
         throw new NetworkError(
           `Circuit breaker is open for operation: ${operationName}`,
-          'CIRCUIT_BREAKER_OPEN'
+          "CIRCUIT_BREAKER_OPEN",
         );
       }
-      
+
       // Execute operation
       const result = await operation();
-      
+
       // Record success
       circuitBreaker.recordSuccess();
       this.clearErrorCount(operationName);
-      
+
       const duration = Date.now() - startTime;
       errorLogger.trace(`Operation ${operationName} succeeded`, { duration });
-      
+
       return result;
     } catch (error) {
       const baseError = ErrorFactory.fromUnknown(error);
       baseError.addContext({
         operation: operationName,
-        ...context?.metadata
+        ...context?.metadata,
       });
-      
+
       // Track error for degradation
       this.trackError(operationName);
-      
+
       // Check if service should now be degraded
       this.checkDegradation(operationName);
-      
+
       // Notify user of error
       if (baseError.severity === ErrorSeverity.CRITICAL) {
-        this.notify(`Critical error in ${operationName}: ${baseError.message}`, 'error');
+        this.notify(
+          `Critical error in ${operationName}: ${baseError.message}`,
+          "error",
+        );
       } else if (baseError.severity === ErrorSeverity.HIGH) {
-        this.notify(`Error in ${operationName}: ${baseError.message}`, 'warning');
+        this.notify(
+          `Error in ${operationName}: ${baseError.message}`,
+          "warning",
+        );
       }
-      
+
       // Log the error
       errorLogger.logError(baseError);
-      
+
       // Record failure in circuit breaker
       const circuitBreaker = this.getOrCreateCircuitBreaker(operationName);
       circuitBreaker.recordFailure();
-      
+
       // Determine recovery strategy
-      const hasFallback = !!(context?.fallback || this.getFallbackForService(operationName));
-      const recoveryStrategy = this.determineRecoveryStrategy(baseError, hasFallback);
-      
+      const hasFallback = !!(
+        context?.fallback || this.getFallbackForService(operationName)
+      );
+      const recoveryStrategy = this.determineRecoveryStrategy(
+        baseError,
+        hasFallback,
+      );
+
       // Notify recovery attempt if enabled
-      if (this.notificationConfig.showRecoveryAttempts && recoveryStrategy !== RecoveryStrategy.TERMINATE) {
-        this.notify(`Attempting recovery for ${operationName} using ${recoveryStrategy} strategy`, 'info');
+      if (
+        this.notificationConfig.showRecoveryAttempts &&
+        recoveryStrategy !== RecoveryStrategy.TERMINATE
+      ) {
+        this.notify(
+          `Attempting recovery for ${operationName} using ${recoveryStrategy} strategy`,
+          "info",
+        );
       }
-      
+
       // Apply recovery strategy
       return this.applyRecoveryStrategy(
         baseError,
         operation,
         recoveryStrategy,
-        context
+        context,
       );
     }
   }
-  
+
   /**
    * Execute with retry logic
    */
   public async executeWithRetry<T>(
     operation: () => Promise<T>,
-    config?: Partial<RetryConfig>
+    config?: Partial<RetryConfig>,
   ): Promise<T> {
     const retryConfig = { ...this.retryConfig, ...config };
     let lastError: Error | undefined;
-    
+
     for (let attempt = 1; attempt <= retryConfig.maxAttempts; attempt++) {
       try {
-        errorLogger.debug(`Attempting operation (attempt ${attempt}/${retryConfig.maxAttempts})`);
+        errorLogger.debug(
+          `Attempting operation (attempt ${attempt}/${retryConfig.maxAttempts})`,
+        );
         return await operation();
       } catch (error) {
         lastError = error as Error;
-        
+
         // Check if error is retryable
         if (!isRetryableError(error)) {
-          errorLogger.warn('Error is not retryable, stopping retry attempts');
+          errorLogger.warn("Error is not retryable, stopping retry attempts");
           throw error;
         }
-        
+
         // Check if we've exhausted attempts
         if (attempt === retryConfig.maxAttempts) {
-          errorLogger.error(`All retry attempts exhausted (${retryConfig.maxAttempts} attempts)`, lastError);
+          errorLogger.error(
+            `All retry attempts exhausted (${retryConfig.maxAttempts} attempts)`,
+            lastError,
+          );
           throw lastError;
         }
-        
+
         // Calculate delay with exponential backoff
         const delay = this.calculateBackoffDelay(attempt, retryConfig);
-        
-        errorLogger.debug(`Retry attempt ${attempt} failed, waiting ${delay}ms before next attempt`);
+
+        errorLogger.debug(
+          `Retry attempt ${attempt} failed, waiting ${delay}ms before next attempt`,
+        );
         await this.sleep(delay);
       }
     }
-    
-    throw lastError || new Error('Retry failed with no error captured');
+
+    throw lastError || new Error("Retry failed with no error captured");
   }
-  
+
   /**
    * Execute with exponential backoff
    */
   public async executeWithBackoff<T>(
     operation: () => Promise<T>,
-    maxAttempts: number = 5
+    maxAttempts: number = 5,
   ): Promise<T> {
     return this.executeWithRetry(operation, {
       maxAttempts,
       backoffMultiplier: 2,
-      jitter: true
+      jitter: true,
     });
   }
-  
+
   /**
    * Execute with circuit breaker
    */
   public async executeWithCircuitBreaker<T>(
     operation: () => Promise<T>,
-    name: string
+    name: string,
   ): Promise<T> {
     const circuitBreaker = this.getOrCreateCircuitBreaker(name);
-    
+
     if (!circuitBreaker.canExecute()) {
       throw new NetworkError(
         `Circuit breaker is open for: ${name}`,
-        'CIRCUIT_BREAKER_OPEN'
+        "CIRCUIT_BREAKER_OPEN",
       );
     }
-    
+
     try {
       const result = await operation();
       circuitBreaker.recordSuccess();
@@ -425,61 +459,64 @@ export class ErrorHandler {
       throw error;
     }
   }
-  
+
   /**
    * Handle rate limit errors
    */
   public async handleRateLimit(
     error: RateLimitError,
-    operation: () => Promise<any>
+    operation: () => Promise<any>,
   ): Promise<any> {
     const retryAfter = error.retryAfter || 60000; // Default to 1 minute
-    
+
     errorLogger.info(`Rate limited, waiting ${retryAfter}ms before retry`, {
       limit: error.limit,
       remaining: error.remaining,
-      reset: error.reset
+      reset: error.reset,
     });
-    
+
     await this.sleep(retryAfter);
-    
+
     return operation();
   }
-  
+
   /**
    * Determine recovery strategy based on error
    */
-  private determineRecoveryStrategy(error: BaseError, hasFallback: boolean = false): RecoveryStrategy {
+  private determineRecoveryStrategy(
+    error: BaseError,
+    hasFallback: boolean = false,
+  ): RecoveryStrategy {
     // If we have a fallback and error is not critical, use it
     if (hasFallback && error.severity !== ErrorSeverity.CRITICAL) {
       return RecoveryStrategy.FALLBACK;
     }
-    
+
     // Use error's suggested strategy if available
     if (error.recoveryStrategy) {
       return error.recoveryStrategy;
     }
-    
+
     // Determine based on error properties
     if (error instanceof RateLimitError) {
       return RecoveryStrategy.EXPONENTIAL_BACKOFF;
     }
-    
+
     if (error instanceof NetworkError) {
       return RecoveryStrategy.CIRCUIT_BREAKER;
     }
-    
+
     if (error.isRetryable) {
       return RecoveryStrategy.RETRY;
     }
-    
+
     if (error.severity === ErrorSeverity.CRITICAL) {
       return RecoveryStrategy.TERMINATE;
     }
-    
+
     return RecoveryStrategy.IGNORE;
   }
-  
+
   /**
    * Apply recovery strategy
    */
@@ -487,14 +524,14 @@ export class ErrorHandler {
     error: BaseError,
     operation: () => Promise<T>,
     strategy: RecoveryStrategy,
-    context?: { 
-      name?: string; 
+    context?: {
+      name?: string;
       fallback?: () => T | Promise<T>;
       metadata?: Record<string, any>;
-    }
+    },
   ): Promise<T> {
     errorLogger.debug(`Applying recovery strategy: ${strategy}`);
-    
+
     switch (strategy) {
       case RecoveryStrategy.RETRY:
         // Check if we're already inside a retry to prevent infinite recursion
@@ -502,14 +539,14 @@ export class ErrorHandler {
           throw error;
         }
         return this.executeWithRetry(operation);
-        
+
       case RecoveryStrategy.EXPONENTIAL_BACKOFF:
         // Check if we're already inside a backoff to prevent infinite recursion
         if (context?.metadata?.isRetrying) {
           throw error;
         }
         return this.executeWithBackoff(operation);
-        
+
       case RecoveryStrategy.CIRCUIT_BREAKER:
         // Circuit breaker should not retry itself
         if (context?.metadata?.isCircuitBreaker) {
@@ -519,61 +556,66 @@ export class ErrorHandler {
           return this.executeWithCircuitBreaker(operation, context.name);
         }
         throw error;
-        
+
       case RecoveryStrategy.FALLBACK:
-        const fallback = this.getFallbackForService(context?.name || '') || context?.fallback;
+        const fallback =
+          this.getFallbackForService(context?.name || "") || context?.fallback;
         if (fallback) {
-          errorLogger.info('Using fallback strategy');
+          errorLogger.info("Using fallback strategy");
           return fallback();
         }
         throw error;
-        
+
       case RecoveryStrategy.IGNORE:
-        errorLogger.debug('Ignoring error as per recovery strategy');
+        errorLogger.debug("Ignoring error as per recovery strategy");
         return undefined as any;
-        
+
       case RecoveryStrategy.TERMINATE:
       default:
-        errorLogger.error('Terminating due to critical error', error);
+        errorLogger.error("Terminating due to critical error", error);
         throw error;
     }
   }
-  
+
   /**
    * Get or create circuit breaker
    */
   private getOrCreateCircuitBreaker(name: string): CircuitBreaker {
     if (!this.circuitBreakers.has(name)) {
-      this.circuitBreakers.set(name, new CircuitBreaker(name, this.circuitConfig));
+      this.circuitBreakers.set(
+        name,
+        new CircuitBreaker(name, this.circuitConfig),
+      );
     }
     return this.circuitBreakers.get(name)!;
   }
-  
+
   /**
    * Calculate backoff delay with jitter
    */
   private calculateBackoffDelay(attempt: number, config: RetryConfig): number {
-    let delay = config.initialDelay * Math.pow(config.backoffMultiplier, attempt - 1);
-    
+    let delay =
+      config.initialDelay * Math.pow(config.backoffMultiplier, attempt - 1);
+
     // Apply max delay cap
     delay = Math.min(delay, config.maxDelay);
-    
+
     // Add jitter if enabled
     if (config.jitter) {
       const jitterAmount = delay * 0.2; // 20% jitter
       delay += Math.random() * jitterAmount - jitterAmount / 2;
     }
-    
+
     return Math.round(delay);
   }
-  
+
   /**
    * Sleep for specified milliseconds
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
-  
+
   /**
    * Get circuit breaker state
    */
@@ -582,55 +624,62 @@ export class ErrorHandler {
     const breaker = this.circuitBreakers.get(name);
     return breaker?.getState();
   }
-  
+
   /**
    * Reset circuit breaker
    */
   public resetCircuitBreaker(name: string): void {
     this.circuitBreakers.delete(name);
   }
-  
+
   /**
    * Reset all circuit breakers
    */
   public resetAllCircuitBreakers(): void {
     this.circuitBreakers.clear();
   }
-  
+
   /**
    * Send user notification
    */
-  private notify(message: string, level: 'error' | 'warning' | 'info' = 'info'): void {
+  private notify(
+    message: string,
+    level: "error" | "warning" | "info" = "info",
+  ): void {
     if (!this.notificationConfig.enabled) return;
-    
+
     // Check notification level settings
-    if (level === 'error' && !this.notificationConfig.showErrors) return;
-    if (level === 'warning' && !this.notificationConfig.showWarnings) return;
-    if (level === 'info' && !this.notificationConfig.showRecoveryAttempts) return;
-    
+    if (level === "error" && !this.notificationConfig.showErrors) return;
+    if (level === "warning" && !this.notificationConfig.showWarnings) return;
+    if (level === "info" && !this.notificationConfig.showRecoveryAttempts)
+      return;
+
     // Use custom notifier if provided
     if (this.notificationConfig.customNotifier) {
       this.notificationConfig.customNotifier(message, level);
       return;
     }
-    
+
     // Default console notification
-    const prefix = level === 'error' ? '❌' : level === 'warning' ? '⚠️' : 'ℹ️';
+    const prefix = level === "error" ? "❌" : level === "warning" ? "⚠️" : "ℹ️";
     console.log(`${prefix} ${message}`);
   }
-  
+
   /**
    * Check if service should be degraded
    */
   private checkDegradation(serviceName: string): boolean {
     if (!this.degradationConfig.enabled) return false;
-    
+
     const errorCount = this.errorCounts.get(serviceName) || 0;
     if (errorCount >= this.degradationConfig.degradationThreshold) {
       if (!this.degradedServices.has(serviceName)) {
         this.degradedServices.add(serviceName);
-        this.notify(`Service ${serviceName} has been degraded due to repeated failures`, 'warning');
-        
+        this.notify(
+          `Service ${serviceName} has been degraded due to repeated failures`,
+          "warning",
+        );
+
         // Setup auto-recovery if enabled
         if (this.degradationConfig.autoRecover) {
           this.setupAutoRecovery(serviceName);
@@ -640,7 +689,7 @@ export class ErrorHandler {
     }
     return false;
   }
-  
+
   /**
    * Setup auto-recovery for degraded service
    */
@@ -650,15 +699,15 @@ export class ErrorHandler {
     if (existingTimer) {
       clearTimeout(existingTimer);
     }
-    
+
     // Setup new recovery timer
     const timer = setTimeout(() => {
       this.attemptServiceRecovery(serviceName);
     }, this.degradationConfig.recoveryCheckInterval);
-    
+
     this.recoveryTimers.set(serviceName, timer);
   }
-  
+
   /**
    * Attempt to recover degraded service
    */
@@ -667,8 +716,8 @@ export class ErrorHandler {
       // Reset error count and remove from degraded services
       this.errorCounts.delete(serviceName);
       this.degradedServices.delete(serviceName);
-      this.notify(`Attempting to recover service ${serviceName}`, 'info');
-      
+      this.notify(`Attempting to recover service ${serviceName}`, "info");
+
       // Clear recovery timer
       const timer = this.recoveryTimers.get(serviceName);
       if (timer) {
@@ -677,14 +726,14 @@ export class ErrorHandler {
       }
     }
   }
-  
+
   /**
    * Get fallback for degraded service
    */
   private getFallbackForService(serviceName: string): (() => any) | undefined {
     return this.degradationConfig.fallbackServices.get(serviceName);
   }
-  
+
   /**
    * Track error for service
    */
@@ -692,7 +741,7 @@ export class ErrorHandler {
     const currentCount = this.errorCounts.get(serviceName) || 0;
     this.errorCounts.set(serviceName, currentCount + 1);
   }
-  
+
   /**
    * Clear error count for service
    */
@@ -700,24 +749,24 @@ export class ErrorHandler {
     this.errorCounts.delete(serviceName);
     if (this.degradedServices.has(serviceName)) {
       this.degradedServices.delete(serviceName);
-      this.notify(`Service ${serviceName} has been restored`, 'info');
+      this.notify(`Service ${serviceName} has been restored`, "info");
     }
   }
-  
+
   /**
    * Get degraded services
    */
   public getDegradedServices(): string[] {
     return Array.from(this.degradedServices);
   }
-  
+
   /**
    * Configure notifications
    */
   public configureNotifications(config: Partial<NotificationConfig>): void {
     this.notificationConfig = { ...this.notificationConfig, ...config };
   }
-  
+
   /**
    * Configure degradation
    */
@@ -740,13 +789,10 @@ export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
     name?: string;
     fallback?: () => ReturnType<T>;
     metadata?: Record<string, any>;
-  }
+  },
 ): T {
   return (async (...args: Parameters<T>) => {
-    return globalErrorHandler.handle(
-      () => fn(...args),
-      options
-    );
+    return globalErrorHandler.handle(() => fn(...args), options);
   }) as T;
 }
 
@@ -757,50 +803,51 @@ export function HandleErrors(options?: {
   strategy?: RecoveryStrategy;
   fallback?: () => any;
 }): any {
-  return function (target: any, propertyKey: string | symbol, descriptor?: PropertyDescriptor): any {
+  return function (
+    target: any,
+    propertyKey: string | symbol,
+    descriptor?: PropertyDescriptor,
+  ): any {
     // TypeScript 5+ decorators
-    if (typeof propertyKey === 'symbol' || arguments.length === 2) {
+    if (typeof propertyKey === "symbol" || arguments.length === 2) {
       const method = target;
-      return async function(this: any, ...args: any[]) {
-        const className = this?.constructor?.name || 'Unknown';
+      return async function (this: any, ...args: any[]) {
+        const className = this?.constructor?.name || "Unknown";
         const methodName = `${className}.${String(propertyKey)}`;
-        
-        return globalErrorHandler.handle(
-          () => method.apply(this, args),
-          {
-            name: methodName,
-            fallback: options?.fallback || undefined,
-            metadata: { className, methodName }
-          }
-        );
+
+        return globalErrorHandler.handle(() => method.apply(this, args), {
+          name: methodName,
+          fallback: options?.fallback || undefined,
+          metadata: { className, methodName },
+        });
       };
     }
-    
+
     // Legacy decorators
     if (!descriptor) {
-      descriptor = Object.getOwnPropertyDescriptor(target, propertyKey as string);
+      descriptor = Object.getOwnPropertyDescriptor(
+        target,
+        propertyKey as string,
+      );
     }
-    
+
     if (!descriptor || !descriptor.value) {
       throw new Error(`HandleErrors can only be applied to methods`);
     }
-    
+
     const originalMethod = descriptor.value;
-    
+
     descriptor.value = async function (...args: any[]) {
       const className = target.constructor.name;
       const methodName = `${className}.${String(propertyKey)}`;
-      
-      return globalErrorHandler.handle(
-        () => originalMethod.apply(this, args),
-        {
-          name: methodName,
-          fallback: options?.fallback || undefined,
-          metadata: { className, methodName }
-        }
-      );
+
+      return globalErrorHandler.handle(() => originalMethod.apply(this, args), {
+        name: methodName,
+        fallback: options?.fallback || undefined,
+        metadata: { className, methodName },
+      });
     };
-    
+
     return descriptor;
   };
 }
