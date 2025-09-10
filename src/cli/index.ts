@@ -8,7 +8,12 @@ import { Command } from "commander";
 import { createInitCommand } from "./commands/init.js";
 import { createScrapeCommand } from "./commands/scrape.js";
 import { createStatusCommand } from "./commands/status.js";
-import { formatError } from "./validation.js";
+import { 
+  formatError,
+  validateExportOptions,
+  validateCleanOptions,
+  validateConfigOptions,
+} from "./validation.js";
 import chalk from "chalk";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
@@ -117,16 +122,28 @@ async function handleConfig(
   options: any,
 ): Promise<void> {
   try {
+    // Validate options
+    const validatedOptions = validateConfigOptions({
+      key,
+      value: options.set,
+      set: !!options.set,
+      get: !options.set && !!key,
+      list: !options.set && !key,
+      config: options.config,
+      format: "json",
+    });
+
     const { ConfigManager } = await import("../config/manager.js");
-    const configManager = new ConfigManager(options.config);
+    const configManager = new ConfigManager(validatedOptions.config || options.config);
     const config = configManager.loadConfig();
 
-    if (options.set && key) {
+    if (validatedOptions.set && key) {
       // Set configuration value
-      // TODO: implement config setting
-      console.log(chalk.yellow("Config setting not yet implemented"));
+      const { set: _set, ...configData } = config as any;
+      configData[key] = options.set;
+      configManager.saveConfig(configData);
       console.log(chalk.green(`✓ Set ${key} = ${options.set}`));
-    } else if (key) {
+    } else if (validatedOptions.get && key) {
       // Display specific key
       const value = (config as any)[key];
       if (value !== undefined) {
@@ -149,35 +166,35 @@ async function handleConfig(
  */
 async function handleExport(options: any): Promise<void> {
   try {
+    // Validate options
+    const validatedOptions = validateExportOptions({
+      database: options.database,
+      format: options.format,
+      output: options.output,
+      platform: options.platform,
+      startDate: options.startDate,
+      endDate: options.endDate,
+      limit: options.limit ? parseInt(options.limit, 10) : undefined,
+    });
+
     const { DatabaseManager } = await import("../database/database.js");
     const { ExportManager } = await import("../export/export-manager.js");
 
     // Connect to database
     const dbManager = new DatabaseManager({
       type: "sqlite" as const,
-      path: options.database,
+      path: validatedOptions.database || options.database,
       connectionPoolSize: 5,
     });
     await dbManager.initialize();
 
     // Query data
-    const queryOptions: any = {};
-
-    if (options.platform) {
-      queryOptions.platform = options.platform;
-    }
-
-    if (options.startDate) {
-      queryOptions.startDate = new Date(options.startDate);
-    }
-
-    if (options.endDate) {
-      queryOptions.endDate = new Date(options.endDate);
-    }
-
-    if (options.limit) {
-      queryOptions.limit = parseInt(options.limit, 10);
-    }
+    const queryOptions: any = {
+      platform: validatedOptions.platform,
+      startDate: validatedOptions.startDate,
+      endDate: validatedOptions.endDate,
+      limit: validatedOptions.limit,
+    };
 
     // Query posts from database
     const posts = dbManager.queryPosts(queryOptions);
@@ -231,25 +248,37 @@ async function handleExport(options: any): Promise<void> {
  */
 async function handleClean(options: any): Promise<void> {
   try {
+    // Validate options
+    const validatedOptions = validateCleanOptions({
+      database: options.database,
+      olderThan: options.olderThan ? parseInt(options.olderThan, 10) : undefined,
+      platform: options.platform,
+      dryRun: options.dryRun || false,
+      force: false,
+    });
+
     const { DatabaseManager } = await import("../database/database.js");
 
     // Connect to database
     const dbManager = new DatabaseManager({
       type: "sqlite" as const,
-      path: options.database,
+      path: validatedOptions.database || options.database,
       connectionPoolSize: 5,
     });
     await dbManager.initialize();
 
-    if (options.olderThan) {
-      const olderThanDays = parseInt(options.olderThan, 10);
+    if (validatedOptions.olderThan) {
+      const olderThanDays = validatedOptions.olderThan;
 
-      if (options.dryRun) {
+      if (validatedOptions.dryRun) {
         // Count items that would be deleted
-        const counts = dbManager.countOldData({
+        const countOptions: { olderThanDays: number; platform?: any } = {
           olderThanDays,
-          platform: options.platform,
-        });
+        };
+        if (validatedOptions.platform) {
+          countOptions.platform = validatedOptions.platform;
+        }
+        const counts = dbManager.countOldData(countOptions);
 
         console.log(chalk.yellow("Dry run - no data will be deleted"));
         console.log(chalk.cyan(`Would delete:`));
@@ -258,10 +287,13 @@ async function handleClean(options: any): Promise<void> {
         console.log(`  Users: ${counts.users}`);
       } else {
         // Actually delete
-        const result = dbManager.deleteOldData({
+        const deleteOptions: { olderThanDays: number; platform?: any } = {
           olderThanDays,
-          platform: options.platform,
-        });
+        };
+        if (validatedOptions.platform) {
+          deleteOptions.platform = validatedOptions.platform;
+        }
+        const result = dbManager.deleteOldData(deleteOptions);
 
         console.log(chalk.green("✓ Database cleaned"));
         console.log(chalk.cyan(`Deleted:`));
@@ -304,13 +336,14 @@ async function main(): Promise<void> {
   }
 }
 
-// Run CLI if this is the main module
+// Export for testing and as module
+export { createProgram, main };
+
+// Only run if directly executed (not when imported)
+// This prevents double execution when imported by src/cli.ts
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch((error) => {
     console.error(chalk.red("Fatal error:"), error);
     process.exit(1);
   });
 }
-
-// Export for testing
-export { createProgram, main };
