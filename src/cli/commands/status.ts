@@ -71,7 +71,7 @@ async function handleStatus(options: any): Promise<void> {
   const analytics = dbManager.getAnalytics();
 
   // Gather statistics
-  const stats = await gatherStatistics(analytics, statusOptions);
+  const stats = await gatherStatistics(analytics, statusOptions, dbManager);
 
   // Display based on format
   switch (statusOptions.format) {
@@ -94,42 +94,145 @@ async function handleStatus(options: any): Promise<void> {
 async function gatherStatistics(
   analytics: any,
   options: StatusOptions,
+  dbManager?: any,
 ): Promise<any> {
   const stats: any = {
-    overview: analytics.getPlatformStats(),
+    overview: {},
     platforms: {},
     recent: {},
     trends: {},
+    activeSessions: [],
+    recentSessions: [],
+    systemHealth: {},
   };
+
+  // Get overall platform stats
+  const allPlatformStats = analytics.getPlatformStatistics();
+  if (allPlatformStats && allPlatformStats.length > 0) {
+    // Aggregate overall stats
+    stats.overview = {
+      totalPosts: allPlatformStats.reduce((sum: number, p: any) => sum + p.totalPosts, 0),
+      totalComments: allPlatformStats.reduce((sum: number, p: any) => sum + p.totalComments, 0),
+      totalUsers: allPlatformStats.reduce((sum: number, p: any) => sum + p.totalUsers, 0),
+      databaseSize: 0, // Will be set from health metrics
+      lastActivity: Math.max(...allPlatformStats.map((p: any) => p.lastUpdateTime?.getTime() || 0)),
+    };
+  }
 
   // Get platform-specific stats
   if (options.platform) {
-    stats.platforms[options.platform] = analytics.getPlatformStats(
-      options.platform,
-    );
+    const platformStats = analytics.getPlatformStats(options.platform);
+    if (platformStats) {
+      stats.platforms[options.platform] = {
+        postCount: platformStats.totalPosts,
+        commentCount: platformStats.totalComments,
+        userCount: platformStats.totalUsers,
+        avgScore: platformStats.avgPostScore,
+      };
+    }
   } else {
     // Get stats for all platforms
-    const platforms = ["reddit", "hackernews"] as const; // TODO: get from analytics
+    const platforms = ["reddit", "hackernews"] as const;
     for (const platform of platforms) {
-      stats.platforms[platform] = analytics.getPlatformStats(platform);
+      const platformStats = analytics.getPlatformStats(platform);
+      if (platformStats) {
+        stats.platforms[platform] = {
+          postCount: platformStats.totalPosts,
+          commentCount: platformStats.totalComments,
+          userCount: platformStats.totalUsers,
+          avgScore: platformStats.avgPostScore,
+        };
+      }
     }
   }
 
-  // Get recent activity
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - (options.days || 7));
+  // Get recent activity data
+  const days = options.days || 7;
 
-  stats.recent = {
-    posts: { data: [] }, // TODO: implement trends
-    comments: { data: [] },
-    users: { data: [] },
-  };
+  // Get engagement over time
+  const engagementData = analytics.getEngagementOverTime(days, options.platform);
+  if (engagementData && engagementData.length > 0) {
+    // Process engagement data into daily stats
+    const dailyStats: { [date: string]: { posts: number; comments: number } } = {};
+    
+    engagementData.forEach((item: any) => {
+      const dateStr = item.date ? new Date(item.date).toISOString().split('T')[0] : '';
+      if (dateStr) {
+        if (!dailyStats[dateStr]) {
+          dailyStats[dateStr] = { posts: 0, comments: 0 };
+        }
+        dailyStats[dateStr].posts += item.post_count || 0;
+        dailyStats[dateStr].comments += item.comment_count || 0;
+      }
+    });
+
+    stats.recent.posts = {
+      data: Object.entries(dailyStats).map(([date, data]) => ({
+        date,
+        count: data.posts,
+      })),
+    };
+    stats.recent.comments = {
+      data: Object.entries(dailyStats).map(([date, data]) => ({
+        date,
+        count: data.comments,
+      })),
+    };
+  }
 
   // Get top content
+  const trendingPosts = analytics.getTrendingPosts ? analytics.getTrendingPosts(5) : [];
+  const topUsers = analytics.getTopUsersByKarma(5, options.platform);
+  
   stats.topContent = {
-    posts: [], // TODO: implement top content
-    users: [],
+    posts: trendingPosts.map((post: any) => ({
+      id: post.id,
+      title: post.title,
+      score: post.score,
+      commentCount: post.commentCount || post.comment_count || 0,
+      author: post.author,
+      platform: post.platform,
+    })),
+    users: topUsers.map((user: any) => ({
+      id: user.id,
+      username: user.username,
+      karma: user.karma,
+      platform: user.platform,
+      postCount: 0, // Would need additional query
+      commentCount: 0, // Would need additional query
+    })),
   };
+
+  // Get active and recent sessions if dbManager provided
+  if (dbManager) {
+    stats.activeSessions = dbManager.getActiveSessions ? dbManager.getActiveSessions(5) : [];
+    stats.recentSessions = dbManager.getRecentSessions ? dbManager.getRecentSessions(10, options.platform) : [];
+  }
+
+  // Get system health metrics
+  const healthDetailed = analytics.getDatabaseHealthDetailed ? analytics.getDatabaseHealthDetailed() : null;
+  if (healthDetailed && healthDetailed.size) {
+    stats.systemHealth = {
+      databaseSize: healthDetailed.size.totalSize || 0,
+      tableCount: healthDetailed.tables?.length || 0,
+      indexCount: healthDetailed.indexes?.total || 0,
+      cacheHitRate: healthDetailed.performance?.cacheHitRate,
+      queryCount: healthDetailed.performance?.queryCount,
+      fragmentation: healthDetailed.fragmentation,
+    };
+    // Update overview with actual database size
+    stats.overview.databaseSize = healthDetailed.size.totalSize || 0;
+  } else {
+    // Provide basic health metrics if detailed not available
+    const health = analytics.getDatabaseHealth ? analytics.getDatabaseHealth() : null;
+    if (health) {
+      stats.systemHealth = {
+        databaseSize: health.size || 0,
+        tableCount: health.tables || 0,
+      };
+      stats.overview.databaseSize = health.size || 0;
+    }
+  }
 
   return stats;
 }
@@ -149,15 +252,45 @@ function displaySummary(stats: any): void {
 
   // Overview
   console.log(chalk.yellow("Overview:"));
-  console.log(`  Total Posts: ${stats.overview.totalPosts.toLocaleString()}`);
+  console.log(`  Total Posts: ${stats.overview.totalPosts?.toLocaleString() || 0}`);
   console.log(
-    `  Total Comments: ${stats.overview.totalComments.toLocaleString()}`,
+    `  Total Comments: ${stats.overview.totalComments?.toLocaleString() || 0}`,
   );
-  console.log(`  Total Users: ${stats.overview.totalUsers.toLocaleString()}`);
-  console.log(`  Database Size: ${formatBytes(stats.overview.databaseSize)}`);
-  console.log(
-    `  Last Activity: ${new Date(stats.overview.lastActivity).toLocaleString()}`,
-  );
+  console.log(`  Total Users: ${stats.overview.totalUsers?.toLocaleString() || 0}`);
+  console.log(`  Database Size: ${formatBytes(stats.overview.databaseSize || 0)}`);
+  if (stats.overview.lastActivity) {
+    console.log(
+      `  Last Activity: ${new Date(stats.overview.lastActivity).toLocaleString()}`,
+    );
+  }
+
+  // Active sessions
+  if (stats.activeSessions && stats.activeSessions.length > 0) {
+    console.log(chalk.yellow("\nActive Sessions:"));
+    stats.activeSessions.forEach((session: any) => {
+      console.log(`  ${chalk.green("●")} ${session.platform} - ${session.status}`);
+      console.log(`    Started: ${new Date(session.startedAt).toLocaleString()}`);
+      console.log(`    Items scraped: ${session.totalItemsScraped || 0}`);
+    });
+  } else {
+    console.log(chalk.yellow("\nActive Sessions:"));
+    console.log(`  ${chalk.gray("No active sessions")}`);
+  }
+
+  // System health
+  if (stats.systemHealth && Object.keys(stats.systemHealth).length > 0) {
+    console.log(chalk.yellow("\nSystem Health:"));
+    console.log(`  Tables: ${stats.systemHealth.tableCount || 0}`);
+    console.log(`  Indexes: ${stats.systemHealth.indexCount || 0}`);
+    if (stats.systemHealth.cacheHitRate !== undefined) {
+      console.log(`  Cache Hit Rate: ${(stats.systemHealth.cacheHitRate * 100).toFixed(1)}%`);
+    }
+    if (stats.systemHealth.fragmentation !== undefined) {
+      const fragColor = stats.systemHealth.fragmentation > 30 ? chalk.red : 
+                       stats.systemHealth.fragmentation > 10 ? chalk.yellow : chalk.green;
+      console.log(`  Fragmentation: ${fragColor(stats.systemHealth.fragmentation.toFixed(1) + '%')}`);
+    }
+  }
 
   // Platform breakdown
   if (Object.keys(stats.platforms).length > 0) {
@@ -165,33 +298,36 @@ function displaySummary(stats: any): void {
     for (const [platform, platformStats] of Object.entries(stats.platforms)) {
       const pStats = platformStats as any;
       console.log(`  ${chalk.cyan(platform)}:`);
-      console.log(`    Posts: ${pStats.postCount.toLocaleString()}`);
-      console.log(`    Comments: ${pStats.commentCount.toLocaleString()}`);
-      console.log(`    Users: ${pStats.userCount.toLocaleString()}`);
+      console.log(`    Posts: ${pStats.postCount?.toLocaleString() || 0}`);
+      console.log(`    Comments: ${pStats.commentCount?.toLocaleString() || 0}`);
+      console.log(`    Users: ${pStats.userCount?.toLocaleString() || 0}`);
+      if (pStats.avgScore !== undefined) {
+        console.log(`    Avg Score: ${pStats.avgScore.toFixed(1)}`);
+      }
     }
   }
 
   // Recent activity
-  if (stats.recent.posts) {
+  if (stats.recent.posts && stats.recent.posts.data) {
     console.log(chalk.yellow("\nRecent Activity:"));
     const recentPosts = stats.recent.posts.data.reduce(
       (sum: number, day: any) => sum + day.count,
       0,
     );
-    const recentComments = stats.recent.comments.data.reduce(
+    const recentComments = stats.recent.comments?.data?.reduce(
       (sum: number, day: any) => sum + day.count,
       0,
-    );
+    ) || 0;
     console.log(
       `  Posts (last ${stats.recent.posts.data.length} days): ${recentPosts.toLocaleString()}`,
     );
     console.log(
-      `  Comments (last ${stats.recent.comments.data.length} days): ${recentComments.toLocaleString()}`,
+      `  Comments (last ${stats.recent.comments?.data?.length || 0} days): ${recentComments.toLocaleString()}`,
     );
   }
 
   // Top content
-  if (stats.topContent.posts.length > 0) {
+  if (stats.topContent && stats.topContent.posts && stats.topContent.posts.length > 0) {
     console.log(chalk.yellow("\nTop Posts:"));
     stats.topContent.posts.forEach((post: any, index: number) => {
       console.log(`  ${index + 1}. ${truncateString(post.title, 50)}`);
@@ -213,12 +349,26 @@ function displayTable(stats: any, verbose: boolean): void {
   });
 
   overviewTable.push(
-    ["Total Posts", stats.overview.totalPosts.toLocaleString()],
-    ["Total Comments", stats.overview.totalComments.toLocaleString()],
-    ["Total Users", stats.overview.totalUsers.toLocaleString()],
-    ["Database Size", formatBytes(stats.overview.databaseSize)],
-    ["Last Activity", new Date(stats.overview.lastActivity).toLocaleString()],
+    ["Total Posts", stats.overview.totalPosts?.toLocaleString() || "0"],
+    ["Total Comments", stats.overview.totalComments?.toLocaleString() || "0"],
+    ["Total Users", stats.overview.totalUsers?.toLocaleString() || "0"],
+    ["Database Size", formatBytes(stats.overview.databaseSize || 0)],
+    ["Last Activity", stats.overview.lastActivity ? new Date(stats.overview.lastActivity).toLocaleString() : "N/A"],
   );
+  
+  // Add system health metrics
+  if (stats.systemHealth && stats.systemHealth.cacheHitRate !== undefined) {
+    overviewTable.push(
+      ["Cache Hit Rate", `${(stats.systemHealth.cacheHitRate * 100).toFixed(1)}%`]
+    );
+  }
+  if (stats.systemHealth && stats.systemHealth.fragmentation !== undefined) {
+    const fragColor = stats.systemHealth.fragmentation > 30 ? chalk.red : 
+                     stats.systemHealth.fragmentation > 10 ? chalk.yellow : chalk.green;
+    overviewTable.push(
+      ["DB Fragmentation", fragColor(`${stats.systemHealth.fragmentation.toFixed(1)}%`)]
+    );
+  }
 
   console.log(overviewTable.toString());
 
@@ -250,14 +400,49 @@ function displayTable(stats: any, verbose: boolean): void {
     console.log(platformTable.toString());
   }
 
+  // Active sessions table
+  if (stats.activeSessions && stats.activeSessions.length > 0) {
+    const sessionsTable = new Table({
+      head: [
+        chalk.yellow("Platform"),
+        chalk.yellow("Status"),
+        chalk.yellow("Started"),
+        chalk.yellow("Items"),
+        chalk.yellow("Errors"),
+      ],
+      colWidths: [12, 10, 20, 10, 8],
+    });
+
+    stats.activeSessions.forEach((session: any) => {
+      const statusColor = session.status === 'running' ? chalk.green :
+                         session.status === 'pending' ? chalk.yellow :
+                         session.status === 'failed' ? chalk.red : chalk.gray;
+      sessionsTable.push([
+        session.platform,
+        statusColor(session.status),
+        new Date(session.startedAt).toLocaleString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }),
+        session.totalItemsScraped?.toString() || "0",
+        session.errorCount?.toString() || "0",
+      ]);
+    });
+
+    console.log(chalk.bold.cyan("\nActive Sessions"));
+    console.log(sessionsTable.toString());
+  }
+
   // Recent activity chart (simple ASCII)
-  if (verbose && stats.recent.posts) {
+  if (verbose && stats.recent.posts && stats.recent.posts.data) {
     console.log(chalk.bold.cyan("\nRecent Activity (Posts)"));
     displayMiniChart(stats.recent.posts.data);
   }
 
   // Top posts table
-  if (stats.topContent.posts.length > 0) {
+  if (stats.topContent && stats.topContent.posts && stats.topContent.posts.length > 0) {
     const topPostsTable = new Table({
       head: [
         chalk.yellow("#"),
@@ -282,7 +467,7 @@ function displayTable(stats: any, verbose: boolean): void {
   }
 
   // Top users table
-  if (verbose && stats.topContent.users.length > 0) {
+  if (verbose && stats.topContent && stats.topContent.users && stats.topContent.users.length > 0) {
     const topUsersTable = new Table({
       head: [
         chalk.yellow("#"),

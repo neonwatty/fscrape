@@ -497,6 +497,42 @@ export class DatabaseManager {
     return rows.map((row) => this.mapRowToSession(row as any));
   }
 
+  /**
+   * Get all active sessions (running or pending)
+   */
+  getActiveSessions(limit = 10): SessionInfo[] {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM scraping_sessions 
+         WHERE status IN ('running', 'pending') 
+         ORDER BY started_at DESC 
+         LIMIT ?`
+      )
+      .all(limit);
+    
+    return rows.map((row) => this.mapRowToSession(row as any));
+  }
+
+  /**
+   * Get recent sessions (all statuses)
+   */
+  getRecentSessions(limit = 10, platform?: Platform): SessionInfo[] {
+    const query = platform
+      ? `SELECT * FROM scraping_sessions 
+         WHERE platform = ? 
+         ORDER BY started_at DESC 
+         LIMIT ?`
+      : `SELECT * FROM scraping_sessions 
+         ORDER BY started_at DESC 
+         LIMIT ?`;
+    
+    const rows = platform
+      ? this.db.prepare(query).all(platform, limit)
+      : this.db.prepare(query).all(limit);
+    
+    return rows.map((row) => this.mapRowToSession(row as any));
+  }
+
   // ============================================================================
   // Bulk Operations
   // ============================================================================
