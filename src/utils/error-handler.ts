@@ -57,6 +57,28 @@ export interface RecoveryContext {
 }
 
 /**
+ * User notification configuration
+ */
+export interface NotificationConfig {
+  enabled: boolean;
+  showErrors: boolean;
+  showWarnings: boolean;
+  showRecoveryAttempts: boolean;
+  customNotifier?: (message: string, level: 'error' | 'warning' | 'info') => void;
+}
+
+/**
+ * Graceful degradation configuration
+ */
+export interface DegradationConfig {
+  enabled: boolean;
+  fallbackServices: Map<string, () => any>;
+  degradationThreshold: number;
+  autoRecover: boolean;
+  recoveryCheckInterval: number;
+}
+
+/**
  * Default retry configuration
  */
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
@@ -198,13 +220,35 @@ export class ErrorHandler {
   private circuitBreakers: Map<string, CircuitBreaker> = new Map();
   private retryConfig: RetryConfig;
   private circuitConfig: CircuitBreakerConfig;
+  private notificationConfig: NotificationConfig;
+  private degradationConfig: DegradationConfig;
+  private degradedServices: Set<string> = new Set();
+  private errorCounts: Map<string, number> = new Map();
+  private recoveryTimers: Map<string, NodeJS.Timeout> = new Map();
   
   constructor(
     retryConfig?: Partial<RetryConfig>,
-    circuitConfig?: Partial<CircuitBreakerConfig>
+    circuitConfig?: Partial<CircuitBreakerConfig>,
+    notificationConfig?: Partial<NotificationConfig>,
+    degradationConfig?: Partial<DegradationConfig>
   ) {
     this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig };
     this.circuitConfig = { ...DEFAULT_CIRCUIT_CONFIG, ...circuitConfig };
+    this.notificationConfig = {
+      enabled: true,
+      showErrors: true,
+      showWarnings: true,
+      showRecoveryAttempts: false,
+      ...notificationConfig
+    };
+    this.degradationConfig = {
+      enabled: true,
+      fallbackServices: new Map(),
+      degradationThreshold: 3,
+      autoRecover: true,
+      recoveryCheckInterval: 60000,
+      ...degradationConfig
+    };
   }
   
   /**
@@ -222,9 +266,19 @@ export class ErrorHandler {
     const startTime = Date.now();
     
     try {
+      // Check if service is degraded
+      if (this.checkDegradation(operationName)) {
+        const fallback = this.getFallbackForService(operationName) || context?.fallback;
+        if (fallback) {
+          this.notify(`Using fallback for degraded service: ${operationName}`, 'info');
+          return await fallback();
+        }
+      }
+      
       // Check circuit breaker if exists
       const circuitBreaker = this.getOrCreateCircuitBreaker(operationName);
       if (!circuitBreaker.canExecute()) {
+        this.notify(`Circuit breaker open for: ${operationName}`, 'warning');
         throw new NetworkError(
           `Circuit breaker is open for operation: ${operationName}`,
           'CIRCUIT_BREAKER_OPEN'
@@ -236,6 +290,7 @@ export class ErrorHandler {
       
       // Record success
       circuitBreaker.recordSuccess();
+      this.clearErrorCount(operationName);
       
       const duration = Date.now() - startTime;
       errorLogger.trace(`Operation ${operationName} succeeded`, { duration });
@@ -248,6 +303,16 @@ export class ErrorHandler {
         ...context?.metadata
       });
       
+      // Track error for degradation
+      this.trackError(operationName);
+      
+      // Notify user of error
+      if (baseError.severity === ErrorSeverity.CRITICAL) {
+        this.notify(`Critical error in ${operationName}: ${baseError.message}`, 'error');
+      } else if (baseError.severity === ErrorSeverity.HIGH) {
+        this.notify(`Error in ${operationName}: ${baseError.message}`, 'warning');
+      }
+      
       // Log the error
       errorLogger.logError(baseError);
       
@@ -256,7 +321,13 @@ export class ErrorHandler {
       circuitBreaker.recordFailure();
       
       // Determine recovery strategy
-      const recoveryStrategy = this.determineRecoveryStrategy(baseError);
+      const hasFallback = !!(context?.fallback || this.getFallbackForService(operationName));
+      const recoveryStrategy = this.determineRecoveryStrategy(baseError, hasFallback);
+      
+      // Notify recovery attempt if enabled
+      if (this.notificationConfig.showRecoveryAttempts && recoveryStrategy !== RecoveryStrategy.TERMINATE) {
+        this.notify(`Attempting recovery for ${operationName} using ${recoveryStrategy} strategy`, 'info');
+      }
       
       // Apply recovery strategy
       return this.applyRecoveryStrategy(
@@ -371,10 +442,15 @@ export class ErrorHandler {
   /**
    * Determine recovery strategy based on error
    */
-  private determineRecoveryStrategy(error: BaseError): RecoveryStrategy {
+  private determineRecoveryStrategy(error: BaseError, hasFallback: boolean = false): RecoveryStrategy {
     // Use error's suggested strategy if available
     if (error.recoveryStrategy) {
       return error.recoveryStrategy;
+    }
+    
+    // If we have a fallback and error is not critical, use it
+    if (hasFallback && error.severity !== ErrorSeverity.CRITICAL) {
+      return RecoveryStrategy.FALLBACK;
     }
     
     // Determine based on error properties
@@ -414,21 +490,34 @@ export class ErrorHandler {
     
     switch (strategy) {
       case RecoveryStrategy.RETRY:
+        // Check if we're already inside a retry to prevent infinite recursion
+        if (context?.metadata?.isRetrying) {
+          throw error;
+        }
         return this.executeWithRetry(operation);
         
       case RecoveryStrategy.EXPONENTIAL_BACKOFF:
+        // Check if we're already inside a backoff to prevent infinite recursion
+        if (context?.metadata?.isRetrying) {
+          throw error;
+        }
         return this.executeWithBackoff(operation);
         
       case RecoveryStrategy.CIRCUIT_BREAKER:
+        // Circuit breaker should not retry itself
+        if (context?.metadata?.isCircuitBreaker) {
+          throw error;
+        }
         if (context?.name) {
           return this.executeWithCircuitBreaker(operation, context.name);
         }
         throw error;
         
       case RecoveryStrategy.FALLBACK:
-        if (context?.fallback) {
+        const fallback = this.getFallbackForService(context?.name || '') || context?.fallback;
+        if (fallback) {
           errorLogger.info('Using fallback strategy');
-          return context.fallback();
+          return fallback();
         }
         throw error;
         
@@ -482,8 +571,9 @@ export class ErrorHandler {
    * Get circuit breaker state
    */
   public getCircuitBreakerState(name: string): CircuitState | undefined {
-    const breaker = this.circuitBreakers.get(name);
-    return breaker?.getState();
+    // Create the circuit breaker if it doesn't exist to ensure consistent state
+    const breaker = this.getOrCreateCircuitBreaker(name);
+    return breaker.getState();
   }
   
   /**
@@ -498,6 +588,134 @@ export class ErrorHandler {
    */
   public resetAllCircuitBreakers(): void {
     this.circuitBreakers.clear();
+  }
+  
+  /**
+   * Send user notification
+   */
+  private notify(message: string, level: 'error' | 'warning' | 'info' = 'info'): void {
+    if (!this.notificationConfig.enabled) return;
+    
+    // Check notification level settings
+    if (level === 'error' && !this.notificationConfig.showErrors) return;
+    if (level === 'warning' && !this.notificationConfig.showWarnings) return;
+    if (level === 'info' && !this.notificationConfig.showRecoveryAttempts) return;
+    
+    // Use custom notifier if provided
+    if (this.notificationConfig.customNotifier) {
+      this.notificationConfig.customNotifier(message, level);
+      return;
+    }
+    
+    // Default console notification
+    const prefix = level === 'error' ? '❌' : level === 'warning' ? '⚠️' : 'ℹ️';
+    console.log(`${prefix} ${message}`);
+  }
+  
+  /**
+   * Check if service should be degraded
+   */
+  private checkDegradation(serviceName: string): boolean {
+    if (!this.degradationConfig.enabled) return false;
+    
+    const errorCount = this.errorCounts.get(serviceName) || 0;
+    if (errorCount >= this.degradationConfig.degradationThreshold) {
+      if (!this.degradedServices.has(serviceName)) {
+        this.degradedServices.add(serviceName);
+        this.notify(`Service ${serviceName} has been degraded due to repeated failures`, 'warning');
+        
+        // Setup auto-recovery if enabled
+        if (this.degradationConfig.autoRecover) {
+          this.setupAutoRecovery(serviceName);
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+  
+  /**
+   * Setup auto-recovery for degraded service
+   */
+  private setupAutoRecovery(serviceName: string): void {
+    // Clear existing timer if any
+    const existingTimer = this.recoveryTimers.get(serviceName);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+    
+    // Setup new recovery timer
+    const timer = setTimeout(() => {
+      this.attemptServiceRecovery(serviceName);
+    }, this.degradationConfig.recoveryCheckInterval);
+    
+    this.recoveryTimers.set(serviceName, timer);
+  }
+  
+  /**
+   * Attempt to recover degraded service
+   */
+  private attemptServiceRecovery(serviceName: string): void {
+    if (this.degradedServices.has(serviceName)) {
+      // Reset error count and remove from degraded services
+      this.errorCounts.delete(serviceName);
+      this.degradedServices.delete(serviceName);
+      this.notify(`Attempting to recover service ${serviceName}`, 'info');
+      
+      // Clear recovery timer
+      const timer = this.recoveryTimers.get(serviceName);
+      if (timer) {
+        clearTimeout(timer);
+        this.recoveryTimers.delete(serviceName);
+      }
+    }
+  }
+  
+  /**
+   * Get fallback for degraded service
+   */
+  private getFallbackForService(serviceName: string): (() => any) | undefined {
+    return this.degradationConfig.fallbackServices.get(serviceName);
+  }
+  
+  /**
+   * Track error for service
+   */
+  private trackError(serviceName: string): void {
+    const currentCount = this.errorCounts.get(serviceName) || 0;
+    this.errorCounts.set(serviceName, currentCount + 1);
+  }
+  
+  /**
+   * Clear error count for service
+   */
+  public clearErrorCount(serviceName: string): void {
+    this.errorCounts.delete(serviceName);
+    if (this.degradedServices.has(serviceName)) {
+      this.degradedServices.delete(serviceName);
+      this.notify(`Service ${serviceName} has been restored`, 'info');
+    }
+  }
+  
+  /**
+   * Get degraded services
+   */
+  public getDegradedServices(): string[] {
+    return Array.from(this.degradedServices);
+  }
+  
+  /**
+   * Configure notifications
+   */
+  public configureNotifications(config: Partial<NotificationConfig>): void {
+    this.notificationConfig = { ...this.notificationConfig, ...config };
+  }
+  
+  /**
+   * Configure degradation
+   */
+  public configureDegradation(config: Partial<DegradationConfig>): void {
+    this.degradationConfig = { ...this.degradationConfig, ...config };
   }
 }
 
@@ -535,8 +753,17 @@ export function HandleErrors(options?: {
   return function (
     target: any,
     propertyKey: string,
-    descriptor: PropertyDescriptor
+    descriptor?: PropertyDescriptor
   ) {
+    // Handle both legacy and modern decorators
+    if (!descriptor) {
+      descriptor = Object.getOwnPropertyDescriptor(target, propertyKey);
+    }
+    
+    if (!descriptor || !descriptor.value) {
+      throw new Error(`HandleErrors can only be applied to methods`);
+    }
+    
     const originalMethod = descriptor.value;
     
     descriptor.value = async function (...args: any[]) {
