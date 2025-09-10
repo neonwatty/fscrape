@@ -335,7 +335,8 @@ describe("DatabaseAnalytics", () => {
     });
 
     it("should get posts by date range for specific platform", async () => {
-      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      // Use slightly more than 7 days to ensure we capture posts created exactly 7 days ago
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000 - 1000); // Add 1 second buffer
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
       
       const redditPosts = await analytics.getPostsByDateRange(
