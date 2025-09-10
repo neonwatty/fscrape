@@ -548,8 +548,8 @@ export class AnalyticsVisualizer {
     }
 
     // Find bounds
-    const xValues = data.map(d => d.x);
-    const yValues = data.map(d => d.y);
+    const xValues = data.map((d) => d.x);
+    const yValues = data.map((d) => d.y);
     const xMin = Math.min(...xValues);
     const xMax = Math.max(...xValues);
     const yMin = Math.min(...yValues);
@@ -573,8 +573,10 @@ export class AnalyticsVisualizer {
     // Plot points
     data.forEach((point, index) => {
       const xPos = Math.floor(((point.x - xMin) / xRange) * (chartWidth - 1));
-      const yPos = Math.floor((1 - (point.y - yMin) / yRange) * (chartHeight - 1));
-      
+      const yPos = Math.floor(
+        (1 - (point.y - yMin) / yRange) * (chartHeight - 1),
+      );
+
       if (xPos >= 0 && xPos < chartWidth && yPos >= 0 && yPos < chartHeight) {
         grid[yPos][xPos] = this.getScatterCharacter(index);
       }
@@ -616,11 +618,13 @@ export class AnalyticsVisualizer {
       for (let i = 0; i <= 4; i++) {
         xLabels.push((xMin + (xRange * i) / 4).toFixed(1));
       }
-      lines.push("         " + xLabels.join("     ".padEnd(Math.floor(chartWidth / 4))));
+      lines.push(
+        "         " + xLabels.join("     ".padEnd(Math.floor(chartWidth / 4))),
+      );
     }
 
     // Legend
-    if (opts.showLegend && data.some(d => d.label)) {
+    if (opts.showLegend && data.some((d) => d.label)) {
       lines.push("");
       lines.push("Points:");
       data.slice(0, 10).forEach((point, i) => {
@@ -661,11 +665,8 @@ export class AnalyticsVisualizer {
     const histogram: number[] = new Array(bins).fill(0);
 
     // Populate bins
-    data.forEach(value => {
-      const binIndex = Math.min(
-        Math.floor((value - min) / binWidth),
-        bins - 1
-      );
+    data.forEach((value) => {
+      const binIndex = Math.min(Math.floor((value - min) / binWidth), bins - 1);
       histogram[binIndex]++;
     });
 
@@ -710,7 +711,10 @@ export class AnalyticsVisualizer {
       let labelLine = "         ";
       for (let i = 0; i <= bins; i += Math.ceil(bins / 5)) {
         const value = min + i * binWidth;
-        labelLine += this.padRight(value.toFixed(1), Math.floor((opts.width - 10) / 5));
+        labelLine += this.padRight(
+          value.toFixed(1),
+          Math.floor((opts.width - 10) / 5),
+        );
       }
       lines.push(labelLine);
     }
@@ -719,11 +723,16 @@ export class AnalyticsVisualizer {
     if (opts.showLegend) {
       const mean = data.reduce((a, b) => a + b, 0) / data.length;
       const stdDev = Math.sqrt(
-        data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length
+        data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) /
+          data.length,
       );
       lines.push("");
-      lines.push(`Count: ${data.length} | Mean: ${mean.toFixed(2)} | StdDev: ${stdDev.toFixed(2)}`);
-      lines.push(`Min: ${min.toFixed(2)} | Max: ${max.toFixed(2)} | Bins: ${bins}`);
+      lines.push(
+        `Count: ${data.length} | Mean: ${mean.toFixed(2)} | StdDev: ${stdDev.toFixed(2)}`,
+      );
+      lines.push(
+        `Min: ${min.toFixed(2)} | Max: ${max.toFixed(2)} | Bins: ${bins}`,
+      );
     }
 
     return lines.join("\n");
@@ -750,10 +759,10 @@ export class AnalyticsVisualizer {
     }
 
     // Calculate statistics for each dataset
-    const stats = datasets.map(dataset => {
+    const stats = datasets.map((dataset) => {
       const sorted = [...dataset.values].sort((a, b) => a - b);
       const n = sorted.length;
-      
+
       return {
         label: dataset.label,
         min: sorted[0],
@@ -766,7 +775,7 @@ export class AnalyticsVisualizer {
     });
 
     // Find overall min/max for scaling
-    const allValues = datasets.flatMap(d => d.values);
+    const allValues = datasets.flatMap((d) => d.values);
     const overallMin = Math.min(...allValues);
     const overallMax = Math.max(...allValues);
     const range = overallMax - overallMin || 1;
@@ -791,7 +800,7 @@ export class AnalyticsVisualizer {
 
       // Create box plot line
       const boxLine = new Array(chartWidth).fill(" ");
-      
+
       // Whiskers and box positions
       const minPos = Math.floor((stat.min - overallMin) * scale);
       const q1Pos = Math.floor((stat.q1 - overallMin) * scale);
@@ -822,7 +831,7 @@ export class AnalyticsVisualizer {
       }
 
       // Draw outliers
-      stat.outliers.forEach(outlier => {
+      stat.outliers.forEach((outlier) => {
         const pos = Math.floor((outlier - overallMin) * scale);
         if (pos >= 0 && pos < chartWidth) {
           boxLine[pos] = "◦";
@@ -841,13 +850,17 @@ export class AnalyticsVisualizer {
       for (let i = 0; i <= 4; i++) {
         labels.push((overallMin + (range * i) / 4).toFixed(1));
       }
-      lines.push("         " + labels.join("     ".padEnd(Math.floor(chartWidth / 4))));
+      lines.push(
+        "         " + labels.join("     ".padEnd(Math.floor(chartWidth / 4))),
+      );
     }
 
     // Legend
     if (opts.showLegend) {
       lines.push("");
-      lines.push("Box Plot Legend: │ = whisker/quartile, █ = box, ┊ = median, ◦ = outlier");
+      lines.push(
+        "Box Plot Legend: │ = whisker/quartile, █ = box, ┊ = median, ◦ = outlier",
+      );
     }
 
     return lines.join("\n");
@@ -863,8 +876,8 @@ export class AnalyticsVisualizer {
     const iqr = q3 - q1;
     const lowerBound = q1 - 1.5 * iqr;
     const upperBound = q3 + 1.5 * iqr;
-    
-    return sorted.filter(v => v < lowerBound || v > upperBound);
+
+    return sorted.filter((v) => v < lowerBound || v > upperBound);
   }
 
   /**

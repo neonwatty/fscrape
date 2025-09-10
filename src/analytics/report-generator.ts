@@ -988,7 +988,10 @@ ${trending.predictions
   /**
    * Validate a template
    */
-  public validateTemplate(template: ReportTemplate): { valid: boolean; errors: string[] } {
+  public validateTemplate(template: ReportTemplate): {
+    valid: boolean;
+    errors: string[];
+  } {
     const errors: string[] = [];
 
     if (!template.name) {
@@ -1016,11 +1019,15 @@ ${trending.predictions
       const positions = new Set<string>();
       template.sections?.forEach((section) => {
         if (!section.position) {
-          errors.push(`Section ${section.id} must have position in dashboard layout`);
+          errors.push(
+            `Section ${section.id} must have position in dashboard layout`,
+          );
         } else {
           const key = `${section.position.row},${section.position.col}`;
           if (positions.has(key)) {
-            errors.push(`Position conflict at row ${section.position.row}, col ${section.position.col}`);
+            errors.push(
+              `Position conflict at row ${section.position.row}, col ${section.position.col}`,
+            );
           }
           positions.add(key);
         }
@@ -1056,7 +1063,10 @@ ${trending.predictions
         continue;
       }
 
-      const sectionData = this.extractDataFromSource(data, templateSection.dataSource);
+      const sectionData = this.extractDataFromSource(
+        data,
+        templateSection.dataSource,
+      );
       const content = this.renderSectionContent(templateSection, sectionData);
 
       sections.push({
@@ -1185,9 +1195,11 @@ ${trending.predictions
         <section class="report-section ${section.priority}" style="${positionStyle}">
           <h2>${section.title}</h2>
           <div class="content ${section.type}">
-            ${typeof section.content === "string" 
-              ? section.content.replace(/\n/g, "<br>")
-              : `<pre>${JSON.stringify(section.content, null, 2)}</pre>`}
+            ${
+              typeof section.content === "string"
+                ? section.content.replace(/\n/g, "<br>")
+                : `<pre>${JSON.stringify(section.content, null, 2)}</pre>`
+            }
           </div>
         </section>
       `;
@@ -1430,13 +1442,18 @@ ${trending.predictions
     report: ScheduledReport,
   ): Promise<void> {
     // This would implement actual sending logic (email, webhook, etc.)
-    console.log(`Sending report ${report.name} to ${report.recipients?.join(", ")}`);
+    console.log(
+      `Sending report ${report.name} to ${report.recipients?.join(", ")}`,
+    );
   }
 
   /**
    * Save generated report (placeholder)
    */
-  private async saveGeneratedReport(reportId: string, content: string): Promise<void> {
+  private async saveGeneratedReport(
+    reportId: string,
+    content: string,
+  ): Promise<void> {
     // This would implement actual storage logic
     console.log(`Saving report ${reportId} (${content.length} bytes)`);
   }
@@ -1451,7 +1468,10 @@ ${trending.predictions
   /**
    * Update scheduled report
    */
-  public updateScheduledReport(reportId: string, updates: Partial<ScheduledReport>): void {
+  public updateScheduledReport(
+    reportId: string,
+    updates: Partial<ScheduledReport>,
+  ): void {
     const report = this.scheduledReports.get(reportId);
     if (!report) {
       throw new Error(`Scheduled report '${reportId}' not found`);
@@ -1488,7 +1508,12 @@ ${trending.predictions
   ): Promise<Buffer> {
     // This would require a PDF generation library like puppeteer or pdfkit
     // For now, generate HTML and return as buffer
-    const html = await this.generateFromTemplate("executive", data, "html", config);
+    const html = await this.generateFromTemplate(
+      "executive",
+      data,
+      "html",
+      config,
+    );
     return Buffer.from(html);
   }
 
