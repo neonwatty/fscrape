@@ -249,6 +249,10 @@ export class ErrorHandler {
       recoveryCheckInterval: 60000,
       ...degradationConfig
     };
+    // Ensure fallbackServices is properly set if provided
+    if (degradationConfig?.fallbackServices) {
+      this.degradationConfig.fallbackServices = degradationConfig.fallbackServices;
+    }
   }
   
   /**
@@ -305,6 +309,9 @@ export class ErrorHandler {
       
       // Track error for degradation
       this.trackError(operationName);
+      
+      // Check if service should now be degraded
+      this.checkDegradation(operationName);
       
       // Notify user of error
       if (baseError.severity === ErrorSeverity.CRITICAL) {
@@ -443,14 +450,14 @@ export class ErrorHandler {
    * Determine recovery strategy based on error
    */
   private determineRecoveryStrategy(error: BaseError, hasFallback: boolean = false): RecoveryStrategy {
-    // Use error's suggested strategy if available
-    if (error.recoveryStrategy) {
-      return error.recoveryStrategy;
-    }
-    
     // If we have a fallback and error is not critical, use it
     if (hasFallback && error.severity !== ErrorSeverity.CRITICAL) {
       return RecoveryStrategy.FALLBACK;
+    }
+    
+    // Use error's suggested strategy if available
+    if (error.recoveryStrategy) {
+      return error.recoveryStrategy;
     }
     
     // Determine based on error properties
@@ -571,9 +578,9 @@ export class ErrorHandler {
    * Get circuit breaker state
    */
   public getCircuitBreakerState(name: string): CircuitState | undefined {
-    // Create the circuit breaker if it doesn't exist to ensure consistent state
-    const breaker = this.getOrCreateCircuitBreaker(name);
-    return breaker.getState();
+    // Don't create if it doesn't exist - return undefined
+    const breaker = this.circuitBreakers.get(name);
+    return breaker?.getState();
   }
   
   /**
@@ -749,15 +756,29 @@ export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
 export function HandleErrors(options?: {
   strategy?: RecoveryStrategy;
   fallback?: () => any;
-}) {
-  return function (
-    target: any,
-    propertyKey: string,
-    descriptor?: PropertyDescriptor
-  ) {
-    // Handle both legacy and modern decorators
+}): any {
+  return function (target: any, propertyKey: string | symbol, descriptor?: PropertyDescriptor): any {
+    // TypeScript 5+ decorators
+    if (typeof propertyKey === 'symbol' || arguments.length === 2) {
+      const method = target;
+      return async function(this: any, ...args: any[]) {
+        const className = this?.constructor?.name || 'Unknown';
+        const methodName = `${className}.${String(propertyKey)}`;
+        
+        return globalErrorHandler.handle(
+          () => method.apply(this, args),
+          {
+            name: methodName,
+            fallback: options?.fallback || undefined,
+            metadata: { className, methodName }
+          }
+        );
+      };
+    }
+    
+    // Legacy decorators
     if (!descriptor) {
-      descriptor = Object.getOwnPropertyDescriptor(target, propertyKey);
+      descriptor = Object.getOwnPropertyDescriptor(target, propertyKey as string);
     }
     
     if (!descriptor || !descriptor.value) {
@@ -768,7 +789,7 @@ export function HandleErrors(options?: {
     
     descriptor.value = async function (...args: any[]) {
       const className = target.constructor.name;
-      const methodName = `${className}.${propertyKey}`;
+      const methodName = `${className}.${String(propertyKey)}`;
       
       return globalErrorHandler.handle(
         () => originalMethod.apply(this, args),

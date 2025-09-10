@@ -20,7 +20,8 @@ import {
   ErrorSeverity,
   RecoveryStrategy,
   ValidationError,
-  ErrorFactory
+  ErrorFactory,
+  ErrorCategory
 } from '../errors.js';
 
 describe('ErrorHandler', () => {
@@ -65,20 +66,32 @@ describe('ErrorHandler', () => {
     });
 
     it('should add context to errors', async () => {
-      const error = new NetworkError('Network failed');
+      // Create a non-retryable error to prevent retries
+      const error = new BaseError(
+        'Network failed',
+        'TEST_ERROR',
+        ErrorSeverity.HIGH,
+        ErrorCategory.NETWORK,
+        RecoveryStrategy.TERMINATE,
+        false
+      );
       const operation = vi.fn().mockRejectedValue(error);
       
+      let caughtError: any;
       try {
         await errorHandler.handle(operation, {
           name: 'test_operation',
           metadata: { userId: '123' }
         });
       } catch (err: any) {
-        expect(err.context).toMatchObject({
-          operation: 'test_operation',
-          userId: '123'
-        });
+        caughtError = err;
       }
+      
+      expect(caughtError).toBeDefined();
+      expect(caughtError.context).toMatchObject({
+        operation: 'test_operation',
+        userId: '123'
+      });
     });
   });
 
@@ -89,10 +102,18 @@ describe('ErrorHandler', () => {
         .mockRejectedValueOnce(new NetworkError('Temporary failure'))
         .mockResolvedValue('success');
       
-      const result = await errorHandler.executeWithRetry(operation, {
+      const retryPromise = errorHandler.executeWithRetry(operation, {
         maxAttempts: 3,
-        initialDelay: 100
+        initialDelay: 10,
+        jitter: false
       });
+      
+      // Advance timers for first retry
+      await vi.advanceTimersByTimeAsync(10);
+      // Advance timers for second retry (with backoff multiplier of 2)
+      await vi.advanceTimersByTimeAsync(20);
+      
+      const result = await retryPromise;
       
       expect(result).toBe('success');
       expect(operation).toHaveBeenCalledTimes(3);
@@ -143,7 +164,12 @@ describe('ErrorHandler', () => {
         .mockRejectedValueOnce(new NetworkError('Failure'))
         .mockResolvedValue('success');
       
-      await errorHandler.executeWithRetry(operation, config);
+      const retryPromise = errorHandler.executeWithRetry(operation, config);
+      
+      // Advance timer to handle jitter (max 1200ms with 20% jitter)
+      await vi.advanceTimersByTimeAsync(1200);
+      
+      await retryPromise;
       
       // Verify jitter was applied (delay should be between 800-1200ms)
       expect(operation).toHaveBeenCalledTimes(2);
@@ -182,9 +208,9 @@ describe('ErrorHandler', () => {
 
     it('should transition to half-open after timeout', async () => {
       const operation = vi.fn()
-        .mockRejectedValue(new NetworkError('Service unavailable'))
-        .mockRejectedValue(new NetworkError('Service unavailable'))
-        .mockRejectedValue(new NetworkError('Service unavailable'))
+        .mockRejectedValueOnce(new NetworkError('Service unavailable'))
+        .mockRejectedValueOnce(new NetworkError('Service unavailable'))
+        .mockRejectedValueOnce(new NetworkError('Service unavailable'))
         .mockResolvedValue('success');
       
       const circuitConfig: CircuitBreakerConfig = {
@@ -196,16 +222,21 @@ describe('ErrorHandler', () => {
       
       const handler = new ErrorHandler(undefined, circuitConfig);
       
-      // Open the circuit
-      for (let i = 0; i < 2; i++) {
+      // Open the circuit by failing operations
+      let failureCount = 0;
+      for (let i = 0; i < 3; i++) {  // Try 3 times to ensure we exceed threshold
         try {
           await handler.executeWithCircuitBreaker(operation, 'test_service');
         } catch (e) {
-          // Expected
+          failureCount++;
+          // Expected failure
         }
       }
       
-      // Circuit is open
+      // Check that we had enough failures
+      expect(failureCount).toBeGreaterThanOrEqual(2);
+      
+      // Circuit should be open after reaching failure threshold
       expect(handler.getCircuitBreakerState('test_service')).toBe('open');
       
       // Wait for timeout
@@ -250,11 +281,12 @@ describe('ErrorHandler', () => {
       expect(handler.getCircuitBreakerState('test_service')).toBe('closed');
     });
 
-    it('should reset circuit breaker', () => {
+    it('should reset circuit breaker', async () => {
       const handler = new ErrorHandler();
       
-      // Create a circuit breaker
-      handler.getCircuitBreakerState('test_service');
+      // Create a circuit breaker by executing an operation
+      const operation = vi.fn().mockResolvedValue('success');
+      await handler.executeWithCircuitBreaker(operation, 'test_service');
       expect(handler.getCircuitBreakerState('test_service')).toBe('closed');
       
       // Reset it
@@ -267,10 +299,10 @@ describe('ErrorHandler', () => {
     it('should handle rate limit errors with retry', async () => {
       const rateLimitError = new RateLimitError(
         'Rate limited',
-        429,
-        60,
-        0,
-        Date.now() + 1000
+        1000,  // retryAfter in ms
+        60,    // limit
+        0,     // remaining
+        new Date(Date.now() + 1000)  // reset as Date
       );
       
       const operation = vi.fn()
@@ -634,16 +666,23 @@ describe('ErrorHandler', () => {
       const handler = new ErrorHandler();
       const originalError = new NetworkError('Network failed', 'NETWORK_ERROR');
       originalError.addContext({ requestId: '123' });
+      // Override recovery strategy to prevent retries
+      originalError.recoveryStrategy = RecoveryStrategy.TERMINATE;
       
       const operation = vi.fn().mockRejectedValue(originalError);
       
+      let caughtError: any;
       try {
         await handler.handle(operation, { name: 'test_op' });
       } catch (error: any) {
-        expect(error.code).toBe('NETWORK_ERROR');
-        expect(error.context.requestId).toBe('123');
-        expect(error.context.operation).toBe('test_op');
+        caughtError = error;
       }
+      
+      expect(caughtError).toBeDefined();
+      expect(caughtError.code).toBe('NETWORK_ERROR');
+      expect(caughtError.context).toBeDefined();
+      expect(caughtError.context.requestId).toBe('123');
+      expect(caughtError.context.operation).toBe('test_op');
     });
   });
 

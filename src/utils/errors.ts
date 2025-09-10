@@ -104,6 +104,13 @@ export class BaseError extends Error {
   }
 
   /**
+   * Get error context
+   */
+  public get context(): Record<string, any> | undefined {
+    return this.metadata.context;
+  }
+
+  /**
    * Set correlation ID for tracing
    */
   public setCorrelationId(correlationId: string): this {
@@ -800,7 +807,7 @@ export class ErrorFactory {
         'UNKNOWN_ERROR',
         ErrorSeverity.MEDIUM,
         ErrorCategory.UNKNOWN,
-        RecoveryStrategy.TERMINATE,
+        RecoveryStrategy.FALLBACK,
         false,
         error
       );
