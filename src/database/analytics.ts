@@ -988,9 +988,10 @@ export class DatabaseAnalytics {
           session_id TEXT,
           time_bucket INTEGER,
           requests_made INTEGER DEFAULT 0,
+          requests_successful INTEGER DEFAULT 0,
           requests_failed INTEGER DEFAULT 0,
           items_scraped INTEGER DEFAULT 0,
-          avg_response_time REAL DEFAULT 0
+          avg_response_time_ms INTEGER DEFAULT 0
         )
       `,
       daily_stats: `
