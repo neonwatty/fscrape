@@ -139,12 +139,12 @@ describe('ErrorHandler', () => {
       // First attempt immediately
       expect(operation).toHaveBeenCalledTimes(1);
       
-      // Second attempt after initial delay
-      await vi.advanceTimersByTimeAsync(1100);
+      // Second attempt after initial delay (1000ms base + up to 20% jitter)
+      await vi.advanceTimersByTimeAsync(1200);
       expect(operation).toHaveBeenCalledTimes(2);
       
-      // Third attempt after backoff
-      await vi.advanceTimersByTimeAsync(2100);
+      // Third attempt after backoff (2000ms base + up to 20% jitter)
+      await vi.advanceTimersByTimeAsync(2400);
       expect(operation).toHaveBeenCalledTimes(3);
       
       const result = await promise;
