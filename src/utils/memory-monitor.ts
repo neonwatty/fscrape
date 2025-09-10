@@ -1,6 +1,5 @@
 import { createLogger } from "./enhanced-logger.js";
-import v8 from "v8";
-import { performance } from "perf_hooks";
+import { performance, PerformanceObserver } from "perf_hooks";
 
 export interface MemoryStats {
   heapUsed: number;
@@ -21,7 +20,6 @@ export interface MemoryThresholds {
 
 export interface MemorySnapshot {
   stats: MemoryStats;
-  heapSnapshot?: v8.HeapSnapshot;
   gcStats?: GCStats;
 }
 
@@ -70,15 +68,16 @@ export class MemoryMonitor {
 
   private setupGCTracking(): void {
     try {
-      const obs = new performance.PerformanceObserver((list) => {
+      const obs = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         for (const entry of entries) {
           if (entry.entryType === "gc") {
             this.gcStats.count++;
             this.gcStats.duration += entry.duration;
             this.gcStats.lastRun = Date.now();
-            this.gcStats.type = (entry as any).kind
-              ? String((entry as any).kind)
+            const gcEntry = entry as any;
+            this.gcStats.type = gcEntry.kind
+              ? String(gcEntry.kind)
               : "unknown";
           }
         }
@@ -130,8 +129,8 @@ export class MemoryMonitor {
 
     if (this.monitorInterval) {
       clearInterval(this.monitorInterval);
-      this.monitorInterval = undefined;
     }
+    this.monitorInterval = undefined;
 
     this.monitoring = false;
     this.logger.info("Memory monitoring stopped");
@@ -149,23 +148,17 @@ export class MemoryMonitor {
     const heapUsedMB = stats.heapUsed / 1024 / 1024;
 
     if (stats.heapUsedPercent > this.thresholds.criticalPercent) {
-      this.logger.error("Critical memory usage detected", {
-        heapUsedPercent: stats.heapUsedPercent.toFixed(2),
-        heapUsedMB: heapUsedMB.toFixed(2),
-      });
+      this.logger.error("Critical memory usage detected: " + 
+        `${stats.heapUsedPercent.toFixed(2)}% (${heapUsedMB.toFixed(2)}MB)`);
       this.forceGarbageCollection();
     } else if (stats.heapUsedPercent > this.thresholds.warningPercent) {
-      this.logger.warn("High memory usage detected", {
-        heapUsedPercent: stats.heapUsedPercent.toFixed(2),
-        heapUsedMB: heapUsedMB.toFixed(2),
-      });
+      this.logger.warn("High memory usage detected: " + 
+        `${stats.heapUsedPercent.toFixed(2)}% (${heapUsedMB.toFixed(2)}MB)`);
     }
 
     if (heapUsedMB > this.thresholds.maxHeapUsedMB) {
-      this.logger.error("Memory limit exceeded", {
-        heapUsedMB: heapUsedMB.toFixed(2),
-        limitMB: this.thresholds.maxHeapUsedMB,
-      });
+      this.logger.error("Memory limit exceeded: " + 
+        `${heapUsedMB.toFixed(2)}MB (limit: ${this.thresholds.maxHeapUsedMB}MB)`);
       this.forceGarbageCollection();
     }
   }
@@ -201,6 +194,10 @@ export class MemoryMonitor {
     const recentHistory = this.history.slice(-10);
     const first = recentHistory[0];
     const last = recentHistory[recentHistory.length - 1];
+    
+    if (!first || !last) {
+      return { trend: "stable", averageGrowthMBPerMin: 0 };
+    }
 
     const timeDiffMin = (last.timestamp - first.timestamp) / 1000 / 60;
     const memDiffMB = (last.heapUsed - first.heapUsed) / 1024 / 1024;
@@ -249,9 +246,12 @@ export class MemoryMonitor {
 
     const growthRates: number[] = [];
     for (let i = 1; i < snapshots.length; i++) {
-      const rate =
-        (snapshots[i].heapUsed - snapshots[i - 1].heapUsed) / sampleInterval;
-      growthRates.push(rate);
+      const prev = snapshots[i - 1];
+      const curr = snapshots[i];
+      if (prev && curr) {
+        const rate = (curr.heapUsed - prev.heapUsed) / sampleInterval;
+        growthRates.push(rate);
+      }
     }
 
     const avgGrowthRate =
@@ -283,13 +283,13 @@ export class MemoryMonitor {
   }
 
   private notifyCallbacks(stats: MemoryStats): void {
-    for (const callback of this.callbacks.values()) {
+    this.callbacks.forEach((callback) => {
       try {
         callback(stats);
       } catch (error) {
-        this.logger.error("Callback error:", error);
+        this.logger.error("Callback error: " + String(error));
       }
-    }
+    });
   }
 
   getHistory(): MemoryStats[] {
