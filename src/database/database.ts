@@ -101,7 +101,7 @@ export class DatabaseManager {
           platform: post.platform,
         });
 
-        return result;
+        return { changes: result.changes, inserted: false };
       } else {
         // Insert new post
         const platformId = this.extractPlatformId(post);
@@ -122,7 +122,7 @@ export class DatabaseManager {
           post.metadata ? JSON.stringify(post.metadata) : null,
         );
 
-        return result;
+        return { changes: result.changes, inserted: true };
       }
     } catch (error) {
       this.logger.error(`Failed to upsert post ${post.id}:`, error);
@@ -200,7 +200,7 @@ export class DatabaseManager {
           platform: comment.platform,
         });
 
-        return result;
+        return { changes: result.changes, inserted: false };
       } else {
         // Insert new comment
         const platformId = this.extractPlatformId(comment);
@@ -220,7 +220,7 @@ export class DatabaseManager {
           comment.updatedAt?.getTime() || null,
         );
 
-        return result;
+        return { changes: result.changes, inserted: true };
       }
     } catch (error) {
       this.logger.error(`Failed to upsert comment ${comment.id}:`, error);
@@ -278,7 +278,7 @@ export class DatabaseManager {
           platform: user.platform,
         });
 
-        return result;
+        return { changes: result.changes, inserted: false };
       } else {
         // Insert new user
         const result = this.queries.insertUser.run(
@@ -290,7 +290,7 @@ export class DatabaseManager {
           Date.now(),
         );
 
-        return result;
+        return { changes: result.changes, inserted: true };
       }
     } catch (error) {
       this.logger.error(`Failed to upsert user ${user.id}:`, error);
