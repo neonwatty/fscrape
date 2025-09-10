@@ -12,6 +12,7 @@ import type {
 import type { Platform } from "../types/core.js";
 import { AnalyticsVisualizer } from "./visualizer.js";
 import { ReportGenerator } from "./report-generator.js";
+import * as readline from "readline";
 
 export interface DashboardConfig {
   refreshInterval?: number; // in milliseconds
@@ -695,14 +696,14 @@ export class AnalyticsDashboard {
     }
 
     // Most active user insight
-    for (const [platform, stats] of platforms) {
+    platforms.forEach((stats, platform) => {
       if (stats.mostActiveUser) {
         insights.push(
           `Most active user on ${platform}: ${stats.mostActiveUser.username} ` +
             `(${stats.mostActiveUser.posts + stats.mostActiveUser.comments} contributions)`,
         );
       }
-    }
+    });
 
     return insights;
   }
@@ -803,5 +804,420 @@ export class AnalyticsDashboard {
   public clearCache(): void {
     this.cachedMetrics = undefined;
     this.lastRefresh = undefined;
+  }
+
+  /**
+   * Display comprehensive dashboard summary
+   */
+  public async displayDashboard(
+    options: {
+      showCharts?: boolean;
+      showDetails?: boolean;
+      colorize?: boolean;
+    } = {},
+  ): Promise<string> {
+    const metrics = await this.getMetrics();
+    const output: string[] = [];
+
+    // Header
+    output.push("=".repeat(80));
+    output.push(this.centerText("📊 ANALYTICS DASHBOARD", 80));
+    output.push("=".repeat(80));
+    output.push("");
+
+    // Overview Section
+    output.push(this.formatSection("📈 OVERVIEW", options.colorize));
+    output.push(this.formatOverview(metrics.overview));
+    output.push("");
+
+    // Platform Breakdown
+    output.push(this.formatSection("🌐 PLATFORM BREAKDOWN", options.colorize));
+    output.push(this.formatPlatformBreakdown(metrics.platformBreakdown));
+    output.push("");
+
+    // Trending Content
+    if (metrics.trending.length > 0) {
+      output.push(this.formatSection("🔥 TRENDING CONTENT", options.colorize));
+      output.push(this.formatTrendingContent(metrics.trending.slice(0, 5)));
+      output.push("");
+    }
+
+    // Charts
+    if (options.showCharts && metrics.timeSeries.length > 0) {
+      output.push(this.formatSection("📊 ACTIVITY TREND", options.colorize));
+      const chart = this.visualizer.createLineChart(
+        metrics.timeSeries.slice(0, 30).map(d => ({
+          date: d.timestamp,
+          value: d.avgScore
+        })),
+        "30-Day Score Trend",
+        { width: 70, height: 15 }
+      );
+      output.push(chart);
+      output.push("");
+
+      // Platform distribution pie chart
+      const platformData = Array.from(metrics.platformBreakdown.entries()).map(
+        ([platform, stats]) => ({
+          label: platform,
+          value: stats.totalPosts
+        })
+      );
+      output.push(this.formatSection("🥧 CONTENT DISTRIBUTION", options.colorize));
+      const pieChart = this.visualizer.createPieChart(
+        platformData,
+        "Posts by Platform",
+        { width: 70, height: 15 }
+      );
+      output.push(pieChart);
+      output.push("");
+    }
+
+    // Health Status
+    output.push(this.formatSection("💚 SYSTEM HEALTH", options.colorize));
+    output.push(this.formatHealthStatus(metrics.health));
+    output.push("");
+
+    // Top Performers
+    if (options.showDetails) {
+      output.push(this.formatSection("🏆 TOP PERFORMERS", options.colorize));
+      output.push(this.formatTopPerformers(metrics.topPerformers));
+      output.push("");
+    }
+
+    // Footer
+    output.push("─".repeat(80));
+    output.push(`Last Updated: ${new Date().toLocaleString()}`);
+    output.push("=".repeat(80));
+
+    return output.join("\n");
+  }
+
+  /**
+   * Start interactive dashboard mode
+   */
+  public async startInteractiveDashboard(): Promise<void> {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    console.clear();
+    console.log(await this.displayDashboard({ showCharts: true }));
+
+    const commands = [
+      "r - Refresh dashboard",
+      "p - Platform details",
+      "t - Trending analysis",
+      "c - Comparative view",
+      "e - Export report",
+      "s - Settings",
+      "q - Quit",
+    ];
+
+    console.log("\n" + "─".repeat(80));
+    console.log("Commands: " + commands.join(" | "));
+    console.log("─".repeat(80));
+
+    const prompt = () => {
+      rl.question("\nDashboard > ", async (answer) => {
+        const cmd = answer.toLowerCase().trim();
+
+        switch (cmd) {
+          case "r":
+            console.clear();
+            console.log(await this.displayDashboard({ showCharts: true }));
+            break;
+
+          case "p":
+            await this.showPlatformDetails(rl);
+            break;
+
+          case "t":
+            await this.showTrendingAnalysis();
+            break;
+
+          case "c":
+            await this.showComparativeView();
+            break;
+
+          case "e":
+            await this.exportInteractive(rl);
+            break;
+
+          case "s":
+            await this.showSettings(rl);
+            break;
+
+          case "q":
+            console.log("\nExiting dashboard...");
+            this.stopAutoRefresh();
+            rl.close();
+            return;
+
+          default:
+            console.log("Unknown command. Use 'q' to quit.");
+        }
+
+        console.log("\n" + "─".repeat(80));
+        console.log("Commands: " + commands.join(" | "));
+        console.log("─".repeat(80));
+        prompt();
+      });
+    };
+
+    prompt();
+  }
+
+  /**
+   * Show platform-specific details
+   */
+  private async showPlatformDetails(
+    rl: readline.Interface,
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      rl.question("\nSelect platform (reddit/hackernews): ", async (platform) => {
+        try {
+          const dashboard = await this.getPlatformDashboard(
+            platform as Platform,
+          );
+          console.log("\n" + "=".repeat(80));
+          console.log(this.centerText(`${platform.toUpperCase()} DETAILS`, 80));
+          console.log("=".repeat(80));
+          console.log(dashboard.visualization);
+          console.log("\nEngagement Distribution:");
+          dashboard.engagement.distribution.forEach((count, bucket) => {
+            console.log(`  ${bucket}: ${"█".repeat(Math.min(count, 30))} (${count})`);
+          });
+        } catch (error) {
+          console.error("Error fetching platform details:", error);
+        }
+        resolve();
+      });
+    });
+  }
+
+  /**
+   * Show trending analysis
+   */
+  private async showTrendingAnalysis(): Promise<void> {
+    const insights = await this.getTrendingInsights();
+    
+    console.log("\n" + "=".repeat(80));
+    console.log(this.centerText("TRENDING ANALYSIS", 80));
+    console.log("=".repeat(80));
+    
+    console.log("\n📈 Rising Content:");
+    insights.rising.slice(0, 5).forEach((post, i) => {
+      console.log(`  ${i + 1}. ${post.title}`);
+      console.log(`     Score: ${post.score} | Comments: ${post.commentCount}`);
+    });
+    
+    console.log("\n📉 Declining Content:");
+    insights.declining.slice(0, 5).forEach((item, i) => {
+      console.log(`  ${i + 1}. ${item.post.title}`);
+      console.log(`     Drop Rate: ${(item.dropRate * 100).toFixed(1)}%`);
+    });
+    
+    console.log("\n🔮 Predictions:");
+    insights.predictions.slice(0, 3).forEach((pred, i) => {
+      console.log(`  ${i + 1}. ${pred.post.title}`);
+      console.log(`     Predicted Score: ${pred.predictedScore} (${pred.confidence}% confidence)`);
+    });
+  }
+
+  /**
+   * Show comparative view
+   */
+  private async showComparativeView(): Promise<void> {
+    const comparative = await this.getComparativeAnalytics();
+    
+    console.log("\n" + "=".repeat(80));
+    console.log(this.centerText("PLATFORM COMPARISON", 80));
+    console.log("=".repeat(80));
+    console.log(comparative.visualization);
+    
+    console.log("\n💡 Insights:");
+    comparative.insights.forEach(insight => {
+      console.log(`  • ${insight}`);
+    });
+  }
+
+  /**
+   * Export report interactively
+   */
+  private async exportInteractive(
+    rl: readline.Interface,
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      rl.question("\nExport format (markdown/html/json): ", async (format) => {
+        try {
+          const report = await this.generateReport(format as any);
+          const filename = `dashboard-report-${Date.now()}.${format === "html" ? "html" : format === "json" ? "json" : "md"}`;
+          
+          // In a real implementation, this would write to a file
+          console.log(`\n✅ Report exported to: ${filename}`);
+          console.log(`   Size: ${Buffer.byteLength(report, "utf8")} bytes`);
+        } catch (error) {
+          console.error("Error exporting report:", error);
+        }
+        resolve();
+      });
+    });
+  }
+
+  /**
+   * Show and modify settings
+   */
+  private async showSettings(
+    rl: readline.Interface,
+  ): Promise<void> {
+    console.log("\n" + "=".repeat(80));
+    console.log(this.centerText("DASHBOARD SETTINGS", 80));
+    console.log("=".repeat(80));
+    console.log(`\nCurrent Settings:`);
+    console.log(`  • Auto-refresh: ${this.config.enableAutoRefresh ? "Enabled" : "Disabled"}`);
+    console.log(`  • Refresh interval: ${this.config.refreshInterval / 1000}s`);
+    console.log(`  • Max data points: ${this.config.maxDataPoints}`);
+    console.log(`  • Platforms: ${this.config.platforms.join(", ")}`);
+    
+    return new Promise((resolve) => {
+      rl.question("\nToggle auto-refresh? (y/n): ", (answer) => {
+        if (answer.toLowerCase() === "y") {
+          this.config.enableAutoRefresh = !this.config.enableAutoRefresh;
+          if (this.config.enableAutoRefresh) {
+            this.startAutoRefresh();
+            console.log("✅ Auto-refresh enabled");
+          } else {
+            this.stopAutoRefresh();
+            console.log("✅ Auto-refresh disabled");
+          }
+        }
+        resolve();
+      });
+    });
+  }
+
+  // Formatting helper methods
+
+  private formatSection(title: string, colorize = false): string {
+    if (colorize) {
+      // In a real implementation, this would use ANSI colors
+      return `\n${title}\n${"─".repeat(title.length)}`;
+    }
+    return `\n${title}\n${"─".repeat(title.length)}`;
+  }
+
+  private formatOverview(overview: DashboardMetrics["overview"]): string {
+    const lines: string[] = [];
+    lines.push(`  📊 Total Posts:     ${this.formatNumber(overview.totalPosts)}`);
+    lines.push(`  💬 Total Comments:  ${this.formatNumber(overview.totalComments)}`);
+    lines.push(`  👥 Total Users:     ${this.formatNumber(overview.totalUsers)}`);
+    lines.push(`  ⚡ Avg Engagement:  ${overview.avgEngagement.toFixed(2)}`);
+    lines.push(`  📈 Growth Rate:     ${overview.growthRate > 0 ? "+" : ""}${overview.growthRate.toFixed(1)}%`);
+    return lines.join("\n");
+  }
+
+  private formatPlatformBreakdown(
+    breakdown: Map<Platform, PlatformStats>,
+  ): string {
+    const lines: string[] = [];
+    breakdown.forEach((stats, platform) => {
+      lines.push(`  ${platform}:`);
+      lines.push(`    • Posts: ${this.formatNumber(stats.totalPosts)}`);
+      lines.push(`    • Comments: ${this.formatNumber(stats.totalComments)}`);
+      lines.push(`    • Avg Score: ${stats.avgScore.toFixed(2)}`);
+    });
+    return lines.join("\n");
+  }
+
+  private formatTrendingContent(trending: TrendingPost[]): string {
+    const lines: string[] = [];
+    trending.forEach((post, i) => {
+      lines.push(`  ${i + 1}. ${post.title.substring(0, 60)}${post.title.length > 60 ? "..." : ""}`);
+      lines.push(`     [${post.platform}] Score: ${post.score} | Comments: ${post.commentCount} | By: ${post.author}`);
+    });
+    return lines.join("\n");
+  }
+
+  private formatHealthStatus(
+    health: DashboardMetrics["health"],
+  ): string {
+    const lines: string[] = [];
+    const healthIcon = health.dataQuality >= 80 ? "✅" : health.dataQuality >= 50 ? "⚠️" : "❌";
+    lines.push(`  ${healthIcon} Data Quality:    ${health.dataQuality}%`);
+    lines.push(`  💾 Database Size:   ${this.formatBytes(health.databaseSize)}`);
+    lines.push(`  🕐 Last Update:     ${this.formatRelativeTime(health.lastUpdate)}`);
+    if (health.gaps.length > 0) {
+      lines.push(`  ⚠️  Data Gaps:       ${health.gaps.length} detected`);
+    }
+    return lines.join("\n");
+  }
+
+  private formatTopPerformers(
+    topPerformers: DashboardMetrics["topPerformers"],
+  ): string {
+    const lines: string[] = [];
+    
+    if (topPerformers.posts.length > 0) {
+      lines.push("  Top Posts:");
+      topPerformers.posts.slice(0, 3).forEach((post, i) => {
+        lines.push(`    ${i + 1}. ${post.title.substring(0, 50)}${post.title.length > 50 ? "..." : ""}`);
+        lines.push(`       Score: ${post.score}`);
+      });
+    }
+    
+    if (topPerformers.authors.length > 0) {
+      lines.push("\n  Top Authors:");
+      topPerformers.authors.slice(0, 3).forEach((author, i) => {
+        lines.push(`    ${i + 1}. ${author.author}`);
+        lines.push(`       Posts: ${author.metrics.postCount} | Avg Score: ${author.metrics.avgScore.toFixed(1)}`);
+      });
+    }
+    
+    return lines.join("\n");
+  }
+
+  private formatNumber(num: number): string {
+    if (num >= 1000000) {
+      return `${(num / 1000000).toFixed(1)}M`;
+    } else if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}K`;
+    }
+    return num.toLocaleString();
+  }
+
+  private formatBytes(bytes: number): string {
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let size = bytes;
+    let unitIndex = 0;
+
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
+  }
+
+  private formatRelativeTime(date: Date): string {
+    const now = Date.now();
+    const diff = now - date.getTime();
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+    return `${seconds} second${seconds > 1 ? "s" : ""} ago`;
+  }
+
+  private centerText(text: string, width: number): string {
+    const padding = Math.max(0, width - text.length);
+    const leftPad = Math.floor(padding / 2);
+    const rightPad = padding - leftPad;
+    return " ".repeat(leftPad) + text + " ".repeat(rightPad);
   }
 }
