@@ -23,6 +23,16 @@ export interface RedditScraperConfig extends BasePlatformConfig {
 }
 
 /**
+ * Pagination state for tracking multi-page fetches
+ */
+interface PaginationState {
+  after?: string;
+  before?: string;
+  count: number;
+  hasMore: boolean;
+}
+
+/**
  * Reddit platform implementation
  */
 export class RedditScraper extends BasePlatform {
@@ -35,6 +45,7 @@ export class RedditScraper extends BasePlatform {
     supportsPagination: true,
     supportsRealtime: false,
     maxItemsPerRequest: 100,
+    maxCommentDepth: 10, // Reddit's default max depth
   };
 
   constructor(config: RedditScraperConfig, customLogger?: winston.Logger) {
@@ -193,6 +204,69 @@ export class RedditScraper extends BasePlatform {
   }
 
   /**
+   * Scrape posts with automatic pagination
+   */
+  async scrapeCategoryWithPagination(
+    category: string,
+    options?: ScrapeOptions & { maxPages?: number },
+  ): Promise<{ posts: ForumPost[]; paginationState: PaginationState }> {
+    await this.ensureAuthenticated();
+
+    const sort = this.mapSortOption(options?.sortBy);
+    const pageSize = Math.min(options?.limit || 25, 100); // Reddit max is 100
+    const maxPages = options?.maxPages || 1;
+    const targetTotal = options?.limit || pageSize;
+
+    const allPosts: ForumPost[] = [];
+    let paginationState: PaginationState = {
+      count: 0,
+      hasMore: true,
+    };
+    let pagesLoaded = 0;
+
+    try {
+      while (
+        paginationState.hasMore &&
+        allPosts.length < targetTotal &&
+        pagesLoaded < maxPages
+      ) {
+        const listing = await this.retryOperation(
+          () =>
+            this.client.getSubredditPosts(category, sort, {
+              limit: Math.min(pageSize, targetTotal - allPosts.length),
+              ...(options?.timeRange && { t: options.timeRange }),
+              ...(paginationState.after && { after: paginationState.after }),
+            }),
+          `scrapeCategoryWithPagination(${category}, page ${pagesLoaded + 1})`,
+        );
+
+        const posts = this.parsePostListing(listing);
+        allPosts.push(...posts);
+        pagesLoaded++;
+
+        // Update pagination state
+        paginationState = {
+          ...(listing.data.after && { after: listing.data.after }),
+          ...(listing.data.before && { before: listing.data.before }),
+          count: allPosts.length,
+          hasMore: !!listing.data.after && posts.length === pageSize,
+        };
+
+        this.logger.info(
+          `Loaded page ${pagesLoaded} of ${category}: ${posts.length} posts (total: ${allPosts.length})`,
+        );
+      }
+
+      return {
+        posts: allPosts.slice(0, targetTotal),
+        paginationState,
+      };
+    } catch (error) {
+      this.handleApiError(error, `scrapeCategoryWithPagination(${category})`);
+    }
+  }
+
+  /**
    * Scrape a single post by ID
    */
   async scrapePost(postId: string): Promise<ForumPost | null> {
@@ -237,7 +311,11 @@ export class RedditScraper extends BasePlatform {
         `scrapeComments(${postId})`,
       );
 
-      return this.parseCommentListing(commentsListing, postId);
+      return this.parseCommentListing(
+        commentsListing,
+        postId,
+        options?.maxDepth,
+      );
     } catch (error) {
       this.handleApiError(error, `scrapeComments(${postId})`);
     }
@@ -291,6 +369,69 @@ export class RedditScraper extends BasePlatform {
   }
 
   /**
+   * Search with automatic pagination
+   */
+  async searchWithPagination(
+    query: string,
+    options?: ScrapeOptions & { maxPages?: number },
+  ): Promise<{ posts: ForumPost[]; paginationState: PaginationState }> {
+    await this.ensureAuthenticated();
+
+    const pageSize = Math.min(options?.limit || 25, 100);
+    const maxPages = options?.maxPages || 1;
+    const targetTotal = options?.limit || pageSize;
+
+    const allPosts: ForumPost[] = [];
+    let paginationState: PaginationState = {
+      count: 0,
+      hasMore: true,
+    };
+    let pagesLoaded = 0;
+
+    try {
+      while (
+        paginationState.hasMore &&
+        allPosts.length < targetTotal &&
+        pagesLoaded < maxPages
+      ) {
+        const listing = await this.retryOperation(
+          () =>
+            this.client.search(query, {
+              sort: this.mapSearchSort(options?.sortBy),
+              ...(options?.timeRange && { t: options.timeRange }),
+              limit: Math.min(pageSize, targetTotal - allPosts.length),
+              ...(paginationState.after && { after: paginationState.after }),
+            }),
+          `searchWithPagination(${query}, page ${pagesLoaded + 1})`,
+        );
+
+        const posts = this.parsePostListing(listing);
+        allPosts.push(...posts);
+        pagesLoaded++;
+
+        // Update pagination state
+        paginationState = {
+          ...(listing.data.after && { after: listing.data.after }),
+          ...(listing.data.before && { before: listing.data.before }),
+          count: allPosts.length,
+          hasMore: !!listing.data.after && posts.length === pageSize,
+        };
+
+        this.logger.info(
+          `Search page ${pagesLoaded}: ${posts.length} posts (total: ${allPosts.length})`,
+        );
+      }
+
+      return {
+        posts: allPosts.slice(0, targetTotal),
+        paginationState,
+      };
+    } catch (error) {
+      this.handleApiError(error, `searchWithPagination(${query})`);
+    }
+  }
+
+  /**
    * Get trending/hot posts from Reddit
    */
   async getTrending(options?: ScrapeOptions): Promise<ForumPost[]> {
@@ -338,24 +479,35 @@ export class RedditScraper extends BasePlatform {
   }
 
   /**
-   * Parse comment listing to Comment array
+   * Parse comment listing to Comment array with depth control
    */
   private parseCommentListing(
     listing: RedditListing<RedditComment>,
     postId: string,
+    maxDepth?: number,
   ): Comment[] {
     const comments: Comment[] = [];
+    const effectiveMaxDepth =
+      maxDepth ?? this.capabilities.maxCommentDepth ?? 10;
 
-    const processComment = (commentData: RedditComment) => {
+    const processComment = (
+      commentData: RedditComment,
+      currentDepth: number = 0,
+    ) => {
+      // Add the comment
       comments.push(this.client.convertToComment(commentData, postId));
 
-      // Process replies recursively
-      if (commentData.replies && typeof commentData.replies === "object") {
+      // Process replies recursively with depth check
+      if (
+        currentDepth < effectiveMaxDepth &&
+        commentData.replies &&
+        typeof commentData.replies === "object"
+      ) {
         const repliesListing =
           commentData.replies as RedditListing<RedditComment>;
         for (const replyChild of repliesListing.data.children) {
           if (replyChild.kind === "t1") {
-            processComment(replyChild.data);
+            processComment(replyChild.data, currentDepth + 1);
           }
         }
       }
@@ -364,9 +516,13 @@ export class RedditScraper extends BasePlatform {
     // Process all top-level comments
     for (const child of listing.data.children) {
       if (child.kind === "t1") {
-        processComment(child.data);
+        processComment(child.data, 0);
       }
     }
+
+    this.logger.info(
+      `Parsed ${comments.length} comments with max depth ${effectiveMaxDepth}`,
+    );
 
     return comments;
   }
