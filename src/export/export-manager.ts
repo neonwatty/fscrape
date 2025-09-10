@@ -2,9 +2,8 @@
  * Export manager for handling data exports in various formats
  */
 
-import type { ScrapeResult } from "../types/core.js";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
-import { join, dirname } from "path";
+import { dirname } from "path";
 
 export interface ExportConfig {
   outputDirectory: string;
@@ -13,10 +12,9 @@ export interface ExportConfig {
 }
 
 export class ExportManager {
-  private config: ExportConfig;
-
   constructor(config: ExportConfig) {
-    this.config = config;
+    // Config can be used for future enhancements
+    void config;
   }
 
   /**

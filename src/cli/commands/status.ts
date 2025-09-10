@@ -11,7 +11,6 @@ import {
 } from "../validation.js";
 import type { StatusOptions } from "../validation.js";
 import { DatabaseManager } from "../../database/database.js";
-import { DatabaseAnalytics } from "../../database/analytics.js";
 import chalk from "chalk";
 import Table from "cli-table3";
 
@@ -61,11 +60,15 @@ async function handleStatus(options: any): Promise<void> {
 
   // Connect to database
   const dbPath = validatePath(statusOptions.database || "fscrape.db", true);
-  const dbManager = new DatabaseManager({ path: dbPath });
+  const dbManager = new DatabaseManager({
+    type: "sqlite" as const,
+    path: dbPath,
+    connectionPoolSize: 5,
+  });
   await dbManager.initialize();
 
-  // Create analytics instance
-  const analytics = new DatabaseAnalytics(dbManager);
+  // Get analytics from database manager
+  const analytics = dbManager.getAnalytics();
 
   // Gather statistics
   const stats = await gatherStatistics(analytics, statusOptions);
@@ -89,11 +92,11 @@ async function handleStatus(options: any): Promise<void> {
  * Gather statistics from database
  */
 async function gatherStatistics(
-  analytics: DatabaseAnalytics,
+  analytics: any,
   options: StatusOptions,
 ): Promise<any> {
   const stats: any = {
-    overview: await analytics.getOverview(),
+    overview: analytics.getPlatformStats(),
     platforms: {},
     recent: {},
     trends: {},
@@ -101,14 +104,14 @@ async function gatherStatistics(
 
   // Get platform-specific stats
   if (options.platform) {
-    stats.platforms[options.platform] = await analytics.getPlatformStats(
+    stats.platforms[options.platform] = analytics.getPlatformStats(
       options.platform,
     );
   } else {
     // Get stats for all platforms
-    const platforms = ["reddit", "hackernews"]; // TODO: get from analytics
+    const platforms = ["reddit", "hackernews"] as const; // TODO: get from analytics
     for (const platform of platforms) {
-      stats.platforms[platform] = await analytics.getPlatformStats(platform);
+      stats.platforms[platform] = analytics.getPlatformStats(platform);
     }
   }
 

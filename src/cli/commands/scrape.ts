@@ -16,7 +16,7 @@ import { PlatformFactory } from "../../platforms/platform-factory.js";
 import { DatabaseManager } from "../../database/database.js";
 import { ExportManager } from "../../export/export-manager.js";
 import { ConfigManager } from "../../config/manager.js";
-import type { Platform, ScrapeResult } from "../../types/core.js";
+import type { Platform, ScrapeResult, SortOption } from "../../types/core.js";
 import chalk from "chalk";
 import ora from "ora";
 
@@ -122,7 +122,11 @@ async function handleScrape(url: string, options: any): Promise<void> {
   let dbManager: DatabaseManager | null = null;
   if (options.save !== false) {
     const dbPath = options.database || config.database?.path || "fscrape.db";
-    dbManager = new DatabaseManager({ path: dbPath });
+    dbManager = new DatabaseManager({
+      type: "sqlite" as const,
+      path: dbPath,
+      connectionPoolSize: 5,
+    });
     await dbManager.initialize();
     if (options.verbose) {
       console.log(chalk.gray(formatInfo(`Connected to database: ${dbPath}`)));
@@ -148,13 +152,14 @@ async function handleScrape(url: string, options: any): Promise<void> {
     let result: ScrapeResult;
 
     if (scrapeTarget.type === "category") {
-      const posts = await scraper.scrapeCategory(scrapeTarget.value, {
-        limit: scrapeOptions.limit,
-        sortBy: scrapeOptions.sortBy,
-        timeRange: scrapeOptions.timeRange,
-        includeComments: scrapeOptions.includeComments,
-        maxDepth: scrapeOptions.maxDepth,
-      });
+      const categoryOptions: any = {};
+      if (scrapeOptions.limit !== undefined) categoryOptions.limit = scrapeOptions.limit;
+      if (scrapeOptions.sortBy !== undefined) categoryOptions.sortBy = scrapeOptions.sortBy as SortOption;
+      if (scrapeOptions.timeRange !== undefined) categoryOptions.timeRange = scrapeOptions.timeRange;
+      if (scrapeOptions.includeComments !== undefined) categoryOptions.includeComments = scrapeOptions.includeComments;
+      if (scrapeOptions.maxDepth !== undefined) categoryOptions.maxDepth = scrapeOptions.maxDepth;
+      
+      const posts = await scraper.scrapeCategory(scrapeTarget.value, categoryOptions);
 
       result = {
         posts,
@@ -170,10 +175,10 @@ async function handleScrape(url: string, options: any): Promise<void> {
         throw new Error(`Post not found: ${scrapeTarget.value}`);
       }
 
-      let comments = undefined;
+      let comments: any[] | undefined = undefined;
       if (scrapeOptions.includeComments) {
         comments = await scraper.scrapeComments(scrapeTarget.value, {
-          maxDepth: scrapeOptions.maxDepth,
+          ...(scrapeOptions.maxDepth !== undefined && { maxDepth: scrapeOptions.maxDepth }),
         });
       }
 
@@ -189,13 +194,14 @@ async function handleScrape(url: string, options: any): Promise<void> {
       };
     } else {
       // General scrape
-      result = await scraper.scrape({
-        limit: scrapeOptions.limit,
-        sortBy: scrapeOptions.sortBy,
-        timeRange: scrapeOptions.timeRange,
-        includeComments: scrapeOptions.includeComments,
-        maxDepth: scrapeOptions.maxDepth,
-      });
+      const generalOptions: any = {};
+      if (scrapeOptions.limit !== undefined) generalOptions.limit = scrapeOptions.limit;
+      if (scrapeOptions.sortBy !== undefined) generalOptions.sortBy = scrapeOptions.sortBy as SortOption;
+      if (scrapeOptions.timeRange !== undefined) generalOptions.timeRange = scrapeOptions.timeRange;
+      if (scrapeOptions.includeComments !== undefined) generalOptions.includeComments = scrapeOptions.includeComments;
+      if (scrapeOptions.maxDepth !== undefined) generalOptions.maxDepth = scrapeOptions.maxDepth;
+      
+      result = await scraper.scrape(generalOptions);
     }
 
     spinner.succeed(
@@ -294,10 +300,10 @@ function parseUrlForTarget(
     if (subredditMatch) {
       // Check if it's a specific post
       const postMatch = path.match(/\/comments\/([a-z0-9]+)/);
-      if (postMatch) {
+      if (postMatch && postMatch[1]) {
         return { type: "post", value: postMatch[1] };
       }
-      return { type: "category", value: subredditMatch[1] };
+      return { type: "category", value: subredditMatch[1] || "" };
     }
   }
 

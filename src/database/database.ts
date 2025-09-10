@@ -683,6 +683,188 @@ export class DatabaseManager {
   }
 
   // ============================================================================
+  // Query Methods for Export/Clean Commands
+  // ============================================================================
+
+  /**
+   * Query posts with filters for export
+   */
+  queryPosts(options: {
+    platform?: Platform;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): ForumPost[] {
+    let query = "SELECT * FROM forum_posts WHERE 1=1";
+    const params: any[] = [];
+
+    if (options.platform) {
+      query += " AND platform = ?";
+      params.push(options.platform);
+    }
+
+    if (options.startDate) {
+      query += " AND created_at >= ?";
+      params.push(options.startDate.getTime());
+    }
+
+    if (options.endDate) {
+      query += " AND created_at <= ?";
+      params.push(options.endDate.getTime());
+    }
+
+    query += " ORDER BY created_at DESC";
+
+    if (options.limit) {
+      query += " LIMIT ?";
+      params.push(options.limit);
+    }
+
+    if (options.offset) {
+      query += " OFFSET ?";
+      params.push(options.offset);
+    }
+
+    const rows = this.db.prepare(query).all(...params);
+    return rows.map((row) => this.mapRowToPost(row as any));
+  }
+
+  /**
+   * Query comments with filters for export
+   */
+  queryComments(options: {
+    platform?: Platform;
+    postIds?: string[];
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Comment[] {
+    let query = "SELECT * FROM comments WHERE 1=1";
+    const params: any[] = [];
+
+    if (options.platform) {
+      query += " AND platform = ?";
+      params.push(options.platform);
+    }
+
+    if (options.postIds && options.postIds.length > 0) {
+      const placeholders = options.postIds.map(() => "?").join(",");
+      query += ` AND post_id IN (${placeholders})`;
+      params.push(...options.postIds);
+    }
+
+    if (options.startDate) {
+      query += " AND created_at >= ?";
+      params.push(options.startDate.getTime());
+    }
+
+    if (options.endDate) {
+      query += " AND created_at <= ?";
+      params.push(options.endDate.getTime());
+    }
+
+    query += " ORDER BY created_at ASC";
+
+    if (options.limit) {
+      query += " LIMIT ?";
+      params.push(options.limit);
+    }
+
+    const rows = this.db.prepare(query).all(...params);
+    return rows.map((row) => this.mapRowToComment(row as any));
+  }
+
+  /**
+   * Count items that would be deleted
+   */
+  countOldData(options: {
+    olderThanDays: number;
+    platform?: Platform;
+  }): { posts: number; comments: number; users: number } {
+    const cutoffTime = Date.now() - options.olderThanDays * 24 * 60 * 60 * 1000;
+    let platformClause = "";
+    const params: any[] = [cutoffTime];
+
+    if (options.platform) {
+      platformClause = " AND platform = ?";
+      params.push(options.platform);
+    }
+
+    const postCount = this.db
+      .prepare(`SELECT COUNT(*) as count FROM forum_posts WHERE created_at < ?${platformClause}`)
+      .get(...params) as { count: number };
+
+    const commentCount = this.db
+      .prepare(`SELECT COUNT(*) as count FROM comments WHERE created_at < ?${platformClause}`)
+      .get(...params) as { count: number };
+
+    const userCount = this.db
+      .prepare(`SELECT COUNT(*) as count FROM users WHERE last_seen_at < ?${platformClause}`)
+      .get(...params) as { count: number };
+
+    return {
+      posts: postCount.count,
+      comments: commentCount.count,
+      users: userCount.count,
+    };
+  }
+
+  /**
+   * Delete old data from database
+   */
+  deleteOldData(options: {
+    olderThanDays: number;
+    platform?: Platform;
+  }): { deletedPosts: number; deletedComments: number; deletedUsers: number } {
+    const cutoffTime = Date.now() - options.olderThanDays * 24 * 60 * 60 * 1000;
+    let platformClause = "";
+    const params: any[] = [cutoffTime];
+
+    if (options.platform) {
+      platformClause = " AND platform = ?";
+      params.push(options.platform);
+    }
+
+    const result = {
+      deletedPosts: 0,
+      deletedComments: 0,
+      deletedUsers: 0,
+    };
+
+    const transaction = this.db.transaction(() => {
+      // Delete old comments
+      const deleteComments = this.db.prepare(
+        `DELETE FROM comments WHERE created_at < ?${platformClause}`
+      );
+      const commentResult = deleteComments.run(...params);
+      result.deletedComments = commentResult.changes;
+
+      // Delete old posts
+      const deletePosts = this.db.prepare(
+        `DELETE FROM forum_posts WHERE created_at < ?${platformClause}`
+      );
+      const postResult = deletePosts.run(...params);
+      result.deletedPosts = postResult.changes;
+
+      // Delete old users (based on last_seen_at)
+      const deleteUsers = this.db.prepare(
+        `DELETE FROM users WHERE last_seen_at < ?${platformClause}`
+      );
+      const userResult = deleteUsers.run(...params);
+      result.deletedUsers = userResult.changes;
+
+      // Clean up orphaned sessions
+      this.db
+        .prepare("DELETE FROM scrape_sessions WHERE started_at < ?")
+        .run(cutoffTime);
+    });
+
+    transaction();
+    return result;
+  }
+
+  // ============================================================================
   // Cleanup & Maintenance
   // ============================================================================
 

@@ -152,6 +152,43 @@ export class MigrationManager {
   }
 
   /**
+   * Run all available migrations
+   */
+  async runAllMigrations(): Promise<number> {
+    // Load the schema first
+    this.loadSchemaFromFile();
+    
+    // Get built-in migrations
+    const migrations: Migration[] = this.getBuiltInMigrations();
+    
+    // Run migrations that haven't been applied
+    let appliedCount = 0;
+    for (const migration of migrations) {
+      if (!this.isMigrationApplied(migration.version)) {
+        this.applyMigration(migration);
+        appliedCount++;
+      }
+    }
+    
+    return appliedCount;
+  }
+
+  /**
+   * Get built-in migrations
+   */
+  private getBuiltInMigrations(): Migration[] {
+    return [
+      {
+        version: 1,
+        name: "initial_schema",
+        up: (_db: Database.Database) => {
+          // Initial schema is handled by loadSchemaFromFile
+        }
+      }
+    ];
+  }
+
+  /**
    * Load and run SQL schema file
    */
   loadSchemaFromFile(schemaPath?: string): void {

@@ -128,7 +128,7 @@ async function handleConfig(
       console.log(chalk.green(`✓ Set ${key} = ${options.set}`));
     } else if (key) {
       // Display specific key
-      const value = config[key];
+      const value = (config as any)[key];
       if (value !== undefined) {
         console.log(JSON.stringify(value, null, 2));
       } else {
@@ -153,7 +153,11 @@ async function handleExport(options: any): Promise<void> {
     const { ExportManager } = await import("../export/export-manager.js");
 
     // Connect to database
-    const dbManager = new DatabaseManager({ path: options.database });
+    const dbManager = new DatabaseManager({
+      type: "sqlite" as const,
+      path: options.database,
+      connectionPoolSize: 5,
+    });
     await dbManager.initialize();
 
     // Query data
@@ -175,9 +179,18 @@ async function handleExport(options: any): Promise<void> {
       queryOptions.limit = parseInt(options.limit, 10);
     }
 
-    // TODO: implement query methods
-    const posts: any[] = [];
-    const comments = undefined;
+    // Query posts from database
+    const posts = dbManager.queryPosts(queryOptions);
+    
+    // Query comments if posts were found
+    let comments: any[] | undefined;
+    if (posts.length > 0 && options.format !== "csv") {
+      const postIds = posts.map(p => p.id);
+      comments = dbManager.queryComments({
+        ...queryOptions,
+        postIds: postIds.slice(0, 100), // Limit to first 100 posts for performance
+      });
+    }
 
     // Export data
     const exportManager = new ExportManager({
@@ -221,35 +234,44 @@ async function handleClean(options: any): Promise<void> {
     const { DatabaseManager } = await import("../database/database.js");
 
     // Connect to database
-    const dbManager = new DatabaseManager({ path: options.database });
+    const dbManager = new DatabaseManager({
+      type: "sqlite" as const,
+      path: options.database,
+      connectionPoolSize: 5,
+    });
     await dbManager.initialize();
 
     if (options.olderThan) {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(
-        cutoffDate.getDate() - parseInt(options.olderThan, 10),
-      );
+      const olderThanDays = parseInt(options.olderThan, 10);
 
       if (options.dryRun) {
         // Count items that would be deleted
-        // TODO: implement count methods
-        const postCount = 0;
-        const commentCount = 0;
+        const counts = dbManager.countOldData({
+          olderThanDays,
+          platform: options.platform,
+        });
 
         console.log(chalk.yellow("Dry run - no data will be deleted"));
         console.log(chalk.cyan(`Would delete:`));
-        console.log(`  Posts: ${postCount}`);
-        console.log(`  Comments: ${commentCount}`);
+        console.log(`  Posts: ${counts.posts}`);
+        console.log(`  Comments: ${counts.comments}`);
+        console.log(`  Users: ${counts.users}`);
       } else {
         // Actually delete
-        // TODO: implement delete methods
-        const deletedPosts = 0;
-        const deletedComments = 0;
+        const result = dbManager.deleteOldData({
+          olderThanDays,
+          platform: options.platform,
+        });
 
         console.log(chalk.green("✓ Database cleaned"));
         console.log(chalk.cyan(`Deleted:`));
-        console.log(`  Posts: ${deletedPosts}`);
-        console.log(`  Comments: ${deletedComments}`);
+        console.log(`  Posts: ${result.deletedPosts}`);
+        console.log(`  Comments: ${result.deletedComments}`);
+        console.log(`  Users: ${result.deletedUsers}`);
+        
+        // Run vacuum to reclaim space
+        dbManager.vacuum();
+        console.log(chalk.green("✓ Database optimized"));
       }
     } else {
       console.log(
