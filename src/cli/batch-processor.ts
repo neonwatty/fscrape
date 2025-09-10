@@ -9,10 +9,10 @@ import inquirer from "inquirer";
 import chalk from "chalk";
 import { OutputFormatter } from "./output-formatter.js";
 import { DatabaseManager } from "../database/database.js";
-import { RedditScraper } from "../scrapers/reddit-scraper.js";
-import { HackerNewsScraper } from "../scrapers/hackernews-scraper.js";
-import { CSVExporter } from "../exporters/csv-exporter.js";
-import { JSONExporter } from "../exporters/json-exporter.js";
+import { RedditScraper } from "../platforms/reddit/scraper.js";
+import { HackerNewsScraper } from "../platforms/hackernews/scraper.js";
+import { CsvExporter } from "../export/exporters/csv-exporter.js";
+import { JsonExporter } from "../export/exporters/json-exporter.js";
 // import type { ForumPost, Comment } from "../types/core.js";
 
 export interface BatchOperation {
@@ -525,11 +525,11 @@ export class BatchProcessor {
       const format = operation.options?.format || "json";
       const dataType = operation.options?.data || "all";
 
-      let exporter: CSVExporter | JSONExporter;
+      let exporter: CsvExporter | JsonExporter;
       if (format === "csv") {
-        exporter = new CSVExporter({ outputPath: outputDir });
+        exporter = new CsvExporter({ outputPath: outputDir });
       } else {
-        exporter = new JSONExporter({ outputPath: outputDir });
+        exporter = new JsonExporter({ outputPath: outputDir });
       }
 
       const results: any = {};
