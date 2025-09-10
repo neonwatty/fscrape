@@ -347,6 +347,22 @@ export class PlatformFactory {
         required: [],
         optional: ["baseUrl", "userAgent"],
       },
+      discourse: {
+        required: ["baseUrl", "apiKey"],
+        optional: ["username", "userAgent"],
+      },
+      lemmy: {
+        required: ["baseUrl"],
+        optional: ["username", "password", "userAgent"],
+      },
+      lobsters: {
+        required: [],
+        optional: ["baseUrl", "userAgent"],
+      },
+      custom: {
+        required: ["baseUrl"],
+        optional: ["apiKey", "userAgent", "headers"],
+      },
     };
 
     return requirements[platform] || { required: [], optional: [] };

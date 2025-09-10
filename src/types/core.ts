@@ -12,7 +12,14 @@ export const ForumPostSchema = z.object({
   commentCount: z.number().int().nonnegative(),
   createdAt: z.date(),
   updatedAt: z.date().optional(),
-  platform: z.enum(["reddit", "hackernews"]),
+  platform: z.enum([
+    "reddit",
+    "hackernews",
+    "discourse",
+    "lemmy",
+    "lobsters",
+    "custom",
+  ]),
   metadata: z.record(z.unknown()).optional(),
 });
 
@@ -30,7 +37,14 @@ export const CommentSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date().optional(),
   depth: z.number().int().nonnegative(),
-  platform: z.enum(["reddit", "hackernews"]),
+  platform: z.enum([
+    "reddit",
+    "hackernews",
+    "discourse",
+    "lemmy",
+    "lobsters",
+    "custom",
+  ]),
 });
 
 export type Comment = z.infer<typeof CommentSchema>;
@@ -41,7 +55,14 @@ export const UserSchema = z.object({
   username: z.string(),
   karma: z.number().int().optional(),
   createdAt: z.date().optional(),
-  platform: z.enum(["reddit", "hackernews"]),
+  platform: z.enum([
+    "reddit",
+    "hackernews",
+    "discourse",
+    "lemmy",
+    "lobsters",
+    "custom",
+  ]),
   metadata: z.record(z.unknown()).optional(),
 });
 
@@ -56,7 +77,14 @@ export const ScrapeResultSchema = z.object({
     scrapedAt: z.date(),
     totalPosts: z.number().int().nonnegative(),
     totalComments: z.number().int().nonnegative().optional(),
-    platform: z.enum(["reddit", "hackernews"]),
+    platform: z.enum([
+      "reddit",
+      "hackernews",
+      "discourse",
+      "lemmy",
+      "lobsters",
+      "custom",
+    ]),
     query: z.string().optional(),
     subreddit: z.string().optional(),
     category: z.string().optional(),
@@ -71,7 +99,9 @@ export const ScrapeErrorSchema = z.object({
   message: z.string(),
   details: z.unknown().optional(),
   timestamp: z.date(),
-  platform: z.enum(["reddit", "hackernews"]).optional(),
+  platform: z
+    .enum(["reddit", "hackernews", "discourse", "lemmy", "lobsters", "custom"])
+    .optional(),
   retryable: z.boolean(),
 });
 
@@ -89,7 +119,13 @@ export const PaginationSchema = z.object({
 export type Pagination = z.infer<typeof PaginationSchema>;
 
 // Platform Type
-export type Platform = "reddit" | "hackernews";
+export type Platform =
+  | "reddit"
+  | "hackernews"
+  | "discourse"
+  | "lemmy"
+  | "lobsters"
+  | "custom";
 
 // Sort Options
 export type SortOption =
