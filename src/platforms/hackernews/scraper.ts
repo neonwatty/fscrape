@@ -1,8 +1,8 @@
 /**
  * HackerNews scraper implementation
+ * Extends base platform with HN-specific story and comment extraction
  */
 
-import { BasePlatform } from "../base-platform.js";
 import type {
   BasePlatformConfig,
   BasePlatformCapabilities,
@@ -17,14 +17,7 @@ import type {
   Platform,
 } from "../../types/core.js";
 import { HackerNewsClient, type StoryListType } from "./client.js";
-import {
-  parsePost,
-  parseComment,
-  parseUser,
-  parseJob,
-  buildCommentTree,
-  cleanContent,
-} from "./parsers.js";
+import { HackerNewsParsers } from "./parsers.js";
 import type { Logger } from "winston";
 import winston from "winston";
 
@@ -39,14 +32,13 @@ export interface HackerNewsScraperConfig extends BasePlatformConfig {
 /**
  * HackerNews platform scraper
  */
-export class HackerNewsScraper extends BasePlatform {
+export class HackerNewsScraper {
   public readonly platform: Platform = "hackernews";
   private client: HackerNewsClient;
   private config: HackerNewsScraperConfig;
   private logger: Logger;
 
   constructor(config: HackerNewsScraperConfig = {}) {
-    super(config);
     this.config = {
       maxConcurrent: 5,
       batchSize: 10,
@@ -77,16 +69,24 @@ export class HackerNewsScraper extends BasePlatform {
       supportsSearch: false, // Native API doesn't support search
       supportsCategories: true, // Different story types
       supportsPagination: false, // API returns full lists
-      supportsVoting: false,
-      supportsEditing: false,
-      supportsDeleting: false,
+      supportsRealtime: false,
       maxCommentDepth: 100,
-      maxPageSize: 500,
-      rateLimits: {
-        requestsPerMinute: 600, // No official limit, but be respectful
-        requestsPerHour: 10000,
-      },
+      maxItemsPerRequest: 500,
     };
+  }
+
+  /**
+   * Initialize the scraper
+   */
+  async initialize(): Promise<void> {
+    try {
+      // Test connection by fetching max item
+      const maxItem = await this.client.getMaxItem();
+      this.logger.info(`HackerNews API connected. Max item ID: ${maxItem}`);
+    } catch (error) {
+      this.logger.error("Failed to initialize HackerNews scraper:", error);
+      throw error;
+    }
   }
 
   /**
@@ -126,10 +126,8 @@ export class HackerNewsScraper extends BasePlatform {
           if (!item) continue;
           
           // Parse post
-          const post = item.type === "job" ? parseJob(item) : parsePost(item);
+          const post = HackerNewsParsers.parsePost(item);
           if (post) {
-            // Clean HTML content
-            post.content = cleanContent(post.content);
             posts.push(post);
             
             // Collect user
@@ -146,9 +144,8 @@ export class HackerNewsScraper extends BasePlatform {
                 options.maxDepth || 10
               );
               
-              // Clean comment content and collect users
+              // Collect users from comments
               for (const comment of postComments) {
-                comment.content = cleanContent(comment.content);
                 comment.postId = post.id;
                 comments.push(comment);
                 
@@ -208,9 +205,8 @@ export class HackerNewsScraper extends BasePlatform {
       }
 
       // Parse post
-      const post = item.type === "job" ? parseJob(item) : parsePost(item);
+      const post = HackerNewsParsers.parsePost(item);
       if (post) {
-        post.content = cleanContent(post.content);
         posts.push(post);
         
         // Collect user
@@ -228,7 +224,6 @@ export class HackerNewsScraper extends BasePlatform {
           );
           
           for (const comment of postComments) {
-            comment.content = cleanContent(comment.content);
             comment.postId = post.id;
             comments.push(comment);
             
@@ -272,7 +267,7 @@ export class HackerNewsScraper extends BasePlatform {
         throw new Error(`User ${username} not found`);
       }
 
-      const user = parseUser(hnUser);
+      const user = HackerNewsParsers.parseUser(hnUser);
       users.push(user);
       
       // Optionally fetch recent submissions
@@ -283,16 +278,14 @@ export class HackerNewsScraper extends BasePlatform {
         for (const item of items) {
           if (!item) continue;
           
-          if (item.type === "story" || item.type === "job") {
-            const post = item.type === "job" ? parseJob(item) : parsePost(item);
+          if (item.type === "story" || item.type === "job" || item.type === "poll") {
+            const post = HackerNewsParsers.parsePost(item);
             if (post) {
-              post.content = cleanContent(post.content);
               posts.push(post);
             }
           } else if (item.type === "comment") {
-            const comment = parseComment(item);
+            const comment = HackerNewsParsers.parseComment(item, item.parent?.toString() || "unknown");
             if (comment) {
-              comment.content = cleanContent(comment.content);
               comments.push(comment);
             }
           }
@@ -362,7 +355,7 @@ export class HackerNewsScraper extends BasePlatform {
   }
 
   /**
-   * Helper: Fetch comments recursively
+   * Helper: Fetch comments recursively with hierarchical structure
    */
   private async fetchComments(
     postId: number,
@@ -371,39 +364,48 @@ export class HackerNewsScraper extends BasePlatform {
   ): Promise<Comment[]> {
     const comments: Comment[] = [];
     const queue: Array<{ id: number; depth: number; parentId?: string }> = [];
+    const commentMap = new Map<string, Comment>();
     
     // Initialize with top-level comments
     for (const kidId of kidIds) {
       queue.push({ id: kidId, depth: 1 });
     }
     
+    // Process comments in breadth-first order to maintain hierarchy
     while (queue.length > 0) {
       const batch = queue.splice(0, this.config.batchSize!);
-      const items = await this.client.getItems(batch.map(b => b.id));
       
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        const { depth, parentId } = batch[i];
+      try {
+        const items = await this.client.getItems(batch.map(b => b.id));
         
-        if (!item || item.type !== "comment") continue;
-        
-        const comment = parseComment(item, postId.toString());
-        if (comment) {
-          comment.depth = depth;
-          comment.parentId = parentId;
-          comments.push(comment);
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const { depth, parentId } = batch[i];
           
-          // Add child comments if within depth limit
-          if (item.kids && depth < maxDepth) {
-            for (const kidId of item.kids) {
-              queue.push({
-                id: kidId,
-                depth: depth + 1,
-                parentId: comment.id,
-              });
+          if (!item || item.type !== "comment") continue;
+          
+          const comment = HackerNewsParsers.parseComment(item, postId.toString(), depth);
+          if (comment) {
+            // Ensure proper parent-child relationship
+            comment.parentId = parentId || comment.parentId;
+            comments.push(comment);
+            commentMap.set(comment.id, comment);
+            
+            // Add child comments if within depth limit
+            if (item.kids && depth < maxDepth) {
+              for (const kidId of item.kids) {
+                queue.push({
+                  id: kidId,
+                  depth: depth + 1,
+                  parentId: comment.id,
+                });
+              }
             }
           }
         }
+      } catch (error) {
+        this.logger.warn(`Failed to fetch comment batch: ${error}`);
+        // Continue with remaining comments
       }
       
       // Rate limiting
@@ -412,7 +414,47 @@ export class HackerNewsScraper extends BasePlatform {
       }
     }
     
-    return comments;
+    // Sort comments to maintain thread order (parent before children)
+    return this.sortCommentsByHierarchy(comments, commentMap);
+  }
+
+  /**
+   * Helper: Sort comments to maintain hierarchical thread order
+   */
+  private sortCommentsByHierarchy(
+    comments: Comment[],
+    commentMap: Map<string, Comment>
+  ): Comment[] {
+    const sorted: Comment[] = [];
+    const visited = new Set<string>();
+    
+    // Helper function to add comment and its children in order
+    const addCommentAndChildren = (comment: Comment) => {
+      if (visited.has(comment.id)) return;
+      visited.add(comment.id);
+      sorted.push(comment);
+      
+      // Find and add children
+      const children = comments.filter(c => c.parentId === comment.id);
+      for (const child of children) {
+        addCommentAndChildren(child);
+      }
+    };
+    
+    // Start with top-level comments
+    const topLevel = comments.filter(c => !c.parentId || !commentMap.has(c.parentId));
+    for (const comment of topLevel) {
+      addCommentAndChildren(comment);
+    }
+    
+    // Add any orphaned comments that weren't processed
+    for (const comment of comments) {
+      if (!visited.has(comment.id)) {
+        sorted.push(comment);
+      }
+    }
+    
+    return sorted;
   }
 
   /**
@@ -423,7 +465,7 @@ export class HackerNewsScraper extends BasePlatform {
     
     try {
       const hnUser = await this.client.getUser(username);
-      return hnUser ? parseUser(hnUser) : null;
+      return hnUser ? HackerNewsParsers.parseUser(hnUser) : null;
     } catch {
       return null;
     }
