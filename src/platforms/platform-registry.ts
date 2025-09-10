@@ -43,6 +43,8 @@ export interface PluginManifest {
 export class PlatformRegistry {
   private static platforms = new Map<Platform, PlatformMetadata>();
   private static initialized = false;
+  private static initializing = false;
+  private static initPromise: Promise<void> | null = null;
   private static logger = logger;
   private static pluginDirs: string[] = [];
 
@@ -99,7 +101,7 @@ export class PlatformRegistry {
   static get(platform: Platform): PlatformConstructor | undefined {
     // Initialize default platforms if not done yet
     if (!this.initialized) {
-      this.initializeDefaults();
+      this.initializeDefaultsSync();
     }
 
     const metadata = this.platforms.get(platform);
@@ -111,7 +113,7 @@ export class PlatformRegistry {
    */
   static getMetadata(platform: Platform): PlatformMetadata | undefined {
     if (!this.initialized) {
-      this.initializeDefaults();
+      this.initializeDefaultsSync();
     }
 
     return this.platforms.get(platform);
@@ -122,7 +124,7 @@ export class PlatformRegistry {
    */
   static getAllMetadata(): PlatformMetadata[] {
     if (!this.initialized) {
-      this.initializeDefaults();
+      this.initializeDefaultsSync();
     }
 
     return Array.from(this.platforms.values());
@@ -133,7 +135,7 @@ export class PlatformRegistry {
    */
   static has(platform: Platform): boolean {
     if (!this.initialized) {
-      this.initializeDefaults();
+      this.initializeDefaultsSync();
     }
 
     return this.platforms.has(platform);
@@ -144,7 +146,7 @@ export class PlatformRegistry {
    */
   static list(): Platform[] {
     if (!this.initialized) {
-      this.initializeDefaults();
+      this.initializeDefaultsSync();
     }
 
     return Array.from(this.platforms.keys());
@@ -157,7 +159,7 @@ export class PlatformRegistry {
     capability: keyof BasePlatformCapabilities,
   ): Platform[] {
     if (!this.initialized) {
-      this.initializeDefaults();
+      this.initializeDefaultsSync();
     }
 
     return Array.from(this.platforms.entries())
@@ -295,6 +297,8 @@ export class PlatformRegistry {
   static clear(): void {
     this.platforms.clear();
     this.initialized = false;
+    this.initializing = false;
+    this.initPromise = null;
   }
 
   /**
@@ -302,37 +306,79 @@ export class PlatformRegistry {
    */
   static size(): number {
     if (!this.initialized) {
-      this.initializeDefaults();
+      this.initializeDefaultsSync();
     }
 
     return this.platforms.size;
   }
 
   /**
-   * Initialize with default platform implementations
-   * This will be called automatically when needed
+   * Initialize with default platform implementations (async)
    */
-  private static initializeDefaults(): void {
-    // Note: These imports will be added when the actual platform
-    // implementations are created in subsequent tasks
-    // For now, we'll just mark as initialized to prevent loops
+  static async initializeAsync(): Promise<void> {
+    if (this.initialized) return;
+    
+    // Return existing promise if already initializing
+    if (this.initializing && this.initPromise) {
+      return this.initPromise;
+    }
 
-    // Future implementation:
-    // import { RedditPlatform } from "./reddit/reddit-platform.js";
-    // import { HackerNewsPlatform } from "./hackernews/hackernews-platform.js";
-    //
-    // this.register("reddit", RedditPlatform);
+    this.initializing = true;
+    this.initPromise = this.doInitialize();
+    
+    try {
+      await this.initPromise;
+    } finally {
+      this.initializing = false;
+    }
+  }
+
+  /**
+   * Perform the actual initialization
+   */
+  private static async doInitialize(): Promise<void> {
+    try {
+      // Import Reddit platform implementation
+      const { RedditPlatform } = await import("./reddit/index.js");
+      this.register("reddit", RedditPlatform, {
+        version: "1.0.0",
+        description: "Reddit platform scraper with OAuth2 authentication",
+        author: "fscrape",
+      });
+    } catch (error) {
+      this.logger.warn("Failed to load Reddit platform", error);
+    }
+
+    // Future implementations:
+    // const { HackerNewsPlatform } = await import("./hackernews/index.js");
     // this.register("hackernews", HackerNewsPlatform);
 
     this.initialized = true;
   }
 
   /**
+   * Initialize with default platform implementations (sync fallback)
+   * This is a synchronous version that just marks as initialized
+   */
+  private static initializeDefaultsSync(): void {
+    if (this.initialized) return;
+    
+    // Mark as initialized to prevent loops
+    // Platforms will need to be registered manually or via initializeAsync
+    this.initialized = true;
+    
+    // Start async initialization in background
+    this.initializeAsync().catch(error => {
+      this.logger.error("Background initialization failed", error);
+    });
+  }
+
+  /**
    * Force re-initialization of defaults
    */
-  static reinitialize(): void {
+  static async reinitialize(): Promise<void> {
     this.clear();
-    this.initializeDefaults();
+    await this.initializeAsync();
   }
 
   /**
@@ -364,7 +410,7 @@ export class PlatformRegistry {
     versions: Record<string, string>;
   } {
     if (!this.initialized) {
-      this.initializeDefaults();
+      this.initializeDefaultsSync();
     }
 
     const stats = {
