@@ -58,6 +58,7 @@ export class PreparedQueries {
     avgScoreByPlatform: Database.Statement;
     topPostsByScore: Database.Statement;
     topUsersByKarma: Database.Statement;
+    engagementByPlatform: Database.Statement;
   };
 
   readonly rateLimit: {
@@ -66,7 +67,7 @@ export class PreparedQueries {
     reset: Database.Statement;
     get: Database.Statement;
   };
-  
+
   // Keep legacy properties for backward compatibility
   readonly insertPost: Database.Statement;
   readonly updatePost: Database.Statement;
@@ -159,7 +160,7 @@ export class PreparedQueries {
       getRecent: getRecentPosts,
       getAll: getAllPosts,
       count: countPosts,
-      countByPlatform: countPostsByPlatform
+      countByPlatform: countPostsByPlatform,
     };
 
     // Legacy compatibility
@@ -245,7 +246,7 @@ export class PreparedQueries {
       getByUser: getCommentsByUser,
       getByParent: getCommentsByParent,
       getThread: getCommentThread,
-      count: countComments
+      count: countComments,
     };
 
     // Legacy compatibility
@@ -313,7 +314,7 @@ export class PreparedQueries {
       getById: getUserById,
       getByUsername: getUserByUsername,
       getTopByKarma: getTopUsersByKarma,
-      getByPlatform: getUsersByPlatform
+      getByPlatform: getUsersByPlatform,
     };
 
     // Legacy compatibility
@@ -326,11 +327,11 @@ export class PreparedQueries {
 
     const createSession = db.prepare(`
       INSERT INTO scraping_sessions (
-        platform, status, query_type, query_value,
-        total_items_target, total_items_scraped,
+        session_id, platform, status, query_type, query_value,
+        total_items_target, total_items_scraped, total_posts, total_comments, total_users,
         started_at, last_activity_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
     `);
 
@@ -339,6 +340,9 @@ export class PreparedQueries {
       SET status = COALESCE(@status, status),
           total_items_target = COALESCE(@totalItemsTarget, total_items_target),
           total_items_scraped = COALESCE(@totalItemsScraped, total_items_scraped),
+          total_posts = COALESCE(@totalPosts, total_posts),
+          total_comments = COALESCE(@totalComments, total_comments),
+          total_users = COALESCE(@totalUsers, total_users),
           last_item_id = COALESCE(@lastItemId, last_item_id),
           resume_token = COALESCE(@resumeToken, resume_token),
           last_activity_at = @lastActivityAt,
@@ -380,7 +384,7 @@ export class PreparedQueries {
       get: getSession,
       getActive: getActiveSessions,
       getByPlatform: getSessionsByPlatform,
-      complete: completeSession
+      complete: completeSession,
     };
 
     // Legacy compatibility
@@ -490,6 +494,18 @@ export class PreparedQueries {
       LIMIT ?
     `);
 
+    const engagementByPlatform = db.prepare(`
+      SELECT 
+        platform,
+        COUNT(*) as total_posts,
+        AVG(score) as avg_score,
+        AVG(comment_count) as avg_comments,
+        SUM(score) as total_score,
+        SUM(comment_count) as total_comments
+      FROM forum_posts
+      GROUP BY platform
+    `);
+
     this.metrics = {
       insert: insertMetric,
       upsert: upsertMetric,
@@ -499,7 +515,8 @@ export class PreparedQueries {
       commentsPerPlatform: commentsPerPlatform,
       avgScoreByPlatform: avgScoreByPlatform,
       topPostsByScore: topPostsByScore,
-      topUsersByKarma: topUsersByKarma
+      topUsersByKarma: topUsersByKarma,
+      engagementByPlatform: engagementByPlatform,
     };
 
     // ============================================================================
@@ -544,7 +561,7 @@ export class PreparedQueries {
       check: checkRateLimit,
       increment: incrementRateLimit,
       reset: resetRateLimit,
-      get: getRateLimit
+      get: getRateLimit,
     };
   }
 
@@ -609,6 +626,9 @@ export class PreparedQueries {
         status TEXT DEFAULT 'pending',
         total_items_target INTEGER,
         total_items_scraped INTEGER DEFAULT 0,
+        total_posts INTEGER DEFAULT 0,
+        total_comments INTEGER DEFAULT 0,
+        total_users INTEGER DEFAULT 0,
         last_item_id TEXT,
         resume_token TEXT,
         started_at INTEGER,
@@ -644,7 +664,7 @@ export class PreparedQueries {
         consecutive_errors INTEGER DEFAULT 0,
         created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
         updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
-      )`
+      )`,
     ];
 
     for (const sql of tableCreations) {
@@ -653,6 +673,21 @@ export class PreparedQueries {
       } catch (error) {
         // Table might already exist with different schema, that's ok
         // The migrations will handle proper schema updates
+      }
+    }
+
+    // Add new columns to scraping_sessions if they don't exist
+    const columnAdditions = [
+      `ALTER TABLE scraping_sessions ADD COLUMN total_posts INTEGER DEFAULT 0`,
+      `ALTER TABLE scraping_sessions ADD COLUMN total_comments INTEGER DEFAULT 0`,
+      `ALTER TABLE scraping_sessions ADD COLUMN total_users INTEGER DEFAULT 0`,
+    ];
+
+    for (const sql of columnAdditions) {
+      try {
+        db.exec(sql);
+      } catch (error) {
+        // Column already exists or table doesn't exist, ignore
       }
     }
   }

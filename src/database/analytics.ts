@@ -6,8 +6,10 @@ export interface PlatformStats {
   totalPosts: number;
   totalComments: number;
   totalUsers: number;
+  avgScore: number;
   avgPostScore: number;
   avgCommentScore: number;
+  avgCommentCount: number;
   mostActiveUser: { username: string; posts: number; comments: number } | null;
   lastUpdateTime: Date;
 }
@@ -62,7 +64,6 @@ export class DatabaseAnalytics {
 
   // Prepared statements for analytics
   private readonly stmtPlatformStats: Database.Statement;
-  private readonly stmtTrendingPosts: Database.Statement;
   private readonly stmtUserActivity: Database.Statement;
   private readonly stmtScrapingPerformance: Database.Statement;
   private readonly stmtTimeSeriesHourly: Database.Statement;
@@ -73,7 +74,7 @@ export class DatabaseAnalytics {
 
   constructor(db: Database.Database) {
     this.db = db;
-    
+
     // Ensure required tables exist before creating prepared statements
     this.ensureTablesExist();
 
@@ -92,26 +93,6 @@ export class DatabaseAnalytics {
       LEFT JOIN users u ON u.platform = p.platform
       WHERE p.platform = ?
       GROUP BY p.platform
-    `);
-
-    // Trending posts (using the hot_posts view if available)
-    this.stmtTrendingPosts = db.prepare(`
-      SELECT 
-        p.id,
-        p.title,
-        p.url,
-        p.author,
-        p.score,
-        p.comment_count,
-        p.created_at,
-        p.platform,
-        CAST((p.score + p.comment_count * 2) AS REAL) / 
-          (1 + (strftime('%s', 'now') * 1000 - p.created_at) / 3600000.0) AS hotness
-      FROM forum_posts p
-      WHERE p.platform = ? 
-        AND p.created_at > ?
-      ORDER BY hotness DESC
-      LIMIT ?
     `);
 
     // User activity analysis
@@ -234,24 +215,298 @@ export class DatabaseAnalytics {
       const stats = this.getPlatformStats(platform);
       return stats ? [stats] : [];
     }
-    
+
     // Get stats for all platforms
-    const platforms: Platform[] = ['reddit', 'hackernews'];
+    const platforms: Platform[] = ["reddit", "hackernews"];
     return platforms
-      .map(p => this.getPlatformStats(p))
-      .filter(stats => stats !== null) as PlatformStats[];
+      .map((p) => this.getPlatformStats(p))
+      .filter((stats) => stats !== null) as PlatformStats[];
   }
 
-  getPostsByDateRange(startDate: Date, endDate: Date, platform?: Platform): any[] {
+  getPostsByDateRange(
+    startDate: Date,
+    endDate: Date,
+    platform?: Platform,
+  ): any[] {
     const query = platform
       ? `SELECT * FROM forum_posts WHERE created_at >= ? AND created_at <= ? AND platform = ? ORDER BY created_at DESC`
       : `SELECT * FROM forum_posts WHERE created_at >= ? AND created_at <= ? ORDER BY created_at DESC`;
-    
+
     const params = platform
       ? [startDate.getTime(), endDate.getTime(), platform]
       : [startDate.getTime(), endDate.getTime()];
-    
+
     return this.db.prepare(query).all(...params) as any[];
+  }
+
+  getTopUsersByKarma(limit: number, platform?: Platform): any[] {
+    let query: string;
+    let params: any[];
+
+    if (platform) {
+      query = `
+        SELECT 
+          u.id,
+          u.username,
+          u.platform,
+          u.karma
+        FROM users u
+        WHERE u.platform = ?
+        ORDER BY u.karma DESC
+        LIMIT ?
+      `;
+      params = [platform, limit];
+    } else {
+      query = `
+        SELECT 
+          u.id,
+          u.username,
+          u.platform,
+          u.karma
+        FROM users u
+        ORDER BY u.karma DESC
+        LIMIT ?
+      `;
+      params = [limit];
+    }
+
+    return this.db.prepare(query).all(...params) as any[];
+  }
+
+  getEngagementOverTime(days: number, platform?: Platform): any[] {
+    const sinceTime = Date.now() - days * 24 * 60 * 60 * 1000;
+
+    let query: string;
+    let params: any[];
+
+    if (platform) {
+      query = `
+        SELECT 
+          date(created_at / 1000, 'unixepoch') as date,
+          platform,
+          COUNT(*) as posts,
+          SUM(score) as totalScore,
+          SUM(comment_count) as totalComments,
+          AVG(score) as avgScore,
+          AVG(comment_count) as avgComments
+        FROM forum_posts
+        WHERE created_at >= ? AND platform = ?
+        GROUP BY date, platform
+        ORDER BY date DESC
+      `;
+      params = [sinceTime, platform];
+    } else {
+      query = `
+        SELECT 
+          date(created_at / 1000, 'unixepoch') as date,
+          'all' as platform,
+          COUNT(*) as posts,
+          SUM(score) as totalScore,
+          SUM(comment_count) as totalComments,
+          AVG(score) as avgScore,
+          AVG(comment_count) as avgComments
+        FROM forum_posts
+        WHERE created_at >= ?
+        GROUP BY date
+        ORDER BY date DESC
+      `;
+      params = [sinceTime];
+    }
+
+    return this.db.prepare(query).all(...params) as any[];
+  }
+
+  getMostEngagedPosts(limit: number, platform?: Platform): any[] {
+    let query: string;
+    let params: any[];
+
+    if (platform) {
+      query = `
+        SELECT 
+          id,
+          title,
+          url,
+          author,
+          score,
+          comment_count,
+          (score + comment_count) as totalEngagement,
+          platform
+        FROM forum_posts
+        WHERE platform = ?
+        ORDER BY totalEngagement DESC
+        LIMIT ?
+      `;
+      params = [platform, limit];
+    } else {
+      query = `
+        SELECT 
+          id,
+          title,
+          url,
+          author,
+          score,
+          comment_count,
+          (score + comment_count) as totalEngagement,
+          platform
+        FROM forum_posts
+        ORDER BY totalEngagement DESC
+        LIMIT ?
+      `;
+      params = [limit];
+    }
+
+    return this.db.prepare(query).all(...params) as any[];
+  }
+
+  getMostDiscussedPosts(limit: number, platform?: Platform): any[] {
+    let query: string;
+    let params: any[];
+
+    if (platform) {
+      query = `
+        SELECT 
+          id,
+          title,
+          url,
+          author,
+          score,
+          comment_count as commentCount,
+          platform
+        FROM forum_posts
+        WHERE platform = ? AND comment_count > 0
+        ORDER BY comment_count DESC
+        LIMIT ?
+      `;
+      params = [platform, limit];
+    } else {
+      query = `
+        SELECT 
+          id,
+          title,
+          url,
+          author,
+          score,
+          comment_count as commentCount,
+          platform
+        FROM forum_posts
+        WHERE comment_count > 0
+        ORDER BY comment_count DESC
+        LIMIT ?
+      `;
+      params = [limit];
+    }
+
+    return this.db.prepare(query).all(...params) as any[];
+  }
+
+  getPostsWithHighCommentRatio(limit: number, platform?: Platform): any[] {
+    let query: string;
+    let params: any[];
+
+    if (platform) {
+      query = `
+        SELECT 
+          id,
+          title,
+          url,
+          author,
+          score,
+          comment_count,
+          CASE 
+            WHEN score = 0 THEN comment_count
+            ELSE CAST(comment_count AS REAL) / score
+          END as commentRatio,
+          platform
+        FROM forum_posts
+        WHERE platform = ? AND score > 0
+        ORDER BY commentRatio DESC
+        LIMIT ?
+      `;
+      params = [platform, limit];
+    } else {
+      query = `
+        SELECT 
+          id,
+          title,
+          url,
+          author,
+          score,
+          comment_count,
+          CASE 
+            WHEN score = 0 THEN comment_count
+            ELSE CAST(comment_count AS REAL) / score
+          END as commentRatio,
+          platform
+        FROM forum_posts
+        WHERE score > 0
+        ORDER BY commentRatio DESC
+        LIMIT ?
+      `;
+      params = [limit];
+    }
+
+    return this.db.prepare(query).all(...params) as any[];
+  }
+
+  getDataGaps(thresholdDays: number): any[] {
+    const thresholdMs = thresholdDays * 24 * 60 * 60 * 1000;
+
+    const query = `
+      WITH sorted_posts AS (
+        SELECT 
+          id,
+          platform,
+          created_at,
+          LAG(created_at, 1) OVER (PARTITION BY platform ORDER BY created_at) as prev_created_at
+        FROM forum_posts
+        ORDER BY platform, created_at
+      )
+      SELECT 
+        platform,
+        datetime(prev_created_at / 1000, 'unixepoch') as startDate,
+        datetime(created_at / 1000, 'unixepoch') as endDate,
+        (created_at - prev_created_at) / 1000.0 / 86400 as gapDays
+      FROM sorted_posts
+      WHERE (created_at - prev_created_at) > ?
+      ORDER BY gapDays DESC
+    `;
+
+    return this.db.prepare(query).all(thresholdMs) as any[];
+  }
+
+  getSessionPerformance(): any[] {
+    const query = `
+      SELECT 
+        session_id,
+        platform,
+        status,
+        query_value,
+        total_posts as totalPosts,
+        total_comments as totalComments,
+        total_users as totalUsers,
+        (COALESCE(total_posts, 0) + 
+         COALESCE(total_comments, 0) + 
+         COALESCE(total_users, 0)) as totalItems,
+        started_at as created_at,
+        completed_at as updated_at
+      FROM scraping_sessions
+      WHERE status = 'completed'
+      ORDER BY started_at DESC
+    `;
+
+    return this.db.prepare(query).all() as any[];
+  }
+
+  getSuccessfulSessionRate(): number {
+    const query = `
+      SELECT 
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful,
+        COUNT(*) as total
+      FROM scraping_sessions
+    `;
+
+    const result = this.db.prepare(query).get() as any;
+    return result.total > 0 ? result.successful / result.total : 0;
   }
 
   getUserActivity(userId: string): any {
@@ -262,6 +517,8 @@ export class DatabaseAnalytics {
         u.platform,
         COUNT(DISTINCT p.id) as postCount,
         COUNT(DISTINCT c.id) as commentCount,
+        AVG(p.score) as avgPostScore,
+        AVG(c.score) as avgCommentScore,
         u.karma as totalKarma,
         u.created_at as firstSeen,
         u.last_seen_at as lastSeen
@@ -271,25 +528,48 @@ export class DatabaseAnalytics {
       WHERE u.id = ?
       GROUP BY u.id
     `);
-    
+
     const result = userQuery.get(userId) as any;
-    
+
     if (!result) {
       return {
         userId,
         postCount: 0,
         commentCount: 0,
-        totalKarma: 0
+        avgPostScore: 0,
+        avgCommentScore: 0,
+        totalKarma: 0,
+        totalEngagement: 0,
       };
     }
-    
-    return result;
+
+    return {
+      userId: result.userId,
+      username: result.username,
+      platform: result.platform,
+      postCount: result.postCount || 0,
+      commentCount: result.commentCount || 0,
+      avgPostScore: result.avgPostScore || 0,
+      avgCommentScore: result.avgCommentScore || 0,
+      totalKarma: result.totalKarma || 0,
+      totalEngagement: (result.postCount || 0) + (result.commentCount || 0),
+      firstSeen: result.firstSeen,
+      lastSeen: result.lastSeen,
+    };
   }
 
   getPlatformStats(platform: Platform): PlatformStats | null {
     const row = this.stmtPlatformStats.get(platform) as any;
 
     if (!row) return null;
+
+    // Get average comment count per post
+    const avgCommentQuery = this.db.prepare(`
+      SELECT AVG(comment_count) as avg_comment_count
+      FROM forum_posts
+      WHERE platform = ?
+    `);
+    const avgCommentRow = avgCommentQuery.get(platform) as any;
 
     // Get most active user
     const mostActiveQuery = this.db.prepare(`
@@ -313,8 +593,10 @@ export class DatabaseAnalytics {
       totalPosts: row.total_posts || 0,
       totalComments: row.total_comments || 0,
       totalUsers: row.total_users || 0,
+      avgScore: row.avg_post_score || 0, // Map avg_post_score to avgScore
       avgPostScore: row.avg_post_score || 0,
       avgCommentScore: row.avg_comment_score || 0,
+      avgCommentCount: avgCommentRow?.avg_comment_count || 0,
       mostActiveUser: mostActive
         ? {
             username: mostActive.username,
@@ -322,17 +604,102 @@ export class DatabaseAnalytics {
             comments: mostActive.comments,
           }
         : null,
-      lastUpdateTime: new Date(row.last_update),
+      lastUpdateTime: new Date(row.last_update || Date.now()),
     };
   }
 
-  getTrendingPosts(platform: Platform, hours = 24, limit = 10): TrendingPost[] {
-    const sinceTime = Date.now() - hours * 60 * 60 * 1000;
-    const rows = this.stmtTrendingPosts.all(
-      platform,
-      sinceTime,
-      limit,
-    ) as any[];
+  getTrendingPosts(limit: number): TrendingPost[];
+  getTrendingPosts(limit: number, platform: Platform): TrendingPost[];
+  getTrendingPosts(
+    limit: number,
+    platform: Platform | undefined,
+    startDate: Date,
+  ): TrendingPost[];
+  getTrendingPosts(
+    arg1: number | Platform,
+    arg2?: number | Platform | Date,
+    arg3?: number | Date,
+  ): TrendingPost[] {
+    // Handle different overload patterns
+    let platform: Platform | undefined;
+    let limit: number;
+    let hours = 24;
+    let startDate: Date | undefined;
+
+    if (typeof arg1 === "number") {
+      // First overload: getTrendingPosts(limit)
+      limit = arg1;
+
+      if (typeof arg2 === "string") {
+        // Second overload: getTrendingPosts(limit, platform)
+        platform = arg2 as Platform;
+      } else if (arg2 instanceof Date) {
+        // Third overload: getTrendingPosts(limit, undefined, startDate)
+        startDate = arg2;
+      } else if (arg2 === undefined && arg3 instanceof Date) {
+        // Third overload: getTrendingPosts(limit, undefined, startDate)
+        startDate = arg3;
+      }
+    } else if (typeof arg1 === "string") {
+      // Old signature: getTrendingPosts(platform, hours, limit)
+      platform = arg1 as Platform;
+      hours = typeof arg2 === "number" ? arg2 : 24;
+      limit = typeof arg3 === "number" ? arg3 : 10;
+    } else {
+      // Default values
+      limit = 10;
+    }
+
+    const sinceTime = startDate
+      ? startDate.getTime()
+      : Date.now() - hours * 60 * 60 * 1000;
+
+    // Build query based on whether platform is specified
+    let query: string;
+    let params: any[];
+
+    if (platform) {
+      query = `
+        SELECT 
+          p.id,
+          p.title,
+          p.url,
+          p.author,
+          p.score,
+          p.comment_count,
+          p.created_at,
+          p.platform,
+          CAST((p.score + p.comment_count * 2) AS REAL) / 
+            (1 + (strftime('%s', 'now') * 1000 - p.created_at) / 3600000.0) AS hotness
+        FROM forum_posts p
+        WHERE p.platform = ? 
+          AND p.created_at > ?
+        ORDER BY hotness DESC
+        LIMIT ?
+      `;
+      params = [platform, sinceTime, limit];
+    } else {
+      query = `
+        SELECT 
+          p.id,
+          p.title,
+          p.url,
+          p.author,
+          p.score,
+          p.comment_count,
+          p.created_at,
+          p.platform,
+          CAST((p.score + p.comment_count * 2) AS REAL) / 
+            (1 + (strftime('%s', 'now') * 1000 - p.created_at) / 3600000.0) AS hotness
+        FROM forum_posts p
+        WHERE p.created_at > ?
+        ORDER BY hotness DESC
+        LIMIT ?
+      `;
+      params = [sinceTime, limit];
+    }
+
+    const rows = this.db.prepare(query).all(...params) as any[];
 
     return rows.map((row) => ({
       id: row.id,
@@ -347,7 +714,10 @@ export class DatabaseAnalytics {
     }));
   }
 
-  getUserActivityByUsername(username: string, platform: Platform): UserActivity | null {
+  getUserActivityByUsername(
+    username: string,
+    platform: Platform,
+  ): UserActivity | null {
     const row = this.stmtUserActivity.get(platform, username) as any;
 
     if (!row) return null;
@@ -519,7 +889,7 @@ export class DatabaseAnalytics {
   } {
     return {
       today: this.getPlatformStats(platform)!,
-      trending: this.getTrendingPosts(platform, 24, 10),
+      trending: this.getTrendingPosts(10, platform),
       topAuthors: this.getTopAuthors(platform, 1, 5),
       engagement: this.getEngagementStats(platform, 1),
       growth: this.getContentGrowth(platform, 7),
@@ -532,13 +902,22 @@ export class DatabaseAnalytics {
 
   private ensureTablesExist(): void {
     // Check if core tables exist
-    const tables = ['forum_posts', 'comments', 'users', 'scraping_sessions', 'scraping_metrics', 'daily_stats'];
-    
+    const tables = [
+      "forum_posts",
+      "comments",
+      "users",
+      "scraping_sessions",
+      "scraping_metrics",
+      "daily_stats",
+    ];
+
     for (const table of tables) {
-      const exists = this.db.prepare(
-        `SELECT name FROM sqlite_master WHERE type='table' AND name = ?`
-      ).get(table);
-      
+      const exists = this.db
+        .prepare(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name = ?`,
+        )
+        .get(table);
+
       if (!exists) {
         // Create basic table structures if they don't exist
         // This is a failsafe - proper schema should be created via migrations
@@ -551,7 +930,7 @@ export class DatabaseAnalytics {
     // Create minimal table structures to prevent crashes
     // These will be properly migrated later
     const schemas: Record<string, string> = {
-      'forum_posts': `
+      forum_posts: `
         CREATE TABLE IF NOT EXISTS forum_posts (
           id TEXT PRIMARY KEY,
           platform TEXT NOT NULL,
@@ -571,7 +950,7 @@ export class DatabaseAnalytics {
           ) STORED
         )
       `,
-      'comments': `
+      comments: `
         CREATE TABLE IF NOT EXISTS comments (
           id TEXT PRIMARY KEY,
           platform TEXT NOT NULL,
@@ -583,7 +962,7 @@ export class DatabaseAnalytics {
           created_at INTEGER
         )
       `,
-      'users': `
+      users: `
         CREATE TABLE IF NOT EXISTS users (
           id TEXT PRIMARY KEY,
           platform TEXT NOT NULL,
@@ -593,7 +972,7 @@ export class DatabaseAnalytics {
           last_seen_at INTEGER
         )
       `,
-      'scraping_sessions': `
+      scraping_sessions: `
         CREATE TABLE IF NOT EXISTS scraping_sessions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           session_id TEXT UNIQUE NOT NULL,
@@ -603,7 +982,7 @@ export class DatabaseAnalytics {
           completed_at INTEGER
         )
       `,
-      'scraping_metrics': `
+      scraping_metrics: `
         CREATE TABLE IF NOT EXISTS scraping_metrics (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           session_id TEXT,
@@ -614,7 +993,7 @@ export class DatabaseAnalytics {
           avg_response_time REAL DEFAULT 0
         )
       `,
-      'daily_stats': `
+      daily_stats: `
         CREATE TABLE IF NOT EXISTS daily_stats (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           date TEXT NOT NULL,
@@ -627,7 +1006,7 @@ export class DatabaseAnalytics {
           created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
           UNIQUE(date, platform)
         )
-      `
+      `,
     };
 
     if (schemas[tableName]) {
@@ -639,7 +1018,98 @@ export class DatabaseAnalytics {
   // Database Health Metrics
   // ============================================================================
 
-  getDatabaseHealth(): {
+  getDatabaseHealth(): any {
+    try {
+      // Get total counts
+      const postCount = this.db
+        .prepare("SELECT COUNT(*) as count FROM forum_posts")
+        .get() as any;
+      const commentCount = this.db
+        .prepare("SELECT COUNT(*) as count FROM comments")
+        .get() as any;
+      const userCount = this.db
+        .prepare("SELECT COUNT(*) as count FROM users")
+        .get() as any;
+      const sessionCount = this.db
+        .prepare("SELECT COUNT(*) as count FROM scraping_sessions")
+        .get() as any;
+
+      // Get oldest and newest posts
+      const oldestPost = this.db
+        .prepare("SELECT MIN(created_at) as created_at FROM forum_posts")
+        .get() as any;
+      const newestPost = this.db
+        .prepare("SELECT MAX(created_at) as created_at FROM forum_posts")
+        .get() as any;
+
+      // Get database size
+      const dbInfo = this.db.prepare("PRAGMA page_count").get() as any;
+      const pageSize = this.db.prepare("PRAGMA page_size").get() as any;
+      const databaseSize = dbInfo.page_count * pageSize.page_size;
+
+      // Get platform breakdown
+      const platformStats = this.db
+        .prepare(
+          `
+        SELECT 
+          platform,
+          COUNT(*) as posts
+        FROM forum_posts
+        GROUP BY platform
+      `,
+        )
+        .all() as any[];
+
+      // Calculate average posts per day if we have posts
+      let avgPostsPerDay = 0;
+      let avgCommentsPerPost = 0;
+
+      if (postCount?.count > 0) {
+        if (oldestPost?.created_at && newestPost?.created_at) {
+          const daySpan =
+            (newestPost.created_at - oldestPost.created_at) /
+              (1000 * 60 * 60 * 24) || 1;
+          avgPostsPerDay = postCount.count / Math.max(daySpan, 1);
+        }
+        avgCommentsPerPost = (commentCount?.count || 0) / postCount.count;
+      }
+
+      return {
+        totalPosts: postCount?.count || 0,
+        totalComments: commentCount?.count || 0,
+        totalUsers: userCount?.count || 0,
+        totalSessions: sessionCount?.count || 0,
+        databaseSize: databaseSize || 0,
+        oldestPost: oldestPost?.created_at
+          ? new Date(oldestPost.created_at)
+          : null,
+        newestPost: newestPost?.created_at
+          ? new Date(newestPost.created_at)
+          : null,
+        avgPostsPerDay,
+        avgCommentsPerPost,
+        platformBreakdown: platformStats || [],
+        lastUpdate: new Date(),
+      };
+    } catch (error) {
+      // Return minimal health data if there's an error
+      return {
+        totalPosts: 0,
+        totalComments: 0,
+        totalUsers: 0,
+        totalSessions: 0,
+        databaseSize: 0,
+        oldestPost: null,
+        newestPost: null,
+        avgPostsPerDay: 0,
+        avgCommentsPerPost: 0,
+        platformBreakdown: [],
+        lastUpdate: new Date(),
+      };
+    }
+  }
+
+  getDatabaseHealthDetailed(): {
     totalSize: number;
     tableStats: Array<{
       table: string;

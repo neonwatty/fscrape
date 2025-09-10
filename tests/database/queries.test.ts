@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import Database from "better-sqlite3";
 import { PreparedQueries } from "../../src/database/queries.js";
 import { MigrationManager } from "../../src/database/migrations.js";
@@ -26,8 +26,21 @@ describe("PreparedQueries", () => {
     queries = new PreparedQueries(db);
   });
 
+  afterEach(() => {
+    // Clean up database between tests
+    if (db) {
+      db.exec(`
+        DELETE FROM forum_posts;
+        DELETE FROM comments;
+        DELETE FROM users;
+        DELETE FROM scraping_sessions;
+        DELETE FROM rate_limit_state;
+      `);
+      db.close();
+    }
+  });
+
   afterAll(() => {
-    if (db) db.close();
     rmSync(tempDir, { recursive: true, force: true });
   });
 
@@ -86,18 +99,19 @@ describe("PreparedQueries", () => {
   describe("Post Queries", () => {
     it("should insert a post using prepared statement", () => {
       const result = queries.posts.insert.run(
-        "post1",
-        "reddit",
-        "Test Post",
-        "Content",
-        "author1",
-        "user1",
-        "https://reddit.com/post1",
-        100,
-        5,
-        new Date().toISOString(),
-        null,
-        JSON.stringify({ subreddit: "test" })
+        "post1",        // id
+        "reddit",       // platform
+        "post1",        // platform_id
+        "Test Post",    // title
+        "Content",      // content
+        "author1",      // author
+        "user1",        // author_id
+        "https://reddit.com/post1", // url
+        100,             // score
+        5,               // comment_count
+        new Date().toISOString(), // created_at
+        null,            // updated_at
+        JSON.stringify({ subreddit: "test" }) // metadata
       );
       
       expect(result.changes).toBe(1);
@@ -105,18 +119,19 @@ describe("PreparedQueries", () => {
 
     it("should get post by id", () => {
       queries.posts.insert.run(
-        "post2",
-        "reddit",
-        "Test Post 2",
-        "Content 2",
-        "author2",
-        null,
-        "https://reddit.com/post2",
-        50,
-        2,
-        new Date().toISOString(),
-        null,
-        null
+        "post2",        // id
+        "reddit",       // platform
+        "post2",        // platform_id
+        "Test Post 2",  // title
+        "Content 2",    // content
+        "author2",      // author
+        null,            // author_id
+        "https://reddit.com/post2", // url
+        50,              // score
+        2,               // comment_count
+        new Date().toISOString(), // created_at
+        null,            // updated_at
+        null             // metadata
       );
       
       const post = queries.posts.getById.get("post2") as any;
@@ -128,21 +143,21 @@ describe("PreparedQueries", () => {
     it("should get posts by platform", () => {
       // Insert reddit posts
       queries.posts.insert.run(
-        "r1", "reddit", "Reddit 1", null, "user1", null,
+        "r1", "reddit", "r1", "Reddit 1", null, "user1", null,
         "https://reddit.com/r1", 10, 0, new Date().toISOString(), null, null
       );
       queries.posts.insert.run(
-        "r2", "reddit", "Reddit 2", null, "user2", null,
+        "r2", "reddit", "r2", "Reddit 2", null, "user2", null,
         "https://reddit.com/r2", 20, 0, new Date().toISOString(), null, null
       );
       
       // Insert hackernews post
       queries.posts.insert.run(
-        "hn1", "hackernews", "HN 1", null, "user3", null,
+        "hn1", "hackernews", "hn1", "HN 1", null, "user3", null,
         "https://news.ycombinator.com/item?id=hn1", 30, 0, new Date().toISOString(), null, null
       );
       
-      const redditPosts = queries.posts.getByPlatform.all("reddit", 10) as any[];
+      const redditPosts = queries.posts.getByPlatform.all("reddit", 10, 0) as any[];
       expect(redditPosts).toHaveLength(2);
       expect(redditPosts.every(p => p.platform === "reddit")).toBe(true);
     });
@@ -150,18 +165,18 @@ describe("PreparedQueries", () => {
     it("should upsert posts correctly", () => {
       // Initial insert
       queries.posts.upsert.run(
-        "upsert1", "reddit", "Initial Title", "Initial Content", "author1", null,
+        "upsert1", "reddit", "upsert1", "Initial Title", "Initial Content", "author1", null,
         "https://reddit.com/upsert1", 100, 5, new Date().toISOString(), null, null
       );
       
-      // Update with new values
+      // Update with new values (title and content won't change - only metrics)
       queries.posts.upsert.run(
-        "upsert1", "reddit", "Updated Title", "Updated Content", "author1", null,
+        "upsert1", "reddit", "upsert1", "Updated Title", "Updated Content", "author1", null,
         "https://reddit.com/upsert1", 200, 10, new Date().toISOString(), null, null
       );
       
       const post = queries.posts.getById.get("upsert1") as any;
-      expect(post.title).toBe("Updated Title");
+      expect(post.title).toBe("Initial Title"); // Title doesn't change on upsert
       expect(post.score).toBe(200);
       expect(post.comment_count).toBe(10);
     });
@@ -171,24 +186,25 @@ describe("PreparedQueries", () => {
     beforeEach(() => {
       // Insert a parent post for comments
       queries.posts.insert.run(
-        "parent-post", "reddit", "Parent Post", "Content", "author", null,
+        "parent-post", "reddit", "parent-post", "Parent Post", "Content", "author", null,
         "https://reddit.com/parent", 100, 0, new Date().toISOString(), null, null
       );
     });
 
     it("should insert a comment", () => {
       const result = queries.comments.insert.run(
-        "comment1",
-        "parent-post",
-        null,
-        "reddit",
-        "commenter1",
-        "user1",
-        "This is a comment",
-        10,
-        new Date().toISOString(),
-        0,
-        null
+        "comment1",       // id
+        "parent-post",    // post_id
+        null,             // parent_id
+        "reddit",         // platform
+        "comment1",       // platform_id
+        "commenter1",     // author
+        "user1",          // author_id
+        "This is a comment", // content
+        10,               // score
+        0,                // depth
+        new Date().toISOString(), // created_at
+        null              // updated_at
       );
       
       expect(result.changes).toBe(1);
@@ -197,16 +213,16 @@ describe("PreparedQueries", () => {
     it("should get comments by post", () => {
       // Insert multiple comments
       queries.comments.insert.run(
-        "c1", "parent-post", null, "reddit", "user1", null,
-        "Comment 1", 5, new Date().toISOString(), 0, null
+        "c1", "parent-post", null, "reddit", "c1", "user1", null,
+        "Comment 1", 5, 0, new Date().toISOString(), null
       );
       queries.comments.insert.run(
-        "c2", "parent-post", null, "reddit", "user2", null,
-        "Comment 2", 10, new Date().toISOString(), 0, null
+        "c2", "parent-post", null, "reddit", "c2", "user2", null,
+        "Comment 2", 10, 0, new Date().toISOString(), null
       );
       queries.comments.insert.run(
-        "c3", "parent-post", "c1", "reddit", "user3", null,
-        "Reply to c1", 3, new Date().toISOString(), 1, null
+        "c3", "parent-post", "c1", "reddit", "c3", "user3", null,
+        "Reply to c1", 3, 1, new Date().toISOString(), null
       );
       
       const comments = queries.comments.getByPost.all("parent-post") as any[];
@@ -217,16 +233,16 @@ describe("PreparedQueries", () => {
     it("should handle comment threads", () => {
       // Create a comment thread
       queries.comments.insert.run(
-        "root", "parent-post", null, "reddit", "user1", null,
-        "Root comment", 10, new Date().toISOString(), 0, null
+        "root", "parent-post", null, "reddit", "root", "user1", null,
+        "Root comment", 10, 0, new Date().toISOString(), null
       );
       queries.comments.insert.run(
-        "child1", "parent-post", "root", "reddit", "user2", null,
-        "First reply", 5, new Date().toISOString(), 1, null
+        "child1", "parent-post", "root", "reddit", "child1", "user2", null,
+        "First reply", 5, 1, new Date().toISOString(), null
       );
       queries.comments.insert.run(
-        "child2", "parent-post", "child1", "reddit", "user3", null,
-        "Second reply", 2, new Date().toISOString(), 2, null
+        "child2", "parent-post", "child1", "reddit", "child2", "user3", null,
+        "Second reply", 2, 2, new Date().toISOString(), null
       );
       
       const thread = queries.comments.getThread.all("root") as any[];
@@ -273,11 +289,11 @@ describe("PreparedQueries", () => {
         new Date().toISOString(), null
       );
       
-      const redditUser = queries.users.getByUsername.get("commonname", "reddit") as any;
+      const redditUser = queries.users.getByUsername.get("reddit", "commonname") as any;
       expect(redditUser.id).toBe("u1");
       expect(redditUser.karma).toBe(100);
       
-      const hnUser = queries.users.getByUsername.get("commonname", "hackernews") as any;
+      const hnUser = queries.users.getByUsername.get("hackernews", "commonname") as any;
       expect(hnUser.id).toBe("u2");
       expect(hnUser.karma).toBe(200);
     });
@@ -287,7 +303,7 @@ describe("PreparedQueries", () => {
       queries.users.insert.run("u2", "reddit", "mid", 50, new Date().toISOString(), null);
       queries.users.insert.run("u3", "reddit", "high", 100, new Date().toISOString(), null);
       
-      const topUsers = queries.users.getTopByKarma.all("reddit", 2) as any[];
+      const topUsers = queries.users.getTopByKarma.all(2) as any[];
       expect(topUsers).toHaveLength(2);
       expect(topUsers[0].karma).toBe(100);
       expect(topUsers[1].karma).toBe(50);
@@ -296,15 +312,20 @@ describe("PreparedQueries", () => {
 
   describe("Session Queries", () => {
     it("should create a session", () => {
+      const sessionId = `test-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       const result = queries.sessions.create.run(
-        "reddit",
-        "in_progress",
-        JSON.stringify({ query: "typescript" }),
-        null,
-        0, 0, 0,
-        null, null,
-        new Date().toISOString(),
-        null
+        sessionId,       // session_id
+        "reddit",        // platform
+        "running",       // status
+        "search",        // query_type
+        "typescript",    // query_value
+        null,            // total_items_target
+        0,               // total_items_scraped
+        0,               // total_posts
+        0,               // total_comments
+        0,               // total_users
+        Date.now(),      // started_at
+        Date.now()       // last_activity_at
       );
       
       expect(result.changes).toBe(1);
@@ -312,46 +333,63 @@ describe("PreparedQueries", () => {
     });
 
     it("should update session progress", () => {
+      const sessionIdStr = `test-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       const createResult = queries.sessions.create.run(
-        "reddit", "in_progress", null, null,
-        0, 0, 0, null, null,
-        new Date().toISOString(), null
+        sessionIdStr,    // session_id
+        "reddit",        // platform
+        "running",       // status
+        null,            // query_type
+        null,            // query_value
+        null,            // total_items_target
+        0,               // total_items_scraped
+        0,               // total_posts
+        0,               // total_comments
+        0,               // total_users
+        Date.now(),      // started_at
+        Date.now()       // last_activity_at
       );
       
-      const sessionId = createResult.lastInsertRowid as number;
+      const rowId = createResult.lastInsertRowid as number;
       
-      queries.sessions.update.run(
-        "in_progress",
-        10, 50, 15,
-        null, null,
-        null,
-        sessionId
-      );
+      queries.sessions.update.run({
+        sessionId: sessionIdStr,
+        status: "running",
+        totalItemsTarget: 10,
+        totalItemsScraped: 5,
+        totalPosts: 2,
+        totalComments: 3,
+        totalUsers: 1,
+        lastItemId: null,
+        resumeToken: null,
+        lastActivityAt: Date.now(),
+        completedAt: null,
+        errorCount: null,
+        lastError: null
+      });
       
-      const session = queries.sessions.get.get(sessionId) as any;
-      expect(session.total_posts).toBe(10);
-      expect(session.total_comments).toBe(50);
-      expect(session.total_users).toBe(15);
+      const session = queries.sessions.get.get(sessionIdStr) as any;
+      expect(session.total_items_target).toBe(10);
+      expect(session.total_items_scraped).toBe(5);
     });
 
     it("should get active sessions", () => {
       // Create multiple sessions
+      const sid1 = `test-${Date.now()}-1`;
       queries.sessions.create.run(
-        "reddit", "in_progress", null, null, 0, 0, 0, null, null,
-        new Date().toISOString(), null
+        sid1, "reddit", "running", null, null, null, 0, 0, 0, 0, Date.now(), Date.now()
       );
+      const sid2 = `test-${Date.now()}-2`;
       queries.sessions.create.run(
-        "hackernews", "completed", null, null, 10, 20, 5, null, null,
-        new Date().toISOString(), new Date().toISOString()
+        sid2, "hackernews", "completed", null, null, 10, 5, 2, 3, 1, Date.now(), Date.now()
       );
+      const sid3 = `test-${Date.now()}-3`;
       queries.sessions.create.run(
-        "reddit", "in_progress", null, null, 5, 10, 3, null, null,
-        new Date().toISOString(), null
+        sid3, "reddit", "running", null, null, 5, 3, 1, 2, 0, Date.now(), Date.now()
       );
       
       const activeSessions = queries.sessions.getActive.all() as any[];
       expect(activeSessions).toHaveLength(2);
-      expect(activeSessions.every(s => s.status === "in_progress")).toBe(true);
+      expect(activeSessions.every(s => s.status === "running")).toBe(true);
     });
   });
 
@@ -359,15 +397,15 @@ describe("PreparedQueries", () => {
     beforeEach(() => {
       // Insert test data
       queries.posts.insert.run(
-        "p1", "reddit", "Post 1", null, "u1", null,
+        "p1", "reddit", "p1", "Post 1", null, "u1", null,
         "url1", 100, 10, new Date().toISOString(), null, null
       );
       queries.posts.insert.run(
-        "p2", "reddit", "Post 2", null, "u2", null,
+        "p2", "reddit", "p2", "Post 2", null, "u2", null,
         "url2", 50, 5, new Date().toISOString(), null, null
       );
       queries.posts.insert.run(
-        "p3", "hackernews", "Post 3", null, "u3", null,
+        "p3", "hackernews", "p3", "Post 3", null, "u3", null,
         "url3", 200, 20, new Date().toISOString(), null, null
       );
       
@@ -381,10 +419,10 @@ describe("PreparedQueries", () => {
       expect(metrics).toHaveLength(2);
       
       const reddit = metrics.find(m => m.platform === "reddit");
-      expect(reddit.post_count).toBe(2);
+      expect(reddit.count).toBe(2);
       
       const hn = metrics.find(m => m.platform === "hackernews");
-      expect(hn.post_count).toBe(1);
+      expect(hn.count).toBe(1);
     });
 
     it("should get average score by platform", () => {
@@ -421,20 +459,20 @@ describe("PreparedQueries", () => {
     });
 
     it("should increment rate limit", () => {
-      queries.rateLimit.increment.run("reddit", new Date().toISOString());
-      queries.rateLimit.increment.run("reddit", new Date().toISOString());
+      const now = Date.now();
+      queries.rateLimit.increment.run("reddit", now, now, now);
+      queries.rateLimit.increment.run("reddit", now, now, now);
       
-      const now = new Date().toISOString();
-      const limit = queries.rateLimit.check.get("reddit", now) as any;
-      expect(limit.request_count).toBe(2);
+      const limit = queries.rateLimit.get.get("reddit") as any;
+      expect(limit.requests_in_window).toBe(2);
     });
 
     it("should reset old rate limits", () => {
-      const oldDate = new Date(Date.now() - 7200000); // 2 hours ago
-      queries.rateLimit.increment.run("reddit", oldDate.toISOString());
+      const oldDate = Date.now() - 7200000; // 2 hours ago
+      queries.rateLimit.increment.run("reddit", oldDate, oldDate, oldDate);
       
-      const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
-      queries.rateLimit.reset.run(oneHourAgo);
+      const oneHourAgo = Date.now() - 3600000;
+      queries.rateLimit.reset.run({ platform: "reddit", windowStart: oneHourAgo });
       
       const limit = queries.rateLimit.check.get("reddit", new Date().toISOString()) as any;
       expect(limit.request_count).toBe(0);

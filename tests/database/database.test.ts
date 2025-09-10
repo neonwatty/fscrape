@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import Database from "better-sqlite3";
 import { DatabaseManager } from "../../src/database/database.js";
 import { MigrationManager } from "../../src/database/migrations.js";
@@ -28,6 +28,17 @@ describe("DatabaseManager", () => {
     migrationManager.loadSchemaFromFile();
     
     dbManager = new DatabaseManager(db);
+  });
+
+  afterEach(() => {
+    // Clean up database between tests
+    db.exec(`
+      DELETE FROM forum_posts;
+      DELETE FROM comments;
+      DELETE FROM users;
+      DELETE FROM scraping_sessions;
+      DELETE FROM rate_limit_state;
+    `);
   });
 
   afterAll(() => {
@@ -214,7 +225,7 @@ describe("DatabaseManager", () => {
       const session = await dbManager.getSession(sessionId);
       expect(session).toBeDefined();
       expect(session?.platform).toBe("reddit");
-      expect(session?.status).toBe("in_progress");
+      expect(session?.status).toBe("running");
     });
 
     it("should update session progress", async () => {
@@ -274,7 +285,7 @@ describe("DatabaseManager", () => {
       await dbManager.updateSession(activeId, { status: "completed" });
 
       const activeSessions = db
-        .prepare("SELECT * FROM scrape_sessions WHERE status = 'in_progress'")
+        .prepare("SELECT * FROM scraping_sessions WHERE status = 'running'")
         .all() as any[];
       
       expect(activeSessions).toHaveLength(2);

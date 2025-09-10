@@ -13,7 +13,11 @@ import type { Config, PartialConfig } from "./config-validator.js";
 /**
  * Configuration file names to search for
  */
-const CONFIG_FILE_NAMES = [".fscraperrc", ".fscraperrc.json", "fscraper.config.json"];
+const CONFIG_FILE_NAMES = [
+  ".fscraperrc",
+  ".fscraperrc.json",
+  "fscraper.config.json",
+];
 
 /**
  * Environment variable prefix for configuration
@@ -22,7 +26,7 @@ const ENV_PREFIX = "FSCRAPER_";
 
 /**
  * Configuration loader with discovery chain
- * 
+ *
  * Discovery chain (in order of precedence, highest to lowest):
  * 1. CLI flags (passed as overrides)
  * 2. Local config file (current directory)
@@ -139,7 +143,7 @@ export class ConfigLoader {
    */
   private async loadGlobalConfig(): Promise<PartialConfig | null> {
     const homeDir = homedir();
-    
+
     for (const fileName of CONFIG_FILE_NAMES) {
       const configPath = path.join(homeDir, fileName);
       const config = await this.loadConfigFile(configPath);
@@ -184,7 +188,9 @@ export class ConfigLoader {
   /**
    * Loads and validates a configuration file
    */
-  private async loadConfigFile(filePath: string): Promise<PartialConfig | null> {
+  private async loadConfigFile(
+    filePath: string,
+  ): Promise<PartialConfig | null> {
     try {
       if (!fs.existsSync(filePath)) {
         return null;
@@ -192,7 +198,7 @@ export class ConfigLoader {
 
       const content = await fs.promises.readFile(filePath, "utf-8");
       const rawConfig = JSON.parse(content);
-      
+
       return validatePartialConfig(rawConfig);
     } catch (error) {
       if ((error as any).code !== "ENOENT") {
@@ -206,8 +212,9 @@ export class ConfigLoader {
    * Saves configuration to a file
    */
   async saveConfig(config: PartialConfig, filePath?: string): Promise<void> {
-    const targetPath = filePath || this.configPath || path.join(process.cwd(), ".fscraperrc");
-    
+    const targetPath =
+      filePath || this.configPath || path.join(process.cwd(), ".fscraperrc");
+
     const validation = safeValidateConfig({ ...defaultConfig, ...config });
     if (!validation.success) {
       throw new Error(`Invalid configuration: ${validation.error!.message}`);
@@ -215,7 +222,7 @@ export class ConfigLoader {
 
     const content = JSON.stringify(config, null, 2);
     await fs.promises.writeFile(targetPath, content, "utf-8");
-    
+
     logger.info(`Configuration saved to ${targetPath}`);
     this.configPath = targetPath;
   }
@@ -269,20 +276,20 @@ export class ConfigLoader {
 
     // Development options
     if (options.debug) {
-      overrides.development = { debug: true };
+      overrides.development = { ...overrides.development, debug: true };
     }
 
     if (options.dryRun) {
-      overrides.development = { dryRun: true };
+      overrides.development = { ...overrides.development, dryRun: true };
     }
 
     // Export options
     if (options.format) {
-      overrides.export = { defaultFormat: options.format };
+      overrides.export = { ...overrides.export, defaultFormat: options.format };
     }
 
     if (options.output) {
-      overrides.export = { outputDir: options.output };
+      overrides.export = { ...overrides.export, outputDir: options.output };
     }
 
     return validatePartialConfig(overrides);
@@ -301,7 +308,7 @@ export class ConfigLoader {
    */
   private maskSecrets(config: any): any {
     const masked = JSON.parse(JSON.stringify(config));
-    
+
     // Mask API credentials
     if (masked.api?.reddit?.clientId) {
       masked.api.reddit.clientId = this.maskString(masked.api.reddit.clientId);
@@ -323,7 +330,11 @@ export class ConfigLoader {
     if (str.length <= 4) {
       return "***";
     }
-    return str.substring(0, 2) + "*".repeat(str.length - 4) + str.substring(str.length - 2);
+    return (
+      str.substring(0, 2) +
+      "*".repeat(str.length - 4) +
+      str.substring(str.length - 2)
+    );
   }
 }
 

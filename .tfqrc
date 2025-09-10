@@ -9,8 +9,10 @@
   "claude": {
     "enabled": true,
     "dangerouslySkipPermissions": true,
+    "verbose": true,
+    "outputFormat": "stream-json",
     "maxIterations": 10,
-    "testTimeout": 3000000,
+    "testTimeout": 1800000,
     "prompt": "Run the test file at {testFilePath} and debug any errors you encounter one at a time. Then run the test again to verify that your changes have fixed any errors.",
     "_comment": "The {testFilePath} placeholder will be replaced with the actual test file path when Claude is invoked",
     "claudePath": "/Users/jeremywatt/.claude/local/claude"

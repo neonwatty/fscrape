@@ -76,7 +76,10 @@ const LoggingConfigSchema = z.object({
   format: z.enum(["json", "pretty"]).default("pretty"),
   destination: z.enum(["console", "file", "both"]).default("console"),
   filePath: z.string().default("./logs/fscrape.log"),
-  maxFileSize: z.string().regex(/^\d+[KMG]?B$/).default("10MB"),
+  maxFileSize: z
+    .string()
+    .regex(/^\d+[KMG]?B$/)
+    .default("10MB"),
   maxFiles: z.number().positive().max(100).default(5),
 });
 
@@ -428,9 +431,12 @@ const configDefaults = {
  */
 export function mergeConfigs(...configs: PartialConfig[]): Config {
   // Start with defaults and merge all configs
-  const merged = configs.reduce((acc, config) => {
-    return deepMerge(acc, config);
-  }, deepMerge({}, configDefaults));
+  const merged = configs.reduce(
+    (acc, config) => {
+      return deepMerge(acc, config);
+    },
+    deepMerge({}, configDefaults),
+  );
 
   // Validate the final merged config
   return ConfigSchema.parse(merged);

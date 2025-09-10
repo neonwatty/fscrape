@@ -16,7 +16,7 @@
   "claude": {
     "enabled": true,
     "maxIterations": 10,
-    "timeout": 1800000,
+    "timeout": 3600000,
     "model": "opusplan",
     "verbose": false,
     "dangerouslySkipPermissions": true,

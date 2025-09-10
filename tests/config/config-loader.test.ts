@@ -6,7 +6,20 @@ import { ConfigLoader } from "../../src/config/config-loader.js";
 import { defaultConfig } from "../../src/config/default-config.js";
 
 // Mock modules
-vi.mock("fs");
+vi.mock("fs", () => ({
+  default: {
+    existsSync: vi.fn(),
+    promises: {
+      readFile: vi.fn(),
+      writeFile: vi.fn(),
+    },
+  },
+  existsSync: vi.fn(),
+  promises: {
+    readFile: vi.fn(),
+    writeFile: vi.fn(),
+  },
+}));
 vi.mock("../../src/utils/logger.js", () => ({
   logger: {
     debug: vi.fn(),
@@ -32,7 +45,7 @@ describe("ConfigLoader", () => {
 
   describe("loadConfig", () => {
     it("should load default configuration when no overrides exist", async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(false);
+      (fs.existsSync as any).mockReturnValue(false);
       
       const config = await loader.loadConfig();
       
@@ -45,7 +58,7 @@ describe("ConfigLoader", () => {
       process.env.FSCRAPER_DATABASE_PATH = "/custom/path.db";
       process.env.FSCRAPER_LOG_LEVEL = "debug";
       process.env.FSCRAPER_DEBUG = "true";
-      vi.mocked(fs.existsSync).mockReturnValue(false);
+      (fs.existsSync as any).mockReturnValue(false);
       
       const config = await loader.loadConfig();
       
@@ -58,7 +71,7 @@ describe("ConfigLoader", () => {
       process.env.REDDIT_CLIENT_ID = "test-client-id";
       process.env.REDDIT_CLIENT_SECRET = "test-client-secret";
       process.env.REDDIT_REFRESH_TOKEN = "test-refresh-token";
-      vi.mocked(fs.existsSync).mockReturnValue(false);
+      (fs.existsSync as any).mockReturnValue(false);
       
       const config = await loader.loadConfig();
       
@@ -69,7 +82,7 @@ describe("ConfigLoader", () => {
 
     it("should apply CLI overrides with highest precedence", async () => {
       process.env.FSCRAPER_DATABASE_PATH = "/env/path.db";
-      vi.mocked(fs.existsSync).mockReturnValue(false);
+      (fs.existsSync as any).mockReturnValue(false);
       
       const cliOverrides = {
         database: { path: "/cli/path.db" },
@@ -83,7 +96,7 @@ describe("ConfigLoader", () => {
     });
 
     it("should cache configuration after first load", async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(false);
+      (fs.existsSync as any).mockReturnValue(false);
       
       const config1 = await loader.loadConfig();
       const config2 = await loader.loadConfig();
@@ -98,11 +111,11 @@ describe("ConfigLoader", () => {
         database: { path: "/local/path.db" },
       };
       
-      vi.mocked(fs.existsSync).mockImplementation((p) => {
+      (fs.existsSync as any).mockImplementation((p: string) => {
         return p === path.join(process.cwd(), ".fscraperrc");
       });
       
-      vi.mocked(fs.promises.readFile).mockResolvedValue(
+      (fs.promises.readFile as any).mockResolvedValue(
         JSON.stringify(mockConfig)
       );
       
@@ -117,13 +130,13 @@ describe("ConfigLoader", () => {
       };
       
       let callCount = 0;
-      vi.mocked(fs.existsSync).mockImplementation((p) => {
+      (fs.existsSync as any).mockImplementation((p: string) => {
         callCount++;
         // Return true for parent directory config
         return callCount === 4 && p.endsWith(".fscraperrc");
       });
       
-      vi.mocked(fs.promises.readFile).mockResolvedValue(
+      (fs.promises.readFile as any).mockResolvedValue(
         JSON.stringify(mockConfig)
       );
       
@@ -179,7 +192,8 @@ describe("ConfigLoader", () => {
         database: { path: "/test/path.db" },
       };
       
-      const writeSpy = vi.mocked(fs.promises.writeFile);
+      const writeSpy = fs.promises.writeFile as any;
+      writeSpy.mockResolvedValue(undefined);
       
       await loader.saveConfig(config, "/path/to/config.json");
       
@@ -195,7 +209,8 @@ describe("ConfigLoader", () => {
         logging: { level: "debug" as const },
       };
       
-      const writeSpy = vi.mocked(fs.promises.writeFile);
+      const writeSpy = fs.promises.writeFile as any;
+      writeSpy.mockResolvedValue(undefined);
       
       await loader.saveConfig(config);
       
@@ -239,7 +254,7 @@ describe("ConfigLoader", () => {
 
   describe("resetCache", () => {
     it("should clear cached configuration", async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(false);
+      (fs.existsSync as any).mockReturnValue(false);
       
       const config1 = await loader.loadConfig();
       loader.resetCache();
@@ -256,7 +271,7 @@ describe("ConfigLoader", () => {
 
   describe("config file discovery", () => {
     it("should check multiple config file names", async () => {
-      const existsSpy = vi.mocked(fs.existsSync);
+      const existsSpy = fs.existsSync as any;
       existsSpy.mockReturnValue(false);
       
       await loader.loadConfig();
@@ -279,11 +294,11 @@ describe("ConfigLoader", () => {
         cache: { ttlSeconds: 600 },
       };
       
-      vi.mocked(fs.existsSync).mockImplementation((p) => {
+      (fs.existsSync as any).mockImplementation((p: string) => {
         return p === path.join(homeDir, ".fscraperrc");
       });
       
-      vi.mocked(fs.promises.readFile).mockResolvedValue(
+      (fs.promises.readFile as any).mockResolvedValue(
         JSON.stringify(mockConfig)
       );
       

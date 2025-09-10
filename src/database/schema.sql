@@ -143,6 +143,9 @@ CREATE TABLE IF NOT EXISTS scraping_sessions (
     -- Progress tracking
     total_items_target INTEGER,
     total_items_scraped INTEGER DEFAULT 0,
+    total_posts INTEGER DEFAULT 0,
+    total_comments INTEGER DEFAULT 0,
+    total_users INTEGER DEFAULT 0,
     last_item_id TEXT,
     resume_token TEXT,
     
