@@ -14,19 +14,67 @@ export type {
   HNClientConfig,
 } from "./client.js";
 
-export {
-  parsePost,
-  parseComment,
-  parseUser,
-  parseJob,
-  parsePoll,
-  buildCommentTree,
-  cleanContent,
-  extractDomain,
-  formatRelativeTime,
-  parseStoryType,
-  batchParseItems,
-} from "./parsers.js";
+export { HackerNewsParsers, HackerNewsValidators } from "./parsers.js";
+
+// Import for platform constructor
+import { HackerNewsScraper } from "./scraper.js";
+import type { PlatformConstructor } from "../platform-factory.js";
+import type { BasePlatform, BasePlatformConfig } from "../base-platform.js";
+import type winston from "winston";
+
+/**
+ * HackerNews platform constructor for platform registry
+ * Wraps HackerNewsScraper to match the expected PlatformConstructor interface
+ */
+export const HackerNewsPlatform: PlatformConstructor = class implements BasePlatform {
+  private scraper: HackerNewsScraper;
+  public readonly platform = "hackernews" as const;
+
+  constructor(_platform: string, config: BasePlatformConfig, logger?: winston.Logger) {
+    this.scraper = new HackerNewsScraper({
+      ...config,
+      logger,
+    });
+  }
+
+  // Delegate all methods to the scraper instance
+  getCapabilities() {
+    return this.scraper.getCapabilities();
+  }
+
+  async initialize() {
+    return this.scraper.initialize();
+  }
+
+  async scrapePosts(category: string, options: any) {
+    return this.scraper.scrapePosts(category, options);
+  }
+
+  async scrapePost(postId: string, options: any) {
+    return this.scraper.scrapePost(postId, options);
+  }
+
+  async scrapeUser(username: string) {
+    return this.scraper.scrapeUser(username);
+  }
+
+  async search(query: string, options: any) {
+    return this.scraper.search(query, options);
+  }
+
+  async validateAuth() {
+    return this.scraper.validateAuth();
+  }
+
+  async testConnection() {
+    return this.scraper.validateAuth();
+  }
+
+  setRateLimiter(rateLimiter: any) {
+    // HackerNewsScraper doesn't use external rate limiter, has internal delay
+    // This is a no-op for compatibility
+  }
+} as any;
 
 // Default export for platform registration
-export { HackerNewsScraper as default } from "./scraper.js";
+export default HackerNewsPlatform;

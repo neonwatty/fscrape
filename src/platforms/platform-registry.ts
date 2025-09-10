@@ -349,9 +349,17 @@ export class PlatformRegistry {
       this.logger.warn("Failed to load Reddit platform", error);
     }
 
-    // Future implementations:
-    // const { HackerNewsPlatform } = await import("./hackernews/index.js");
-    // this.register("hackernews", HackerNewsPlatform);
+    try {
+      // Import HackerNews platform implementation
+      const { HackerNewsPlatform } = await import("./hackernews/index.js");
+      this.register("hackernews", HackerNewsPlatform, {
+        version: "1.0.0",
+        description: "Hacker News platform scraper with Firebase API integration",
+        author: "fscrape",
+      });
+    } catch (error) {
+      this.logger.warn("Failed to load HackerNews platform", error);
+    }
 
     this.initialized = true;
   }
