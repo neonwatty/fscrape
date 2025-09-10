@@ -32,20 +32,9 @@ export function createListCommand(): Command {
 
   command
     .description("List and query data from database")
-    .option("-d, --database <path>", "Database file path", "fscrape.db")
-    .option("-p, --platform <platform>", "Filter by platform")
-    .option("-l, --limit <number>", "Maximum items to show", parseInt, 10)
-    .option("--offset <number>", "Skip first N items", parseInt, 0)
-    .option("--sort-by <field>", "Sort by field (date, score, comments)", "date")
-    .option("--sort-order <order>", "Sort order (asc, desc)", "desc")
-    .option("--author <username>", "Filter by author")
-    .option("--min-score <number>", "Minimum score filter", parseInt)
-    .option("--start-date <date>", "Start date (YYYY-MM-DD)")
-    .option("--end-date <date>", "End date (YYYY-MM-DD)")
-    .option("-f, --format <format>", "Output format (table, json, simple)", "table")
-    .option("-v, --verbose", "Show detailed information", false)
-    .action(async (options: ListCommandOptions) => {
-      await handleList("posts", options);
+    .action(async () => {
+      console.log(chalk.yellow("Please specify a subcommand: posts, comments, users, stats, or search"));
+      console.log(chalk.gray("Example: fscrape list posts --platform reddit"));
     });
 
   // Subcommands for specific data types
@@ -60,6 +49,8 @@ export function createListCommand(): Command {
     .option("--sort-order <order>", "Sort order", "desc")
     .option("--author <username>", "Filter by author")
     .option("--min-score <number>", "Minimum score", parseInt)
+    .option("--start-date <date>", "Start date (YYYY-MM-DD)")
+    .option("--end-date <date>", "End date (YYYY-MM-DD)")
     .option("-f, --format <format>", "Output format", "table")
     .option("-v, --verbose", "Show full content", false)
     .action(async (options) => {
@@ -141,6 +132,8 @@ async function handleList(type: string, options: ListCommandOptions): Promise<vo
       platform: options.platform,
       limit: options.limit || 10,
       offset: options.offset || 0,
+      sortBy: options.sortBy,
+      sortOrder: options.sortOrder,
     };
 
     if (options.author) {
@@ -157,7 +150,7 @@ async function handleList(type: string, options: ListCommandOptions): Promise<vo
     }
 
     // Query posts
-    const posts = dbManager.queryPosts(queryOptions);
+    const posts = await dbManager.queryPosts(queryOptions);
 
     if (posts.length === 0) {
       console.log(chalk.yellow("No posts found"));
@@ -235,9 +228,11 @@ async function handleList(type: string, options: ListCommandOptions): Promise<vo
       console.log(chalk.gray(`\nShowing ${posts.length} posts (offset: ${options.offset || 0})`));
     }
 
+    await dbManager.close();
+
   } catch (error) {
     console.error(chalk.red("❌ List failed:"));
-    console.error(chalk.red(formatError(error)));
+    console.error(chalk.red(`Error: ${formatError(error)}`));
     process.exit(1);
   }
 }
@@ -270,7 +265,7 @@ async function handleListComments(options: any): Promise<void> {
       queryOptions.minScore = options.minScore;
     }
 
-    const comments = dbManager.queryComments(queryOptions);
+    const comments = await dbManager.queryComments(queryOptions);
 
     if (comments.length === 0) {
       console.log(chalk.yellow("No comments found"));
@@ -323,9 +318,11 @@ async function handleListComments(options: any): Promise<void> {
       console.log(chalk.gray(`\nShowing ${comments.length} comments`));
     }
 
+    await dbManager.close();
+
   } catch (error) {
     console.error(chalk.red("❌ List failed:"));
-    console.error(chalk.red(formatError(error)));
+    console.error(chalk.red(`Error: ${formatError(error)}`));
     process.exit(1);
   }
 }
@@ -352,7 +349,7 @@ async function handleListUsers(options: any): Promise<void> {
       queryOptions.minKarma = options.minKarma;
     }
 
-    const users = dbManager.queryUsers(queryOptions);
+    const users = await dbManager.queryUsers(queryOptions);
 
     if (users.length === 0) {
       console.log(chalk.yellow("No users found"));
@@ -408,9 +405,11 @@ async function handleListUsers(options: any): Promise<void> {
       console.log(chalk.gray(`\nShowing ${users.length} users`));
     }
 
+    await dbManager.close();
+
   } catch (error) {
     console.error(chalk.red("❌ List failed:"));
-    console.error(chalk.red(formatError(error)));
+    console.error(chalk.red(`Error: ${formatError(error)}`));
     process.exit(1);
   }
 }
@@ -427,7 +426,7 @@ async function handleStats(options: any): Promise<void> {
     });
     await dbManager.initialize();
 
-    const stats = dbManager.getStatistics({
+    const stats = await dbManager.getStatistics({
       platform: options.platform,
       startDate: options.startDate ? new Date(options.startDate) : undefined,
       endDate: options.endDate ? new Date(options.endDate) : undefined,
@@ -444,7 +443,7 @@ async function handleStats(options: any): Promise<void> {
 
     console.log(table(statsTable));
 
-    if (stats.platformBreakdown) {
+    if (stats.platformBreakdown && Object.keys(stats.platformBreakdown).length > 0) {
       console.log(chalk.cyan("\n📈 Platform Breakdown\n"));
       const platformTable = [
         ["Platform", "Posts", "Comments", "Users"],
@@ -466,9 +465,11 @@ async function handleStats(options: any): Promise<void> {
       console.log(chalk.gray(`\nDate range: ${stats.dateRange.earliest.toLocaleDateString()} - ${stats.dateRange.latest.toLocaleDateString()}`));
     }
 
+    await dbManager.close();
+
   } catch (error) {
     console.error(chalk.red("❌ Stats failed:"));
-    console.error(chalk.red(formatError(error)));
+    console.error(chalk.red(`Error: ${formatError(error)}`));
     process.exit(1);
   }
 }
@@ -496,14 +497,10 @@ async function handleSearch(query: string, options: any): Promise<void> {
       limit: options.limit || 20,
     };
 
-    // Search posts
-    const posts = dbManager.searchPosts(searchOptions);
-    
-    // Search comments if content field is included
-    let comments: any[] = [];
-    if (searchFields.includes("content")) {
-      comments = dbManager.searchComments(searchOptions);
-    }
+    // Search content
+    const searchResults = await dbManager.searchContent(searchOptions);
+    const posts = searchResults.posts || [];
+    const comments = searchResults.comments || [];
 
     if (posts.length === 0 && comments.length === 0) {
       console.log(chalk.yellow("No results found"));
@@ -559,9 +556,11 @@ async function handleSearch(query: string, options: any): Promise<void> {
 
     console.log(chalk.gray(`\nTotal results: ${posts.length + comments.length}`));
 
+    await dbManager.close();
+
   } catch (error) {
     console.error(chalk.red("❌ Search failed:"));
-    console.error(chalk.red(formatError(error)));
+    console.error(chalk.red(`Error: ${formatError(error)}`));
     process.exit(1);
   }
 }
