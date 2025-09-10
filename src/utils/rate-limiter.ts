@@ -1,6 +1,11 @@
 import PQueue from "p-queue";
 import type { Platform } from "../types/core.js";
 import { logger } from "./logger.js";
+import {
+  TokenBucket,
+  TokenBucketFactory,
+  MultiTierTokenBucket,
+} from "./token-bucket.js";
 
 /**
  * Rate limiting configuration per platform
@@ -98,6 +103,11 @@ export interface RateLimitStatus {
   isLimited: boolean;
   currentBackoffMs?: number;
   quotaUsage?: QuotaUsage;
+  tokenBucketState?: {
+    availableTokens: number;
+    capacity: number;
+    refillRate: number;
+  };
 }
 
 /**
@@ -144,12 +154,14 @@ export interface RateLimiter {
 }
 
 /**
- * Advanced rate limiter with p-queue and backoff strategies
+ * Advanced rate limiter with p-queue, token bucket, and backoff strategies
  */
 export class AdvancedRateLimiter implements RateLimiter {
   private readonly platform: Platform;
   private readonly config: Required<RateLimitConfig>;
   private readonly queue: PQueue;
+  private readonly tokenBucket: TokenBucket;
+  private readonly multiTierBucket?: MultiTierTokenBucket;
   private requests: number[] = [];
   private currentBackoffMs: number = 0;
   private backoffUntil: number = 0;
@@ -181,6 +193,23 @@ export class AdvancedRateLimiter implements RateLimiter {
       intervalCap: 1, // One request per interval
     });
 
+    // Initialize token bucket for primary rate limiting
+    const requestsPerSecond =
+      this.config.maxRequests / (this.config.windowMs / 1000);
+    this.tokenBucket = TokenBucketFactory.perSecond(
+      requestsPerSecond,
+      Math.min(this.config.maxRequests, requestsPerSecond * 10), // Allow burst up to 10 seconds worth or max requests
+    );
+
+    // Initialize multi-tier bucket for platforms with complex limits
+    if (platform === "reddit" || platform === "discourse") {
+      this.multiTierBucket = TokenBucketFactory.multiTier(
+        Math.ceil(requestsPerSecond), // Per second
+        this.config.maxRequests, // Per minute
+        this.config.maxRequests * 60, // Per hour
+      );
+    }
+
     // Initialize quota usage
     const now = new Date();
     this.quotaUsage = {
@@ -205,6 +234,14 @@ export class AdvancedRateLimiter implements RateLimiter {
 
   async execute<T>(fn: () => Promise<T>): Promise<T> {
     const result = await this.queue.add(async () => {
+      // Wait for token bucket availability
+      await this.tokenBucket.consume(1);
+
+      // If multi-tier bucket exists, also check it
+      if (this.multiTierBucket) {
+        await this.multiTierBucket.consumeAll(1);
+      }
+
       await this.waitIfNeeded();
       this.recordRequest();
 
@@ -263,6 +300,16 @@ export class AdvancedRateLimiter implements RateLimiter {
       return false;
     }
 
+    // Check token bucket
+    if (this.tokenBucket.getAvailableTokens() < 1) {
+      return false;
+    }
+
+    // Check multi-tier bucket if exists
+    if (this.multiTierBucket && !this.multiTierBucket.tryConsumeAll(0)) {
+      return false;
+    }
+
     // Check rate limit
     return this.requests.length < this.config.maxRequests;
   }
@@ -317,6 +364,10 @@ export class AdvancedRateLimiter implements RateLimiter {
     this.currentBackoffMs = 0;
     this.backoffUntil = 0;
     this.queue.clear();
+    this.tokenBucket.reset();
+    if (this.multiTierBucket) {
+      this.multiTierBucket.resetAll();
+    }
     logger.info(`${this.platform}: Rate limiter reset`);
   }
 
@@ -330,6 +381,8 @@ export class AdvancedRateLimiter implements RateLimiter {
       oldestRequest !== undefined
         ? new Date(oldestRequest + this.config.windowMs)
         : new Date(now + this.config.windowMs);
+
+    const bucketState = this.tokenBucket.getState();
 
     return {
       platform: this.platform,
@@ -346,6 +399,11 @@ export class AdvancedRateLimiter implements RateLimiter {
         currentBackoffMs: this.currentBackoffMs,
       }),
       quotaUsage: { ...this.quotaUsage },
+      tokenBucketState: {
+        availableTokens: bucketState.tokens,
+        capacity: bucketState.capacity,
+        refillRate: bucketState.refillRate,
+      },
     };
   }
 
