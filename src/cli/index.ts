@@ -8,9 +8,10 @@ import { Command } from "commander";
 import { createInitCommand } from "./commands/init.js";
 import { createScrapeCommand } from "./commands/scrape.js";
 import { createStatusCommand } from "./commands/status.js";
+import { createExportCommand } from "./commands/export.js";
+import { createListCommand } from "./commands/list.js";
 import { 
   formatError,
-  validateExportOptions,
   validateCleanOptions,
   validateConfigOptions,
 } from "./validation.js";
@@ -62,6 +63,8 @@ function createProgram(): Command {
   program.addCommand(createInitCommand());
   program.addCommand(createScrapeCommand());
   program.addCommand(createStatusCommand());
+  program.addCommand(createExportCommand());
+  program.addCommand(createListCommand());
 
   // Add additional utility commands
   program
@@ -78,23 +81,6 @@ function createProgram(): Command {
       await handleConfig(key, options);
     });
 
-  program
-    .command("export")
-    .description("Export data from database")
-    .option("-d, --database <path>", "Database path", "fscrape.db")
-    .option(
-      "-f, --format <format>",
-      "Export format (json, csv, markdown, html)",
-      "json",
-    )
-    .option("-o, --output <path>", "Output file path", "export")
-    .option("-p, --platform <platform>", "Filter by platform")
-    .option("--start-date <date>", "Start date for export")
-    .option("--end-date <date>", "End date for export")
-    .option("--limit <number>", "Maximum items to export")
-    .action(async (options: any) => {
-      await handleExport(options);
-    });
 
   program
     .command("clean")
@@ -161,88 +147,6 @@ async function handleConfig(
   }
 }
 
-/**
- * Handle export command
- */
-async function handleExport(options: any): Promise<void> {
-  try {
-    // Validate options
-    const validatedOptions = validateExportOptions({
-      database: options.database,
-      format: options.format,
-      output: options.output,
-      platform: options.platform,
-      startDate: options.startDate,
-      endDate: options.endDate,
-      limit: options.limit ? parseInt(options.limit, 10) : undefined,
-    });
-
-    const { DatabaseManager } = await import("../database/database.js");
-    const { ExportManager } = await import("../export/export-manager.js");
-
-    // Connect to database
-    const dbManager = new DatabaseManager({
-      type: "sqlite" as const,
-      path: validatedOptions.database || options.database,
-      connectionPoolSize: 5,
-    });
-    await dbManager.initialize();
-
-    // Query data
-    const queryOptions: any = {
-      platform: validatedOptions.platform,
-      startDate: validatedOptions.startDate,
-      endDate: validatedOptions.endDate,
-      limit: validatedOptions.limit,
-    };
-
-    // Query posts from database
-    const posts = dbManager.queryPosts(queryOptions);
-    
-    // Query comments if posts were found
-    let comments: any[] | undefined;
-    if (posts.length > 0 && options.format !== "csv") {
-      const postIds = posts.map(p => p.id);
-      comments = dbManager.queryComments({
-        ...queryOptions,
-        postIds: postIds.slice(0, 100), // Limit to first 100 posts for performance
-      });
-    }
-
-    // Export data
-    const exportManager = new ExportManager({
-      outputDirectory: dirname(options.output),
-      defaultFormat: options.format,
-    });
-
-    const result = {
-      posts,
-      comments,
-      metadata: {
-        scrapedAt: new Date(),
-        totalPosts: posts.length,
-        totalComments: comments?.length || 0,
-        platform: options.platform || "all",
-      },
-    };
-
-    const outputPath = await exportManager.exportData(
-      result,
-      options.format,
-      options.output,
-    );
-
-    const outputPaths = Array.isArray(outputPath) ? outputPath : [outputPath];
-    console.log(chalk.green(`✓ Data exported to ${outputPaths.join(", ")}`));
-    console.log(chalk.cyan(`  Posts: ${posts.length}`));
-    if (comments) {
-      console.log(chalk.cyan(`  Comments: ${comments.length}`));
-    }
-  } catch (error) {
-    console.error(chalk.red(formatError(error)));
-    process.exit(1);
-  }
-}
 
 /**
  * Handle clean command
