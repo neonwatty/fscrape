@@ -6,7 +6,9 @@ import type {
   Platform,
   Pagination,
   SortOption,
+  ScrapeError,
 } from "../types/core.js";
+import type { AuthConfig, SessionState } from "../types/platform.js";
 import type { RateLimiter } from "../scrapers/rate-limiter.js";
 import winston from "winston";
 
@@ -34,6 +36,7 @@ export interface BasePlatformConfig {
   timeout?: number;
   retryAttempts?: number;
   rateLimitPerMinute?: number;
+  auth?: AuthConfig;
 }
 
 /**
@@ -51,6 +54,15 @@ export interface BasePlatformCapabilities {
 }
 
 /**
+ * Authentication state for the platform
+ */
+export interface AuthenticationState {
+  isAuthenticated: boolean;
+  sessionState?: SessionState;
+  expiresAt?: Date;
+}
+
+/**
  * Abstract base class for all platform implementations
  */
 export abstract class BasePlatform {
@@ -58,6 +70,7 @@ export abstract class BasePlatform {
   protected readonly config: BasePlatformConfig;
   protected readonly logger: winston.Logger;
   protected rateLimiter?: RateLimiter;
+  protected authState: AuthenticationState;
 
   constructor(
     platform: Platform,
@@ -73,6 +86,7 @@ export abstract class BasePlatform {
         format: winston.format.simple(),
         transports: [new winston.transports.Console()],
       });
+    this.authState = { isAuthenticated: false };
   }
 
   /**
@@ -84,6 +98,21 @@ export abstract class BasePlatform {
    * Initialize the platform (setup auth, validate config, etc.)
    */
   abstract initialize(): Promise<void>;
+
+  /**
+   * Authenticate with the platform
+   */
+  abstract authenticate(): Promise<boolean>;
+
+  /**
+   * Refresh authentication if needed
+   */
+  abstract refreshAuth(): Promise<boolean>;
+
+  /**
+   * Check if authentication is valid
+   */
+  abstract isAuthValid(): boolean;
 
   /**
    * Scrape posts from the platform
@@ -143,6 +172,45 @@ export abstract class BasePlatform {
    */
   setRateLimiter(rateLimiter: RateLimiter): void {
     this.rateLimiter = rateLimiter;
+  }
+
+  /**
+   * Get authentication state
+   */
+  getAuthState(): AuthenticationState {
+    return this.authState;
+  }
+
+  /**
+   * Get current session state
+   */
+  getSessionState(): SessionState | undefined {
+    return this.authState.sessionState;
+  }
+
+  /**
+   * Update session state
+   */
+  protected updateSessionState(state: Partial<SessionState>): void {
+    this.authState.sessionState = {
+      ...this.authState.sessionState,
+      platform: this.platform,
+      ...state,
+    } as SessionState;
+
+    if (state.expiresAt) {
+      this.authState.expiresAt = state.expiresAt;
+    }
+
+    this.authState.isAuthenticated =
+      state.authenticated ?? this.authState.isAuthenticated;
+  }
+
+  /**
+   * Clear authentication state
+   */
+  protected clearAuthState(): void {
+    this.authState = { isAuthenticated: false };
   }
 
   /**
@@ -232,6 +300,106 @@ export abstract class BasePlatform {
   protected handleApiError(error: any, context: string): never {
     const message = error.message || "Unknown error";
     this.logger.error(`${context}: ${message}`, error);
-    throw new Error(`${this.platform} API error in ${context}: ${message}`);
+
+    const scrapeError: ScrapeError = {
+      code: error.code || "UNKNOWN_ERROR",
+      message: `${this.platform} API error in ${context}: ${message}`,
+      details: error,
+      timestamp: new Date(),
+      platform: this.platform,
+      retryable: this.isRetryableError(error),
+    };
+
+    throw scrapeError;
+  }
+
+  /**
+   * Determine if an error is retryable
+   */
+  protected isRetryableError(error: any): boolean {
+    // Check for common retryable error conditions
+    if (error.code) {
+      const retryableCodes = [
+        "ETIMEDOUT",
+        "ECONNRESET",
+        "ECONNREFUSED",
+        "RATE_LIMIT",
+        "429",
+        "503",
+        "504",
+      ];
+      return retryableCodes.includes(error.code.toString());
+    }
+
+    if (error.statusCode) {
+      // Retry on rate limits and server errors
+      return (
+        error.statusCode === 429 ||
+        (error.statusCode >= 500 && error.statusCode < 600)
+      );
+    }
+
+    return false;
+  }
+
+  /**
+   * Retry logic wrapper for API calls
+   */
+  protected async retryOperation<T>(
+    operation: () => Promise<T>,
+    context: string,
+    maxAttempts?: number,
+  ): Promise<T> {
+    const attempts = maxAttempts || this.config.retryAttempts || 3;
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      try {
+        // Wait for rate limit before each attempt
+        await this.waitForRateLimit();
+
+        // Try the operation
+        return await operation();
+      } catch (error) {
+        lastError = error;
+
+        // Check if error is retryable
+        if (!this.isRetryableError(error) || attempt === attempts) {
+          break;
+        }
+
+        // Calculate exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+        this.logger.warn(
+          `${context}: Attempt ${attempt} failed, retrying in ${delay}ms...`,
+          error,
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+
+    // All attempts failed
+    this.handleApiError(lastError, context);
+  }
+
+  /**
+   * Ensure authentication before operations
+   */
+  protected async ensureAuthenticated(): Promise<void> {
+    if (!this.isAuthValid()) {
+      const refreshed = await this.refreshAuth();
+      if (!refreshed) {
+        const authenticated = await this.authenticate();
+        if (!authenticated) {
+          throw {
+            code: "AUTH_FAILED",
+            message: "Failed to authenticate with platform",
+            platform: this.platform,
+            retryable: false,
+          } as ScrapeError;
+        }
+      }
+    }
   }
 }
