@@ -36,6 +36,7 @@
   "dependencies": {
     "better-sqlite3": "^11.1.2",
     "chalk": "^5.3.0",
+    "cli-table3": "^0.6.5",
     "commander": "^12.1.0",
     "csv-writer": "^1.6.0",
     "dotenv": "^16.4.5",
@@ -50,6 +51,7 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
+    "@types/inquirer": "^9.0.9",
     "@types/node": "^20.14.12",
     "@typescript-eslint/eslint-plugin": "^7.17.0",
     "@typescript-eslint/parser": "^7.17.0",
