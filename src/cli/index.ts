@@ -232,7 +232,8 @@ async function handleExport(options: any): Promise<void> {
       options.output,
     );
 
-    console.log(chalk.green(`✓ Data exported to ${outputPath}`));
+    const outputPaths = Array.isArray(outputPath) ? outputPath : [outputPath];
+    console.log(chalk.green(`✓ Data exported to ${outputPaths.join(", ")}`));
     console.log(chalk.cyan(`  Posts: ${posts.length}`));
     if (comments) {
       console.log(chalk.cyan(`  Comments: ${comments.length}`));
