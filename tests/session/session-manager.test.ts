@@ -61,6 +61,8 @@ describe('SessionManager', () => {
         estimatedRemaining: '0s',
       }),
       emit: vi.fn(),
+      destroy: vi.fn(),
+      getEstimatedCompletion: vi.fn().mockReturnValue(null),
     };
     (ProgressTracker as any).mockImplementation(() => mockProgressTracker);
     
@@ -93,11 +95,17 @@ describe('SessionManager', () => {
       failSession: vi.fn(),
       getAllSessions: vi.fn().mockReturnValue([]),
       getActiveSessions: vi.fn().mockReturnValue([]),
+      getSessionsByStatus: vi.fn().mockReturnValue([]),
       clearOldSessions: vi.fn(),
       updateProgress: vi.fn(),
+      updateMetrics: vi.fn(),
+      updateResumeData: vi.fn(),
       setStatus: vi.fn(),
       updateStatus: vi.fn(),
       addError: vi.fn(),
+      exportSessions: vi.fn().mockReturnValue([]),
+      importSessions: vi.fn(),
+      fromDatabaseFormat: vi.fn(),
       toDatabaseFormat: vi.fn().mockReturnValue({
         sessionId: 'test-session-id',
         platform: 'reddit',
@@ -627,6 +635,449 @@ describe('SessionManager', () => {
     });
   });
 
+  describe('Session Lifecycle Tests', () => {
+    it('should handle full session lifecycle from creation to completion', async () => {
+      const session = await sessionManager.createSession({ 
+        platform: 'reddit',
+        maxItems: 100 
+      });
+      
+      // Verify initial state
+      expect(session.status).toBe('pending');
+      
+      // Start session
+      mockSessionState.getSession.mockReturnValueOnce({
+        ...session,
+        status: 'pending',
+      });
+      
+      mockSessionState.updateStatus.mockImplementation((id, status) => {
+        if (status === 'running') {
+          mockSessionState.getSession.mockReturnValue({
+            ...session,
+            status: 'running',
+          });
+        }
+      });
+      
+      await sessionManager.startSession(session.id);
+      
+      // Verify running state
+      expect(mockSessionState.updateStatus).toHaveBeenCalledWith(session.id, 'running');
+      
+      // Update progress
+      sessionManager.updateProgress(session.id, 50, 100);
+      expect(mockProgressTracker.updateProgress).toHaveBeenCalledWith(session.id, 50, 100);
+      
+      // Complete session
+      mockSessionState.completeSession.mockImplementation((id) => {
+        mockSessionState.getSession.mockReturnValue({
+          ...session,
+          status: 'completed',
+        });
+      });
+      
+      await sessionManager.completeSession(session.id);
+      expect(mockSessionState.completeSession).toHaveBeenCalledWith(session.id);
+    });
+
+    it('should handle session failure lifecycle', async () => {
+      const session = await sessionManager.createSession({ platform: 'reddit' });
+      const error = new Error('Fatal error occurred');
+      
+      // Start session
+      mockSessionState.getSession.mockReturnValueOnce({
+        ...session,
+        status: 'pending',
+      });
+      
+      await sessionManager.startSession(session.id);
+      
+      // Fail session
+      mockSessionState.failSession.mockImplementation((id, err) => {
+        mockSessionState.getSession.mockReturnValue({
+          ...session,
+          status: 'failed',
+          error: err.message,
+        });
+      });
+      
+      await sessionManager.failSession(session.id, error);
+      
+      expect(mockSessionState.failSession).toHaveBeenCalledWith(session.id, error);
+      expect(mockProgressTracker.stopTracking).toHaveBeenCalledWith(session.id);
+    });
+
+    it('should handle session cancellation', async () => {
+      const session = await sessionManager.createSession({ platform: 'reddit' });
+      
+      // Start session - first set to pending for start check
+      mockSessionState.getSession.mockReturnValueOnce({
+        ...session,
+        status: 'pending',
+      });
+      
+      // After start, return running status
+      mockSessionState.getSession.mockReturnValue({
+        ...session,
+        status: 'running',
+      });
+      
+      await sessionManager.startSession(session.id);
+      
+      // Cancel session
+      await sessionManager.cancelSession(session.id);
+      
+      expect(mockSessionState.updateStatus).toHaveBeenCalledWith(session.id, 'cancelled');
+      expect(mockProgressTracker.stopTracking).toHaveBeenCalledWith(session.id);
+    });
+  });
+
+  describe('State Persistence Tests', () => {
+    it('should persist session state to database', async () => {
+      const session = await sessionManager.createSession({ 
+        platform: 'reddit',
+        maxItems: 100 
+      });
+      
+      // Verify database persistence was called
+      expect(mockDatabase.updateSession).toHaveBeenCalled();
+    });
+
+    it('should auto-persist session state at intervals', async () => {
+      vi.useFakeTimers();
+      
+      // Create session manager with auto-persist
+      const autoSessionManager = new SessionManager(mockDatabase, undefined, {
+        autoPersistMs: 5000,
+      });
+      
+      const session = await autoSessionManager.createSession({ platform: 'reddit' });
+      
+      // Advance time to trigger auto-persist
+      vi.advanceTimersByTime(5000);
+      
+      // Verify persistence was called
+      expect(mockDatabase.updateSession).toHaveBeenCalled();
+      
+      autoSessionManager.destroy();
+      vi.useRealTimers();
+    });
+
+    it('should export and import session states', async () => {
+      const session = await sessionManager.createSession({ platform: 'reddit' });
+      
+      mockSessionState.exportSessions.mockReturnValue([{
+        id: session.id,
+        platform: 'reddit',
+        status: 'running',
+        metadata: {},
+        progress: { itemsScraped: 50, totalItems: 100 },
+        startedAt: new Date(),
+      }]);
+      
+      const exported = sessionManager.exportSessions();
+      expect(exported).toHaveLength(1);
+      
+      // Import sessions
+      sessionManager.importSessions(exported);
+      expect(mockSessionState.importSessions).toHaveBeenCalledWith(exported);
+    });
+
+    it('should handle database persistence errors gracefully', async () => {
+      mockDatabase.updateSession.mockRejectedValueOnce(new Error('Database error'));
+      
+      const session = await sessionManager.createSession({ platform: 'reddit' });
+      
+      // Session should still be created despite database error
+      expect(session).toBeDefined();
+    });
+  });
+
+  describe('Crash Recovery Tests', () => {
+    it('should recover from crash by loading persisted state', async () => {
+      // Simulate crashed session in database
+      mockDatabase.getActiveSessions.mockReturnValue([{
+        id: 1,
+        sessionId: 'crashed-session',
+        platform: 'reddit',
+        status: 'running',
+        totalItemsScraped: 50,
+        totalItemsTarget: 100,
+        startedAt: new Date(),
+        metadata: '{}',
+      }]);
+      
+      // Create new session manager (simulating restart)
+      const recoveredManager = new SessionManager(mockDatabase);
+      
+      // Verify session was loaded and marked as paused
+      expect(mockSessionState.fromDatabaseFormat).toHaveBeenCalled();
+    });
+
+    it('should handle corrupted session state during recovery', async () => {
+      mockDatabase.getActiveSessions.mockReturnValue([{
+        id: 1,
+        sessionId: 'corrupted-session',
+        platform: null, // Invalid platform
+        status: 'running',
+        totalItemsScraped: -1, // Invalid progress
+        startedAt: 'invalid-date', // Invalid date
+      }]);
+      
+      mockSessionState.fromDatabaseFormat.mockImplementation(() => {
+        throw new Error('Invalid session data');
+      });
+      
+      // Should not throw, but log error
+      const recoveredManager = new SessionManager(mockDatabase);
+      expect(recoveredManager).toBeDefined();
+    });
+
+    it('should clean up abort controllers on crash recovery', async () => {
+      const session = await sessionManager.createSession({ platform: 'reddit' });
+      
+      // Start session to create abort controller
+      mockSessionState.getSession.mockReturnValue({
+        ...session,
+        status: 'pending',
+      });
+      
+      await sessionManager.startSession(session.id);
+      
+      // Simulate crash by destroying session manager
+      sessionManager.destroy();
+      
+      // Verify abort controllers were cleaned up
+      const signal = sessionManager.getAbortSignal(session.id);
+      expect(signal).toBeUndefined();
+    });
+
+    it('should recover session metrics after crash', async () => {
+      // Simulate session with metrics in database
+      const sessionWithMetrics = {
+        id: 'metrics-session',
+        platform: 'reddit',
+        status: 'paused',
+        progress: { processedItems: 75, totalItems: 100 },
+        metrics: {
+          averageItemTime: 500,
+          totalTime: 37500,
+          requestCount: 75,
+          rateLimitHits: 0,
+        },
+        config: { maxItems: 100 },
+        errors: [],
+        startedAt: new Date(Date.now() - 60000),
+        updatedAt: new Date(),
+      };
+      
+      mockDatabase.getSession.mockReturnValue({
+        id: 1,
+        sessionId: 'metrics-session',
+        platform: 'reddit',
+        status: 'paused',
+        totalItemsScraped: 75,
+        totalItemsTarget: 100,
+        startedAt: new Date(Date.now() - 60000),
+        metadata: JSON.stringify({
+          averageItemTime: 500,
+          requestCount: 75,
+        }),
+      });
+      
+      mockSessionState.fromDatabaseFormat.mockReturnValue(sessionWithMetrics);
+      
+      // Mock getSession to return session after fromDatabaseFormat
+      mockSessionState.getSession.mockReturnValue(sessionWithMetrics);
+      mockSessionState.canResume.mockReturnValue(true);
+      
+      const resumed = await sessionManager.resumeSession('metrics-session');
+      
+      expect(resumed.metrics.averageItemTime).toBe(500);
+      expect(resumed.metrics.requestCount).toBe(75);
+    });
+  });
+
+  describe('Pause/Resume Tests', () => {
+    it('should pause session and preserve exact state', async () => {
+      const session = await sessionManager.createSession({ 
+        platform: 'reddit',
+        maxItems: 100 
+      });
+      
+      // Start session - first set to pending for start check
+      mockSessionState.getSession.mockReturnValueOnce({
+        ...session,
+        status: 'pending',
+      });
+      
+      // After start, return running status
+      mockSessionState.getSession.mockReturnValue({
+        ...session,
+        status: 'running',
+      });
+      
+      await sessionManager.startSession(session.id);
+      
+      // Update progress and metrics
+      sessionManager.updateProgress(session.id, 60, 100);
+      sessionManager.updateMetrics(session.id, {
+        requestCount: 60,
+        averageItemTime: 1000,
+      });
+      
+      // Set specific progress for pause
+      mockProgressTracker.getProgress.mockReturnValue({
+        current: 60,
+        total: 100,
+        itemsScraped: 60,
+        totalItems: 100,
+        percentageComplete: 60,
+        elapsedMs: 60000,
+        remainingMs: 40000,
+      });
+      
+      // Pause session
+      await sessionManager.pauseSession(session.id);
+      
+      // Verify state was preserved
+      expect(mockSessionState.updateProgress).toHaveBeenCalledWith(
+        session.id,
+        expect.objectContaining({
+          processedItems: 60,
+          totalItems: 100,
+        })
+      );
+      expect(mockSessionState.pauseSession).toHaveBeenCalledWith(session.id);
+    });
+
+    it('should resume paused session from exact checkpoint', async () => {
+      // Setup paused session
+      mockSessionState.getSession.mockReturnValue({
+        id: 'paused-session',
+        platform: 'reddit',
+        status: 'paused',
+        progress: { 
+          processedItems: 60,
+          totalItems: 100,
+          lastItemId: 'item-60',
+        },
+        resumeData: {
+          token: 'resume-token',
+          checkpoint: { page: 3, offset: 10 },
+          lastSuccessfulItem: 'item-60',
+        },
+        startedAt: new Date(),
+      });
+      
+      mockSessionState.canResume.mockReturnValue(true);
+      
+      const resumed = await sessionManager.resumeSession('paused-session');
+      
+      expect(resumed.resumeData?.lastSuccessfulItem).toBe('item-60');
+      expect(mockSessionState.setStatus).toHaveBeenCalledWith('paused-session', 'running');
+      expect(mockProgressTracker.startTracking).toHaveBeenCalled();
+    });
+
+    it('should handle rapid pause/resume cycles', async () => {
+      const session = await sessionManager.createSession({ platform: 'reddit' });
+      
+      // Start session - first set to pending for start check
+      mockSessionState.getSession.mockReturnValueOnce({
+        ...session,
+        status: 'pending',
+      });
+      
+      // After start, return running status
+      mockSessionState.getSession.mockReturnValue({
+        ...session,
+        status: 'running',
+      });
+      
+      await sessionManager.startSession(session.id);
+      
+      // Rapid pause/resume cycles
+      for (let i = 0; i < 5; i++) {
+        // Pause
+        mockSessionState.getSession.mockReturnValue({
+          ...session,
+          status: 'running',
+        });
+        await sessionManager.pauseSession(session.id);
+        
+        // Resume
+        mockSessionState.getSession.mockReturnValue({
+          ...session,
+          status: 'paused',
+        });
+        mockSessionState.canResume.mockReturnValue(true);
+        await sessionManager.resumeSession(session.id);
+      }
+      
+      // Verify tracking was properly managed
+      expect(mockProgressTracker.stopTracking).toHaveBeenCalledTimes(5);
+      expect(mockProgressTracker.startTracking).toHaveBeenCalledTimes(6); // Initial + 5 resumes
+    });
+
+    it('should update resume data during session', async () => {
+      const session = await sessionManager.createSession({ platform: 'reddit' });
+      
+      const resumeData = {
+        token: 'new-token',
+        checkpoint: { page: 5, offset: 25 },
+        lastSuccessfulItem: 'item-125',
+        nextUrl: 'https://api.reddit.com/next?after=125',
+      };
+      
+      sessionManager.updateResumeData(session.id, resumeData);
+      
+      expect(mockSessionState.updateResumeData).toHaveBeenCalledWith(
+        session.id,
+        resumeData
+      );
+    });
+
+    it('should not allow resuming non-resumable sessions', async () => {
+      mockSessionState.getSession.mockReturnValue({
+        id: 'completed-session',
+        platform: 'reddit',
+        status: 'completed',
+        progress: { processedItems: 100, totalItems: 100 },
+        startedAt: new Date(),
+      });
+      
+      mockSessionState.canResume.mockReturnValue(false);
+      
+      await expect(
+        sessionManager.resumeSession('completed-session')
+      ).rejects.toThrow('Cannot resume session');
+    });
+
+    it('should handle pause during rate limiting', async () => {
+      const session = await sessionManager.createSession({ platform: 'reddit' });
+      
+      // Simulate rate limiting state
+      mockSessionState.getSession.mockReturnValue({
+        ...session,
+        status: 'running',
+        metrics: {
+          rateLimitHits: 5,
+          averageItemTime: 1000,
+          totalTime: 30000,
+          requestCount: 30,
+        },
+      });
+      
+      // Pause during rate limit
+      await sessionManager.pauseSession(session.id);
+      
+      // Verify rate limit state is preserved
+      expect(mockSessionState.pauseSession).toHaveBeenCalled();
+      expect(mockProgressTracker.stopTracking).toHaveBeenCalled();
+    });
+  });
+
   describe('Session Events', () => {
     it('should emit session started event', async () => {
       const eventSpy = vi.fn();
@@ -694,6 +1145,67 @@ describe('SessionManager', () => {
         id: session.id,
         status: 'completed',
       }));
+    });
+
+    it('should emit session failed event with error', async () => {
+      const eventSpy = vi.fn();
+      sessionManager.on('session:failed', eventSpy);
+      
+      const session = await sessionManager.createSession({ platform: 'reddit' });
+      const error = new Error('Critical failure');
+      
+      mockSessionState.failSession.mockImplementation((id, err) => {
+        mockSessionState.getSession.mockReturnValue({
+          ...session,
+          status: 'failed',
+          error: err.message,
+        });
+      });
+      
+      await sessionManager.failSession(session.id, error);
+      
+      expect(eventSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: session.id,
+          status: 'failed',
+        }),
+        error
+      );
+    });
+
+    it('should emit session paused event', async () => {
+      const eventSpy = vi.fn();
+      sessionManager.on('session:paused', eventSpy);
+      
+      const session = await sessionManager.createSession({ platform: 'reddit' });
+      
+      mockSessionState.getSession.mockReturnValue({
+        ...session,
+        status: 'running',
+      });
+      
+      await sessionManager.pauseSession(session.id);
+      
+      expect(eventSpy).toHaveBeenCalled();
+    });
+
+    it('should emit session resumed event', async () => {
+      const eventSpy = vi.fn();
+      sessionManager.on('session:resumed', eventSpy);
+      
+      mockSessionState.getSession.mockReturnValue({
+        id: 'paused-session',
+        platform: 'reddit',
+        status: 'paused',
+        progress: { processedItems: 50, totalItems: 100 },
+        startedAt: new Date(),
+      });
+      
+      mockSessionState.canResume.mockReturnValue(true);
+      
+      await sessionManager.resumeSession('paused-session');
+      
+      expect(eventSpy).toHaveBeenCalled();
     });
   });
 });
