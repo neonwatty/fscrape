@@ -480,6 +480,7 @@ describe('Export System', () => {
     });
 
     it('should escape HTML entities', async () => {
+      const cardsExporter = new HtmlExporter({ format: 'cards' });
       const postsWithHtml = [{
         ...mockPosts[0],
         title: 'Post with <script>alert("XSS")</script>',
@@ -494,7 +495,7 @@ describe('Export System', () => {
           platform: 'reddit' as const
         }
       };
-      await exporter.export(mockData, './output.html');
+      await cardsExporter.export(mockData, './output.html');
 
       const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
       const writtenContent = writeCall?.[1] as string;

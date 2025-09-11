@@ -83,10 +83,13 @@ export class ExportManager {
     }
 
     // Add metadata if configured
-    if (this.includeMetadata && !processedData.metadata) {
+    if (this.includeMetadata) {
       processedData = {
         ...processedData,
-        metadata: this.generateMetadata(processedData),
+        metadata: {
+          ...processedData.metadata,
+          ...this.generateMetadata(processedData),
+        },
       };
     }
 

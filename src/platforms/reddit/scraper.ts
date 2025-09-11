@@ -341,7 +341,8 @@ export class RedditScraper extends BasePlatform {
       return this.client.convertToUser(user);
     } catch (error) {
       if ((error as any).statusCode === 404 || 
-          (error as any).message?.toLowerCase().includes('user not found')) {
+          (error as any).message?.toLowerCase().includes('user not found') ||
+          (error as any).message?.toLowerCase().includes('404 not found')) {
         return null;
       }
       this.handleApiError(error, `scrapeUser(${username})`);
