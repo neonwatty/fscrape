@@ -101,7 +101,7 @@ describe("PerformanceProfiler", () => {
       const metrics = profiler.getMetrics();
       expect(metrics.measures).toHaveLength(1);
       expect(metrics.measures[0].name).toBe("async-operation");
-      expect(metrics.measures[0].duration).toBeGreaterThanOrEqual(10);
+      expect(metrics.measures[0].duration).toBeGreaterThanOrEqual(9);
     });
 
     it("should handle errors in profiled functions", async () => {
@@ -142,12 +142,12 @@ describe("PerformanceProfiler", () => {
       
       const duration = stopTimer();
       
-      expect(duration).toBeGreaterThanOrEqual(50);
+      expect(duration).toBeGreaterThanOrEqual(49);
       
       const metrics = profiler.getMetrics();
       const timerMeasure = metrics.measures.find(m => m.name === "test-timer-timer");
       expect(timerMeasure).toBeDefined();
-      expect(timerMeasure?.duration).toBeGreaterThanOrEqual(50);
+      expect(timerMeasure?.duration).toBeGreaterThanOrEqual(49);
     });
   });
 

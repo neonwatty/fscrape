@@ -68,7 +68,7 @@ export class HackerNewsScraper {
       supportsUserProfiles: true,
       supportsSearch: true, // We provide a mock search implementation
       supportsCategories: true, // Different story types
-      supportsPagination: true, // We can paginate through story lists
+      supportsPagination: false, // HN API doesn't directly support pagination
       supportsRealtime: false,
       maxCommentDepth: 100,
       maxItemsPerRequest: 500,
