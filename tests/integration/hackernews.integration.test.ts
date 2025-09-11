@@ -383,7 +383,7 @@ describe('Hacker News Platform Integration Tests', () => {
         supportsUserProfiles: true,
         supportsSearch: true,
         supportsCategories: true,
-        supportsPagination: true,
+        supportsPagination: false,
         supportsRealtime: false,
         maxCommentDepth: expect.any(Number),
         rateLimit: {
