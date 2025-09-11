@@ -19,6 +19,7 @@ export class HackerNewsParsers {
       return null;
     }
 
+    const storyType = this.determineStoryType(item);
     return {
       id: item.id.toString(),
       title: item.title || "Untitled",
@@ -31,6 +32,7 @@ export class HackerNewsParsers {
       createdAt: new Date(item.time * 1000),
       updatedAt: new Date(item.time * 1000),
       platform: "hackernews",
+      category: storyType,
       metadata: {
         type: item.type,
         dead: item.dead || false,
@@ -38,7 +40,7 @@ export class HackerNewsParsers {
         parts: item.parts || [],
         poll: item.poll,
         domain: this.extractDomain(item.url),
-        storyType: this.determineStoryType(item),
+        storyType: storyType,
         tags: this.extractTags(item),
       },
     };
@@ -84,6 +86,7 @@ export class HackerNewsParsers {
       id: user.id,
       username: user.id,
       karma: user.karma,
+      bio: this.cleanContent(user.about),
       createdAt: new Date(user.created * 1000),
       platform: "hackernews",
       metadata: {

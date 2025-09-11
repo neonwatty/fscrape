@@ -21,6 +21,8 @@ export interface HtmlExportOptions {
   collapsibleComments?: boolean;
   maxCommentDepth?: number;
   includeSearch?: boolean;
+  format?: 'cards' | 'table';
+  sortable?: boolean;
 }
 
 export class HtmlExporter {
@@ -37,6 +39,8 @@ export class HtmlExporter {
       collapsibleComments: true,
       maxCommentDepth: 10,
       includeSearch: true,
+      format: 'table',
+      sortable: true,
       ...options,
     };
   }
@@ -386,6 +390,38 @@ export class HtmlExporter {
    */
   private generateScripts(): string {
     return `<script>
+        // Sort table functionality
+        function sortTable(event, header) {
+            const table = header.closest('table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const columnIndex = Array.from(header.parentNode.children).indexOf(header);
+            
+            rows.sort((a, b) => {
+                const aValue = a.children[columnIndex].textContent;
+                const bValue = b.children[columnIndex].textContent;
+                
+                // Check if numeric
+                const aNum = parseFloat(aValue);
+                const bNum = parseFloat(bValue);
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return aNum - bNum;
+                }
+                return aValue.localeCompare(bValue);
+            });
+            
+            if (header.dataset.sortOrder === 'asc') {
+                rows.reverse();
+                header.dataset.sortOrder = 'desc';
+            } else {
+                header.dataset.sortOrder = 'asc';
+            }
+            
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
         // Search functionality
         if (document.getElementById('search-input')) {
             document.getElementById('search-input').addEventListener('input', function(e) {
@@ -511,6 +547,10 @@ export class HtmlExporter {
    * Generate posts section
    */
   private generatePostsSection(data: ScrapeResult): string {
+    if (this.options.format === 'table') {
+      return this.generatePostsTable(data);
+    }
+    
     const postsHtml = data.posts
       .map((post) => this.generatePost(post, data.comments))
       .join("");
@@ -518,6 +558,43 @@ export class HtmlExporter {
     return `<section class="posts-section">
         <h2>Posts</h2>
         ${postsHtml}
+    </section>`;
+  }
+
+  /**
+   * Generate posts as table
+   */
+  private generatePostsTable(data: ScrapeResult): string {
+    const sortableAttr = this.options.sortable ? ' onclick="sortTable(event, this)"' : '';
+    
+    const tableRows = data.posts.map(post => `
+        <tr>
+            <td><a href="${post.url}" target="_blank">${this.escapeHtml(post.title)}</a></td>
+            <td>${this.escapeHtml(post.author)}</td>
+            <td>${post.score}</td>
+            <td>${post.commentCount}</td>
+            <td>${post.platform}</td>
+            <td>${this.formatDate(post.createdAt)}</td>
+        </tr>
+    `).join('');
+
+    return `<section class="posts-section">
+        <h2>Posts</h2>
+        <table class="posts-table">
+            <thead>
+                <tr>
+                    <th${sortableAttr}>Title</th>
+                    <th${sortableAttr}>Author</th>
+                    <th${sortableAttr}>Score</th>
+                    <th${sortableAttr}>Comments</th>
+                    <th${sortableAttr}>Platform</th>
+                    <th${sortableAttr}>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
     </section>`;
   }
 

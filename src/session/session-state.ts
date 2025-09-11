@@ -200,6 +200,49 @@ export class SessionStateManager {
   }
 
   /**
+   * Complete a session
+   */
+  completeSession(id: string): void {
+    const state = this.states.get(id);
+    if (state) {
+      state.status = "completed";
+      state.completedAt = new Date();
+      state.updatedAt = new Date();
+    }
+  }
+
+  /**
+   * Fail a session
+   */
+  failSession(id: string, error: Error): void {
+    const state = this.states.get(id);
+    if (state) {
+      state.status = "failed";
+      state.completedAt = new Date();
+      state.updatedAt = new Date();
+      this.addError(id, error);
+    }
+  }
+
+  /**
+   * Pause a session
+   */
+  pauseSession(id: string): void {
+    const state = this.states.get(id);
+    if (state) {
+      state.status = "paused";
+      state.updatedAt = new Date();
+    }
+  }
+
+  /**
+   * Set session status (generic method)
+   */
+  setStatus(id: string, status: SessionStatus): void {
+    this.updateStatus(id, status);
+  }
+
+  /**
    * Get all active sessions
    */
   getActiveSessions(): SessionState[] {

@@ -33,6 +33,11 @@ export interface TransformOptions {
   groupByPlatform?: boolean;
   groupByDate?: boolean;
   groupByAuthor?: boolean;
+
+  // Custom transformations
+  transformPost?: (post: ForumPost) => ForumPost;
+  transformComment?: (comment: Comment) => Comment;
+  transformUser?: (user: User) => User;
 }
 
 export class DataTransformer {
@@ -81,14 +86,19 @@ export class DataTransformer {
    */
   transformPosts(posts: ForumPost[]): ForumPost[] {
     return posts.map((post, index) => {
-      const transformed: any = { ...post };
+      let transformed: any = { ...post };
+
+      // Apply custom transform if provided
+      if (this.options.transformPost) {
+        transformed = this.options.transformPost(transformed);
+      }
 
       // Content transformations
       if (post.content) {
         transformed.content = this.transformContent(post.content);
       }
 
-      if (post.title) {
+      if (post.title && !this.options.transformPost) {
         transformed.title = this.transformText(post.title);
       }
 
@@ -137,10 +147,17 @@ export class DataTransformer {
    */
   transformComments(comments: Comment[]): Comment[] {
     return comments.map((comment) => {
-      const transformed: any = { ...comment };
+      let transformed: any = { ...comment };
+
+      // Apply custom transform if provided
+      if (this.options.transformComment) {
+        transformed = this.options.transformComment(transformed);
+      }
 
       // Content transformations
-      transformed.content = this.transformContent(comment.content);
+      if (!this.options.transformComment) {
+        transformed.content = this.transformContent(comment.content);
+      }
 
       // Date transformations
       transformed.createdAt = this.transformDate(comment.createdAt);
@@ -165,10 +182,15 @@ export class DataTransformer {
    */
   transformUsers(users: User[]): User[] {
     return users.map((user, index) => {
-      const transformed: any = { ...user };
+      let transformed: any = { ...user };
+
+      // Apply custom transform if provided
+      if (this.options.transformUser) {
+        transformed = this.options.transformUser(transformed);
+      }
 
       // Anonymize if requested
-      if (this.options.anonymizeUsers) {
+      if (this.options.anonymizeUsers && !this.options.transformUser) {
         transformed.username = this.anonymizeUsername(user.username);
         transformed.id = this.hashId(user.id);
       }

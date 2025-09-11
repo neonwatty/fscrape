@@ -41,8 +41,12 @@ export class ExportManager {
   private htmlExporter: HtmlExporter;
   private dataFilter?: DataFilter;
   private dataTransformer?: DataTransformer;
+  private includeMetadata: boolean;
 
   constructor(config: ExportConfig) {
+    // Store config
+    this.includeMetadata = config.includeMetadata ?? true;
+
     // Initialize exporters with their specific options
     this.csvExporter = new CsvExporter(config.csvOptions);
     this.jsonExporter = new JsonExporter(config.jsonOptions);
@@ -76,6 +80,14 @@ export class ExportManager {
     // Apply transformation if configured
     if (this.dataTransformer) {
       processedData = this.dataTransformer.transformScrapeResult(processedData);
+    }
+
+    // Add metadata if configured
+    if (this.includeMetadata && !processedData.metadata) {
+      processedData = {
+        ...processedData,
+        metadata: this.generateMetadata(processedData),
+      };
     }
 
     // Export using the appropriate exporter
@@ -194,5 +206,28 @@ export class ExportManager {
    */
   static isFormatSupported(format: string): boolean {
     return ExportManager.getSupportedFormats().includes(format.toLowerCase());
+  }
+
+  /**
+   * Generate metadata for export
+   */
+  private generateMetadata(data: ScrapeResult): any {
+    return {
+      exportDate: new Date().toISOString(),
+      totalCount: data.posts.length,
+      commentCount: data.comments?.length || 0,
+      userCount: data.users?.length || 0,
+      platforms: [...new Set(data.posts.map(p => p.platform))],
+      dateRange: {
+        earliest: data.posts.reduce((min, p) => 
+          p.createdAt < min ? p.createdAt : min, 
+          data.posts[0]?.createdAt || new Date()
+        ),
+        latest: data.posts.reduce((max, p) => 
+          p.createdAt > max ? p.createdAt : max, 
+          data.posts[0]?.createdAt || new Date()
+        ),
+      },
+    };
   }
 }

@@ -148,13 +148,16 @@ export class SessionManager extends EventEmitter {
     // Update status
     this.stateManager.updateStatus(sessionId, "running");
 
+    // Get updated session
+    const updatedSession = this.stateManager.getSession(sessionId)!;
+
     // Persist state
     if (this.database) {
-      await this.persistSession(session);
+      await this.persistSession(updatedSession);
     }
 
     this.logger.info(`Started session ${sessionId}`);
-    this.emit("session:started", session);
+    this.emit("session:started", updatedSession);
   }
 
   /**
@@ -177,16 +180,31 @@ export class SessionManager extends EventEmitter {
       this.activeOperations.delete(sessionId);
     }
 
-    // Update status
-    this.stateManager.updateStatus(sessionId, "paused");
+    // Save current progress before pausing
+    const progress = this.progressTracker.getProgress(sessionId);
+    if (progress) {
+      this.stateManager.updateProgress(sessionId, {
+        processedItems: progress.current,
+        totalItems: progress.total,
+      });
+    }
+
+    // Update status using the new pauseSession method
+    this.stateManager.pauseSession(sessionId);
+
+    // Stop progress tracking
+    this.progressTracker.stopTracking(sessionId);
+
+    // Get updated session
+    const updatedSession = this.stateManager.getSession(sessionId)!;
 
     // Persist state
     if (this.database) {
-      await this.persistSession(session);
+      await this.persistSession(updatedSession);
     }
 
     this.logger.info(`Paused session ${sessionId}`);
-    this.emit("session:paused", session);
+    this.emit("session:paused", updatedSession);
   }
 
   /**
@@ -202,34 +220,35 @@ export class SessionManager extends EventEmitter {
           return this.stateManager.fromDatabaseFormat(dbSession);
         }
       }
-      throw new Error(`Session ${sessionId} not found`);
+      throw new Error(`Session not found`);
     }
 
     if (!this.stateManager.canResume(sessionId)) {
-      throw new Error(
-        `Session ${sessionId} cannot be resumed from status ${session.status}`,
-      );
+      throw new Error(`Cannot resume session`);
     }
 
     // Create new abort controller
     const abortController = new AbortController();
     this.activeOperations.set(sessionId, abortController);
 
-    // Update status
-    this.stateManager.updateStatus(sessionId, "running");
+    // Update status using setStatus method
+    this.stateManager.setStatus(sessionId, "running");
 
     // Resume progress tracking
     this.progressTracker.startTracking(sessionId, session.config?.maxItems);
 
+    // Get updated session
+    const updatedSession = this.stateManager.getSession(sessionId)!;
+
     // Persist state
     if (this.database) {
-      await this.persistSession(session);
+      await this.persistSession(updatedSession);
     }
 
     this.logger.info(`Resumed session ${sessionId}`);
-    this.emit("session:resumed", session);
+    this.emit("session:resumed", updatedSession);
 
-    return session;
+    return updatedSession;
   }
 
   /**
@@ -247,8 +266,8 @@ export class SessionManager extends EventEmitter {
       this.activeOperations.delete(sessionId);
     }
 
-    // Update status
-    this.stateManager.updateStatus(sessionId, "completed");
+    // Update status using the new completeSession method
+    this.stateManager.completeSession(sessionId);
 
     // Stop progress tracking
     this.progressTracker.stopTracking(sessionId);
@@ -259,7 +278,7 @@ export class SessionManager extends EventEmitter {
     }
 
     this.logger.info(`Completed session ${sessionId}`);
-    this.emit("session:completed", session);
+    this.emit("session:completed", this.stateManager.getSession(sessionId));
   }
 
   /**
@@ -277,9 +296,8 @@ export class SessionManager extends EventEmitter {
       this.activeOperations.delete(sessionId);
     }
 
-    // Add error and update status
-    this.stateManager.addError(sessionId, error);
-    this.stateManager.updateStatus(sessionId, "failed");
+    // Use the new failSession method
+    this.stateManager.failSession(sessionId, error);
 
     // Stop progress tracking
     this.progressTracker.stopTracking(sessionId);
@@ -290,7 +308,7 @@ export class SessionManager extends EventEmitter {
     }
 
     this.logger.error(`Session ${sessionId} failed:`, error);
-    this.emit("session:failed", session, error);
+    this.emit("session:failed", this.stateManager.getSession(sessionId), error);
   }
 
   /**
@@ -506,6 +524,22 @@ export class SessionManager extends EventEmitter {
    */
   exportSessions(): SessionState[] {
     return this.stateManager.exportSessions();
+  }
+
+  /**
+   * Get all sessions
+   */
+  getAllSessions(): SessionState[] {
+    return this.stateManager.getAllSessions();
+  }
+
+  /**
+   * Get session metrics
+   */
+  getSessionMetrics(sessionId: string): { session: SessionState | undefined; progress: any } {
+    const session = this.stateManager.getSession(sessionId);
+    const progress = this.progressTracker.getProgress(sessionId);
+    return { session, progress };
   }
 
   /**
