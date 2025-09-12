@@ -47,8 +47,8 @@ describe("PreparedQueries", () => {
     // Clean up database between tests
     if (db) {
       db.exec(`
-        DELETE FROM posts;
         DELETE FROM comments;
+        DELETE FROM posts;
         DELETE FROM users;
         DELETE FROM scrape_sessions;
         DELETE FROM rate_limit_state;
@@ -276,7 +276,7 @@ describe("PreparedQueries", () => {
         "testuser",
         1000,
         Date.now(),
-        JSON.stringify({ verified: true })
+        Date.now()  // last_seen_at
       );
       
       expect(result.changes).toBe(1);
@@ -285,7 +285,7 @@ describe("PreparedQueries", () => {
     it("should get user by id", () => {
       queries.users.insert.run(
         "user456", "reddit", "another", 500,
-        Date.now(), null
+        Date.now(), Date.now()
       );
       
       const user = queries.users.getById.get("user456") as any;
@@ -297,11 +297,11 @@ describe("PreparedQueries", () => {
     it("should get user by username and platform", () => {
       queries.users.insert.run(
         "u1", "reddit", "commonname", 100,
-        Date.now(), null
+        Date.now(), Date.now()
       );
       queries.users.insert.run(
         "u2", "hackernews", "commonname", 200,
-        Date.now(), null
+        Date.now(), Date.now()
       );
       
       const redditUser = queries.users.getByUsername.get("reddit", "commonname") as any;
@@ -314,9 +314,9 @@ describe("PreparedQueries", () => {
     });
 
     it("should get top users by karma", () => {
-      queries.users.insert.run("u1", "reddit", "low", 10, Date.now(), null);
-      queries.users.insert.run("u2", "reddit", "mid", 50, Date.now(), null);
-      queries.users.insert.run("u3", "reddit", "high", 100, Date.now(), null);
+      queries.users.insert.run("u1", "reddit", "low", 10, Date.now(), Date.now());
+      queries.users.insert.run("u2", "reddit", "mid", 50, Date.now(), Date.now());
+      queries.users.insert.run("u3", "reddit", "high", 100, Date.now(), Date.now());
       
       const topUsers = queries.users.getTopByKarma.all(2) as any[];
       expect(topUsers).toHaveLength(2);
@@ -327,20 +327,17 @@ describe("PreparedQueries", () => {
 
   describe("Session Queries", () => {
     it("should create a session", () => {
-      const sessionId = `test-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       const result = queries.sessions.create.run(
-        sessionId,       // session_id
         "reddit",        // platform
+        "typescript",    // query
+        null,            // subreddit
+        null,            // category
+        Date.now(),      // started_at
         "running",       // status
-        "search",        // query_type
-        "typescript",    // query_value
-        null,            // total_items_target
-        0,               // total_items_scraped
         0,               // total_posts
         0,               // total_comments
         0,               // total_users
-        Date.now(),      // started_at
-        Date.now()       // last_activity_at
+        null             // metadata
       );
       
       expect(result.changes).toBe(1);
@@ -348,58 +345,47 @@ describe("PreparedQueries", () => {
     });
 
     it("should update session progress", () => {
-      const sessionIdStr = `test-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       const createResult = queries.sessions.create.run(
-        sessionIdStr,    // session_id
         "reddit",        // platform
+        null,            // query
+        null,            // subreddit
+        null,            // category
+        Date.now(),      // started_at
         "running",       // status
-        null,            // query_type
-        null,            // query_value
-        null,            // total_items_target
-        0,               // total_items_scraped
         0,               // total_posts
         0,               // total_comments
         0,               // total_users
-        Date.now(),      // started_at
-        Date.now()       // last_activity_at
+        null             // metadata
       );
       
       const rowId = createResult.lastInsertRowid as number;
       
       queries.sessions.update.run({
-        sessionId: sessionIdStr,
+        id: rowId,
         status: "running",
-        totalItemsTarget: 10,
-        totalItemsScraped: 5,
         totalPosts: 2,
         totalComments: 3,
         totalUsers: 1,
-        lastItemId: null,
-        resumeToken: null,
-        lastActivityAt: Date.now(),
         completedAt: null,
-        errorCount: null,
-        lastError: null
+        errorMessage: null,
+        metadata: null
       });
       
-      const session = queries.sessions.get.get(sessionIdStr) as any;
-      expect(session.total_items_target).toBe(10);
-      expect(session.total_items_scraped).toBe(5);
+      const session = queries.sessions.get.get(rowId) as any;
+      expect(session.total_posts).toBe(2);
+      expect(session.total_comments).toBe(3);
     });
 
     it("should get active sessions", () => {
       // Create multiple sessions
-      const sid1 = `test-${Date.now()}-1`;
       queries.sessions.create.run(
-        sid1, "reddit", "running", null, null, null, 0, 0, 0, 0, Date.now(), Date.now()
+        "reddit", null, null, null, Date.now(), "running", 0, 0, 0, null
       );
-      const sid2 = `test-${Date.now()}-2`;
       queries.sessions.create.run(
-        sid2, "hackernews", "completed", null, null, 10, 5, 2, 3, 1, Date.now(), Date.now()
+        "hackernews", null, null, null, Date.now(), "completed", 2, 3, 1, null
       );
-      const sid3 = `test-${Date.now()}-3`;
       queries.sessions.create.run(
-        sid3, "reddit", "running", null, null, 5, 3, 1, 2, 0, Date.now(), Date.now()
+        "reddit", null, null, null, Date.now(), "running", 1, 2, 0, null
       );
       
       const activeSessions = queries.sessions.getActive.all() as any[];
@@ -424,9 +410,9 @@ describe("PreparedQueries", () => {
         "url3", 200, 20, Date.now(), null, null
       );
       
-      queries.users.insert.run("u1", "reddit", "user1", 1000, Date.now(), null);
-      queries.users.insert.run("u2", "reddit", "user2", 500, Date.now(), null);
-      queries.users.insert.run("u3", "hackernews", "user3", 2000, Date.now(), null);
+      queries.users.insert.run("u1", "reddit", "user1", 1000, Date.now(), Date.now());
+      queries.users.insert.run("u2", "reddit", "user2", 500, Date.now(), Date.now());
+      queries.users.insert.run("u3", "hackernews", "user3", 2000, Date.now(), Date.now());
     });
 
     it("should get posts per platform", () => {
@@ -475,16 +461,16 @@ describe("PreparedQueries", () => {
 
     it("should increment rate limit", () => {
       const now = Date.now();
-      queries.rateLimit.increment.run("reddit", now, now, now);
-      queries.rateLimit.increment.run("reddit", now, now, now);
+      queries.rateLimit.increment.run("reddit", now, "reddit", now);
+      queries.rateLimit.increment.run("reddit", now, "reddit", now);
       
       const limit = queries.rateLimit.get.get("reddit") as any;
-      expect(limit.requests_in_window).toBe(2);
+      expect(limit.requests_count).toBe(2);
     });
 
     it("should reset old rate limits", () => {
       const oldDate = Date.now() - 7200000; // 2 hours ago
-      queries.rateLimit.increment.run("reddit", oldDate, oldDate, oldDate);
+      queries.rateLimit.increment.run("reddit", oldDate, "reddit", oldDate);
       
       const oneHourAgo = Date.now() - 3600000;
       queries.rateLimit.reset.run({ platform: "reddit", windowStart: oneHourAgo });

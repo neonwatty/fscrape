@@ -117,7 +117,7 @@ export class DatabaseAnalytics {
     // Scraping performance metrics
     this.stmtScrapingPerformance = db.prepare(`
       SELECT 
-        s.session_id,
+        s.id as session_id,
         s.platform,
         s.started_at,
         s.completed_at,
@@ -125,12 +125,12 @@ export class DatabaseAnalytics {
         SUM(m.requests_successful) as successful_requests,
         SUM(m.requests_failed) as failed_requests,
         AVG(m.avg_response_time_ms) as avg_response_time,
-        CAST(s.total_items_scraped AS REAL) / 
-          MAX(1, (COALESCE(s.completed_at, s.last_activity_at) - s.started_at) / 1000.0) as items_per_second
-      FROM scraping_sessions s
-      LEFT JOIN scraping_metrics m ON m.session_id = s.session_id
-      WHERE s.session_id = ?
-      GROUP BY s.session_id
+        CAST((s.total_posts + s.total_comments + s.total_users) AS REAL) / 
+          MAX(1, (COALESCE(s.completed_at, strftime('%s', 'now') * 1000) - s.started_at) / 1000.0) as items_per_second
+      FROM scrape_sessions s
+      LEFT JOIN scraping_metrics m ON m.id = CAST(s.id AS TEXT)
+      WHERE s.id = ?
+      GROUP BY s.id
     `);
 
     // Time series data - hourly
@@ -477,10 +477,10 @@ export class DatabaseAnalytics {
   getSessionPerformance(): any[] {
     const query = `
       SELECT 
-        session_id,
+        id as session_id,
         platform,
         status,
-        query_value,
+        query as query_value,
         total_posts as totalPosts,
         total_comments as totalComments,
         total_users as totalUsers,
@@ -489,7 +489,7 @@ export class DatabaseAnalytics {
          COALESCE(total_users, 0)) as totalItems,
         started_at as created_at,
         completed_at as updated_at
-      FROM scraping_sessions
+      FROM scrape_sessions
       WHERE status = 'completed'
       ORDER BY started_at DESC
     `;
@@ -502,7 +502,7 @@ export class DatabaseAnalytics {
       SELECT 
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful,
         COUNT(*) as total
-      FROM scraping_sessions
+      FROM scrape_sessions
     `;
 
     const result = this.db.prepare(query).get() as any;
@@ -906,7 +906,7 @@ export class DatabaseAnalytics {
       "posts",
       "comments",
       "users",
-      "scraping_sessions",
+      "scrape_sessions",
       "scraping_metrics",
       "daily_stats",
     ];
@@ -972,8 +972,8 @@ export class DatabaseAnalytics {
           last_seen_at INTEGER
         )
       `,
-      scraping_sessions: `
-        CREATE TABLE IF NOT EXISTS scraping_sessions (
+      scrape_sessions: `
+        CREATE TABLE IF NOT EXISTS scrape_sessions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           session_id TEXT UNIQUE NOT NULL,
           platform TEXT NOT NULL,
@@ -1032,7 +1032,7 @@ export class DatabaseAnalytics {
         .prepare("SELECT COUNT(*) as count FROM users")
         .get() as any;
       const sessionCount = this.db
-        .prepare("SELECT COUNT(*) as count FROM scraping_sessions")
+        .prepare("SELECT COUNT(*) as count FROM scrape_sessions")
         .get() as any;
 
       // Get oldest and newest posts

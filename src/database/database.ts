@@ -378,18 +378,16 @@ export class DatabaseManager {
       params.queryValue || params.subreddit || params.query || null;
 
     const result = this.queries.sessions.create.run(
-      sessionId, // session_id
       params.platform,
-      "running",
-      queryType,
-      queryValue,
-      null, // total_items_target
-      0, // total_items_scraped
+      queryValue, // query
+      params.subreddit || null, // subreddit
+      params.category || null, // category
+      now, // started_at
+      "running", // status
       0, // total_posts
       0, // total_comments
       0, // total_users
-      now, // started_at
-      now, // last_activity_at
+      null // metadata
     );
 
     this.sessionNumericId = result.lastInsertRowid as number;
@@ -412,65 +410,40 @@ export class DatabaseManager {
       errorMessage: string;
     }>,
   ): void {
-    // Get the session_id string from the numeric id
-    const session = this.db
-      .prepare("SELECT session_id FROM scraping_sessions WHERE id = ?")
-      .get(sessionId) as any;
-    if (!session) throw new Error(`Session ${sessionId} not found`);
-
     // Initialize params with all required fields for the query
     const params: any = {
-      sessionId: session.session_id,
+      id: sessionId,
       status: null,
-      totalItemsTarget: null,
-      totalItemsScraped: null,
       totalPosts: null,
       totalComments: null,
       totalUsers: null,
-      lastItemId: null,
-      resumeToken: null,
-      errorCount: null,
-      lastError: null,
       completedAt: null,
-      lastActivityAt: Date.now(),
+      errorMessage: null,
+      metadata: null
     };
 
     // Override with provided updates
     if (updates.status !== undefined) params.status = updates.status;
-    if (updates.totalItemsTarget !== undefined)
-      params.totalItemsTarget = updates.totalItemsTarget;
-    if (updates.totalItemsScraped !== undefined)
-      params.totalItemsScraped = updates.totalItemsScraped;
-
-    // Handle the separate count fields
     if (updates.totalPosts !== undefined)
       params.totalPosts = updates.totalPosts;
     if (updates.totalComments !== undefined)
       params.totalComments = updates.totalComments;
     if (updates.totalUsers !== undefined)
       params.totalUsers = updates.totalUsers;
-
-    if (updates.lastItemId !== undefined)
-      params.lastItemId = updates.lastItemId;
-    if (updates.resumeToken !== undefined)
-      params.resumeToken = updates.resumeToken;
-    if (updates.errorCount !== undefined)
-      params.errorCount = updates.errorCount;
-    if (updates.lastError !== undefined) params.lastError = updates.lastError;
     if (updates.errorMessage !== undefined)
-      params.lastError = updates.errorMessage;
+      params.errorMessage = updates.errorMessage;
 
     // Mark completed if status is completed/failed/cancelled
     if (["completed", "failed", "cancelled"].includes(updates.status || "")) {
       params.completedAt = Date.now();
     }
 
-    this.queries.updateSession.run(params);
+    this.queries.sessions.update.run(params);
   }
 
   getSession(sessionId: number): SessionInfo | null {
     const row = this.db
-      .prepare("SELECT * FROM scraping_sessions WHERE id = ?")
+      .prepare("SELECT * FROM scrape_sessions WHERE id = ?")
       .get(sessionId);
     return row ? this.mapRowToSession(row as any) : null;
   }
@@ -479,12 +452,12 @@ export class DatabaseManager {
     const rows = platform
       ? this.db
           .prepare(
-            'SELECT * FROM scraping_sessions WHERE platform = ? AND status IN ("pending", "running")',
+            'SELECT * FROM scrape_sessions WHERE platform = ? AND status IN ("pending", "running")',
           )
           .all(platform)
       : this.db
           .prepare(
-            'SELECT * FROM scraping_sessions WHERE status IN ("pending", "running")',
+            'SELECT * FROM scrape_sessions WHERE status IN ("pending", "running")',
           )
           .all();
 
@@ -497,7 +470,7 @@ export class DatabaseManager {
   getActiveSessions(limit = 10): SessionInfo[] {
     const rows = this.db
       .prepare(
-        `SELECT * FROM scraping_sessions 
+        `SELECT * FROM scrape_sessions 
          WHERE status IN ('running', 'pending') 
          ORDER BY started_at DESC 
          LIMIT ?`,
@@ -512,11 +485,11 @@ export class DatabaseManager {
    */
   getRecentSessions(limit = 10, platform?: Platform): SessionInfo[] {
     const query = platform
-      ? `SELECT * FROM scraping_sessions 
+      ? `SELECT * FROM scrape_sessions 
          WHERE platform = ? 
          ORDER BY started_at DESC 
          LIMIT ?`
-      : `SELECT * FROM scraping_sessions 
+      : `SELECT * FROM scrape_sessions 
          ORDER BY started_at DESC 
          LIMIT ?`;
 
@@ -681,32 +654,31 @@ export class DatabaseManager {
   private mapRowToSession(row: any): SessionInfo {
     const session: SessionInfo = {
       id: row.id,
-      sessionId: row.session_id,
+      sessionId: row.id, // Use numeric id as sessionId
       platform: row.platform as Platform,
       status: row.status,
-      totalItemsScraped: row.total_items_scraped,
+      totalItemsScraped: 0, // Not in current schema
       startedAt: new Date(row.started_at),
-      lastActivityAt: new Date(row.last_activity_at),
-      errorCount: row.error_count,
+      lastActivityAt: row.started_at ? new Date(row.started_at) : new Date(),
+      errorCount: 0, // Not in current schema
     };
 
-    if (row.query_type) session.queryType = row.query_type;
-    if (row.query_value) session.queryValue = row.query_value;
-    if (row.total_items_target)
-      session.totalItemsTarget = row.total_items_target;
+    // Map query to queryValue for compatibility
+    if (row.query) session.queryValue = row.query;
+    if (row.subreddit) session.queryValue = row.subreddit;
+    if (row.category) session.queryType = "category";
+    
     if (row.total_posts !== null && row.total_posts !== undefined)
       session.totalPosts = row.total_posts;
     if (row.total_comments !== null && row.total_comments !== undefined)
       session.totalComments = row.total_comments;
     if (row.total_users !== null && row.total_users !== undefined)
       session.totalUsers = row.total_users;
-    if (row.last_item_id) session.lastItemId = row.last_item_id;
-    if (row.resume_token) session.resumeToken = row.resume_token;
     if (row.completed_at) session.completedAt = new Date(row.completed_at);
-    if (row.last_error) {
-      session.lastError = row.last_error;
+    if (row.error_message) {
+      session.lastError = row.error_message;
       // Add errorMessage property for test compatibility
-      (session as any).errorMessage = row.last_error;
+      (session as any).errorMessage = row.error_message;
     }
 
     return session;

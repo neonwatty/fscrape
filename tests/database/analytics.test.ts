@@ -51,8 +51,8 @@ describe("DatabaseAnalytics", () => {
     // Clean up database between tests
     if (db) {
       db.exec(`
-        DELETE FROM posts;
         DELETE FROM comments;
+        DELETE FROM posts;
         DELETE FROM users;
         DELETE FROM scrape_sessions;
         DELETE FROM rate_limit_state;
@@ -588,8 +588,12 @@ describe("DatabaseAnalytics", () => {
     it("should handle empty database gracefully", async () => {
       // Fresh database with no data
       const emptyDb = new Database(":memory:");
-      const migrationManager = new MigrationManager(emptyDb);
-      migrationManager.loadSchemaFromFile();
+      
+      // Create tables
+      for (const [, tableSchema] of Object.entries(DATABASE_SCHEMA)) {
+        emptyDb.exec(tableSchema as string);
+      }
+      
       const emptyAnalytics = new DatabaseAnalytics(emptyDb);
       
       const stats = await emptyAnalytics.getPlatformStatistics();
