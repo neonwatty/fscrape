@@ -20,9 +20,9 @@ export interface MarkdownExportOptions {
   maxCommentDepth?: number;
   dateFormat?: "short" | "long" | "iso";
   includeStats?: boolean;
-  format?: 'list' | 'table';
+  format?: "list" | "table";
   includeContent?: boolean;
-  groupBy?: 'platform' | 'date' | 'author';
+  groupBy?: "platform" | "date" | "author";
 }
 
 export class MarkdownExporter {
@@ -38,7 +38,7 @@ export class MarkdownExporter {
       maxCommentDepth: 10,
       dateFormat: "short",
       includeStats: true,
-      format: 'list',
+      format: "list",
       includeContent: true,
       groupBy: undefined,
       ...options,
@@ -200,12 +200,12 @@ export class MarkdownExporter {
    */
   private generatePostsSection(data: ScrapeResult): string {
     // Handle grouping if specified
-    if (this.options.groupBy === 'platform') {
+    if (this.options.groupBy === "platform") {
       return this.generateGroupedPosts(data);
     }
 
     // Handle table format
-    if (this.options.format === 'table') {
+    if (this.options.format === "table") {
       return this.generatePostsTable(data);
     }
 
@@ -235,7 +235,7 @@ export class MarkdownExporter {
   /**
    * Generate single post
    */
-  private generatePost(post: ForumPost, index: number): string {
+  private generatePost(post: ForumPost, _index: number): string {
     const lines: string[] = [];
 
     // Post title - simple format for tests
@@ -467,22 +467,22 @@ export class MarkdownExporter {
    */
   private generatePostsTable(data: ScrapeResult): string {
     const lines: string[] = ["## Posts\n"];
-    
+
     // Table header
     lines.push("| Title | Author | Score | Comments | Platform | Date |");
     lines.push("|-------|--------|-------|----------|----------|------|");
-    
+
     // Table rows
-    data.posts.forEach(post => {
+    data.posts.forEach((post) => {
       const title = this.escapeMarkdown(post.title);
       const author = this.escapeMarkdown(post.author);
       const date = this.formatDate(post.createdAt);
-      
+
       lines.push(
-        `| ${title} | ${author} | ${post.score} | ${post.commentCount} | ${post.platform} | ${date} |`
+        `| ${title} | ${author} | ${post.score} | ${post.commentCount} | ${post.platform} | ${date} |`,
       );
     });
-    
+
     lines.push("");
     return lines.join("\n");
   }
@@ -492,26 +492,30 @@ export class MarkdownExporter {
    */
   private generateGroupedPosts(data: ScrapeResult): string {
     const lines: string[] = [];
-    
+
     // Group posts by platform
-    const groupedPosts = data.posts.reduce((acc, post) => {
-      const platform = post.platform.charAt(0).toUpperCase() + post.platform.slice(1);
-      if (!acc[platform]) {
-        acc[platform] = [];
-      }
-      acc[platform].push(post);
-      return acc;
-    }, {} as Record<string, ForumPost[]>);
-    
+    const groupedPosts = data.posts.reduce(
+      (acc, post) => {
+        const platform =
+          post.platform.charAt(0).toUpperCase() + post.platform.slice(1);
+        if (!acc[platform]) {
+          acc[platform] = [];
+        }
+        acc[platform].push(post);
+        return acc;
+      },
+      {} as Record<string, ForumPost[]>,
+    );
+
     // Generate sections for each platform
     Object.entries(groupedPosts).forEach(([platform, posts]) => {
-      const platformName = platform === 'Hackernews' ? 'HackerNews' : platform;
+      const platformName = platform === "Hackernews" ? "HackerNews" : platform;
       lines.push(`## ${platformName} Posts\n`);
-      
+
       posts.forEach((post, index) => {
         const title = this.escapeMarkdown(post.title);
         lines.push(`### ${title}\n`);
-        
+
         // Post metadata
         const metadata: string[] = [];
         metadata.push(`👤 **${post.author}**`);
@@ -519,26 +523,26 @@ export class MarkdownExporter {
         metadata.push(`💬 ${post.commentCount} comments`);
         metadata.push(`📅 ${this.formatDate(post.createdAt)}`);
         metadata.push(`🔗 [View Original](${post.url})`);
-        
+
         lines.push(metadata.join(" | "));
         lines.push("");
-        
+
         // Post content if enabled
         if (this.options.includeContent && post.content) {
           lines.push("#### Content\n");
           lines.push(this.formatContent(post.content));
           lines.push("");
         }
-        
+
         // Add separator between posts within platform
         if (index < posts.length - 1) {
           lines.push("---\n");
         }
       });
-      
+
       lines.push("");
     });
-    
+
     return lines.join("\n");
   }
 }

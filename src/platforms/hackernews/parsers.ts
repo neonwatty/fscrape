@@ -103,7 +103,7 @@ export class HackerNewsParsers {
   static async parseCommentThread(
     items: HNItem[],
     postId: string,
-    parentId: number | null = null,
+    _parentId: number | null = null,
     depth: number = 0,
   ): Promise<Comment[]> {
     const comments: Comment[] = [];
@@ -127,7 +127,7 @@ export class HackerNewsParsers {
     if (!text) return [];
 
     const urls: string[] = [];
-    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
+    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
 
     let match;
     while ((match = urlRegex.exec(text)) !== null) {
@@ -399,11 +399,12 @@ export class HackerNewsParsers {
       switch (item.type) {
         case "story":
         case "job":
-        case "poll":
+        case "poll": {
           const post = this.parsePost(item);
           if (post) posts.push(post);
           break;
-        case "comment":
+        }
+        case "comment": {
           // For batch parsing, we don't have postId context
           const comment = this.parseComment(
             item,
@@ -411,6 +412,7 @@ export class HackerNewsParsers {
           );
           if (comment) comments.push(comment);
           break;
+        }
       }
     }
 

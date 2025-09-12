@@ -1,5 +1,5 @@
 import { createLogger } from "./enhanced-logger.js";
-import { performance, PerformanceObserver } from "perf_hooks";
+import { PerformanceObserver } from "perf_hooks";
 
 export interface MemoryStats {
   heapUsed: number;
@@ -76,9 +76,7 @@ export class MemoryMonitor {
             this.gcStats.duration += entry.duration;
             this.gcStats.lastRun = Date.now();
             const gcEntry = entry as any;
-            this.gcStats.type = gcEntry.kind
-              ? String(gcEntry.kind)
-              : "unknown";
+            this.gcStats.type = gcEntry.kind ? String(gcEntry.kind) : "unknown";
           }
         }
       });
@@ -148,17 +146,23 @@ export class MemoryMonitor {
     const heapUsedMB = stats.heapUsed / 1024 / 1024;
 
     if (stats.heapUsedPercent > this.thresholds.criticalPercent) {
-      this.logger.error("Critical memory usage detected: " + 
-        `${stats.heapUsedPercent.toFixed(2)}% (${heapUsedMB.toFixed(2)}MB)`);
+      this.logger.error(
+        "Critical memory usage detected: " +
+          `${stats.heapUsedPercent.toFixed(2)}% (${heapUsedMB.toFixed(2)}MB)`,
+      );
       this.forceGarbageCollection();
     } else if (stats.heapUsedPercent > this.thresholds.warningPercent) {
-      this.logger.warn("High memory usage detected: " + 
-        `${stats.heapUsedPercent.toFixed(2)}% (${heapUsedMB.toFixed(2)}MB)`);
+      this.logger.warn(
+        "High memory usage detected: " +
+          `${stats.heapUsedPercent.toFixed(2)}% (${heapUsedMB.toFixed(2)}MB)`,
+      );
     }
 
     if (heapUsedMB > this.thresholds.maxHeapUsedMB) {
-      this.logger.error("Memory limit exceeded: " + 
-        `${heapUsedMB.toFixed(2)}MB (limit: ${this.thresholds.maxHeapUsedMB}MB)`);
+      this.logger.error(
+        "Memory limit exceeded: " +
+          `${heapUsedMB.toFixed(2)}MB (limit: ${this.thresholds.maxHeapUsedMB}MB)`,
+      );
       this.forceGarbageCollection();
     }
   }
@@ -194,7 +198,7 @@ export class MemoryMonitor {
     const recentHistory = this.history.slice(-10);
     const first = recentHistory[0];
     const last = recentHistory[recentHistory.length - 1];
-    
+
     if (!first || !last) {
       return { trend: "stable", averageGrowthMBPerMin: 0 };
     }

@@ -4,14 +4,10 @@
  */
 
 import {
-  AdvancedLogger,
-  LoggerConfig,
-  LogMetadata,
   initializeLogger,
-  getLogger,
   setupGlobalErrorLogging,
-  createSimpleLogger,
 } from "./advanced-logger.js";
+import type { LogMetadata } from "./advanced-logger.js";
 
 // Initialize the advanced logger with default configuration
 const advancedLogger = initializeLogger({
@@ -191,5 +187,4 @@ export {
   getLogger,
   initializeLogger as configureLogger,
   requestLoggingMiddleware,
-  setupGlobalErrorLogging,
 } from "./advanced-logger.js";

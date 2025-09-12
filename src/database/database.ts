@@ -87,7 +87,7 @@ export class DatabaseManager {
   upsertPost(post: ForumPost): any {
     try {
       const existing = this.db
-        .prepare("SELECT * FROM forum_posts WHERE platform = ? AND id = ?")
+        .prepare("SELECT * FROM posts WHERE platform = ? AND id = ?")
         .get(post.platform, post.id);
 
       if (existing) {
@@ -104,12 +104,9 @@ export class DatabaseManager {
         return { changes: result.changes, inserted: false };
       } else {
         // Insert new post
-        const platformId = this.extractPlatformId(post);
-
         const result = this.queries.insertPost.run(
           post.id,
           post.platform,
-          platformId,
           post.title,
           post.content,
           post.author,
@@ -157,7 +154,7 @@ export class DatabaseManager {
 
   getPost(id: string, platform: Platform): ForumPost | null {
     const row = this.db
-      .prepare("SELECT * FROM forum_posts WHERE platform = ? AND id = ?")
+      .prepare("SELECT * FROM posts WHERE platform = ? AND id = ?")
       .get(platform, id);
     return row ? this.mapRowToPost(row) : null;
   }
@@ -203,14 +200,12 @@ export class DatabaseManager {
         return { changes: result.changes, inserted: false };
       } else {
         // Insert new comment
-        const platformId = this.extractPlatformId(comment);
-
         const result = this.queries.insertComment.run(
           comment.id,
+          comment.id, // platform_id is the same as id for comments
           comment.postId,
           comment.parentId || null,
           comment.platform,
-          platformId,
           comment.author,
           comment.authorId || null,
           comment.content,
@@ -732,7 +727,7 @@ export class DatabaseManager {
     limit?: number;
     offset?: number;
   }): ForumPost[] {
-    let query = "SELECT * FROM forum_posts WHERE 1=1";
+    let query = "SELECT * FROM posts WHERE 1=1";
     const params: any[] = [];
 
     if (options.platform) {
@@ -830,7 +825,7 @@ export class DatabaseManager {
 
     const postCount = this.db
       .prepare(
-        `SELECT COUNT(*) as count FROM forum_posts WHERE created_at < ?${platformClause}`,
+        `SELECT COUNT(*) as count FROM posts WHERE created_at < ?${platformClause}`,
       )
       .get(...params) as { count: number };
 
@@ -886,7 +881,7 @@ export class DatabaseManager {
 
       // Delete old posts
       const deletePosts = this.db.prepare(
-        `DELETE FROM forum_posts WHERE created_at < ?${platformClause}`,
+        `DELETE FROM posts WHERE created_at < ?${platformClause}`,
       );
       const postResult = deletePosts.run(...params);
       result.deletedPosts = postResult.changes;

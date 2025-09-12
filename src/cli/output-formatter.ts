@@ -6,7 +6,7 @@
 import chalk from "chalk";
 import { table } from "table";
 import ora, { Ora } from "ora";
-import type { ForumPost, Comment, User } from "../types/core.js";
+import type { ForumPost, Comment } from "../types/core.js";
 
 export type OutputFormat = "json" | "csv" | "table" | "simple" | "verbose";
 export type OutputLevel = "quiet" | "normal" | "verbose" | "debug";

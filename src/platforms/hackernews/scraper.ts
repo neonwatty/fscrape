@@ -52,7 +52,7 @@ export class HackerNewsScraper {
     });
 
     this.client = new HackerNewsClient({
-      baseUrl: config.baseUrl || 'https://hacker-news.firebaseio.com/v0',
+      baseUrl: config.baseUrl || "https://hacker-news.firebaseio.com/v0",
       timeout: config.timeout,
       userAgent: config.userAgent,
       logger: this.logger,
@@ -117,17 +117,28 @@ export class HackerNewsScraper {
     options: ScrapeOptions = {},
   ): Promise<ForumPost[]> {
     // Validate category
-    const validCategories = ["top", "new", "best", "ask", "show", "job", "jobs"];
+    const validCategories = [
+      "top",
+      "new",
+      "best",
+      "ask",
+      "show",
+      "job",
+      "jobs",
+    ];
     if (!validCategories.includes(category.toLowerCase())) {
       throw new Error(`Invalid category: ${category}`);
     }
-    
+
     try {
       const result = await this.scrapePosts(category, options);
       return result.posts;
     } catch (error: any) {
       // Re-throw rate limiting errors
-      if (error.response?.status === 429 || error.message?.includes('Rate limited')) {
+      if (
+        error.response?.status === 429 ||
+        error.message?.includes("Rate limited")
+      ) {
         throw error;
       }
       // For other errors, return empty array
@@ -146,30 +157,30 @@ export class HackerNewsScraper {
     let category: string;
     let actualOptions: ScrapeOptions;
     let returnFullResult = false;
-    
-    if (typeof categoryOrOptions === 'string') {
+
+    if (typeof categoryOrOptions === "string") {
       category = categoryOrOptions;
       actualOptions = options;
       returnFullResult = true; // When called with category string, return full result
     } else {
       // If first param is options, extract category from sortBy or default to 'top'
       actualOptions = categoryOrOptions;
-      category = actualOptions.sortBy || 'top';
+      category = actualOptions.sortBy || "top";
       returnFullResult = false; // When called with options only, return posts array
     }
-    
+
     // Map sortBy options to categories
     const sortByMap: Record<string, string> = {
-      'hot': 'top',
-      'new': 'new',
-      'best': 'best',
-      'top': 'top',
+      hot: "top",
+      new: "new",
+      best: "best",
+      top: "top",
     };
-    
+
     if (actualOptions.sortBy && sortByMap[actualOptions.sortBy]) {
       category = sortByMap[actualOptions.sortBy];
     }
-    
+
     const result = await this._scrapePosts(category, actualOptions);
     return returnFullResult ? result : result.posts;
   }
@@ -200,7 +211,10 @@ export class HackerNewsScraper {
         storyIds = await this.client.getStoryList(storyType, limit);
       } catch (error: any) {
         // Re-throw rate limiting errors
-        if (error.response?.status === 429 || error.message?.includes('Rate limited')) {
+        if (
+          error.response?.status === 429 ||
+          error.message?.includes("Rate limited")
+        ) {
           throw error;
         }
         throw error;
@@ -269,10 +283,13 @@ export class HackerNewsScraper {
       );
     } catch (error: any) {
       // Re-throw rate limiting errors
-      if (error.response?.status === 429 || error.message?.includes('Rate limited')) {
+      if (
+        error.response?.status === 429 ||
+        error.message?.includes("Rate limited")
+      ) {
         throw error;
       }
-      
+
       this.logger.error("Error scraping posts:", error);
       errors.push({
         code: "SCRAPE_ERROR",
@@ -295,8 +312,7 @@ export class HackerNewsScraper {
    */
   async scrapePost(postId: string): Promise<ForumPost | null> {
     const maxRetries = 3;
-    let lastError: any;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const itemId = parseInt(postId, 10);
@@ -311,21 +327,27 @@ export class HackerNewsScraper {
 
         return HackerNewsParsers.parsePost(item);
       } catch (error: any) {
-        lastError = error;
-        this.logger.error(`Error scraping post (attempt ${attempt}/${maxRetries}):`, error);
-        
+        this.logger.error(
+          `Error scraping post (attempt ${attempt}/${maxRetries}):`,
+          error,
+        );
+
         // Don't retry on non-network errors
-        if (error.message && !error.message.toLowerCase().includes('network') && !error.message.toLowerCase().includes('fetch')) {
+        if (
+          error.message &&
+          !error.message.toLowerCase().includes("network") &&
+          !error.message.toLowerCase().includes("fetch")
+        ) {
           break;
         }
-        
+
         // Wait before retry (exponential backoff)
         if (attempt < maxRetries) {
           await this.delay(Math.pow(2, attempt - 1) * 100);
         }
       }
     }
-    
+
     return null;
   }
 
@@ -488,7 +510,7 @@ export class HackerNewsScraper {
       try {
         const results = await this.client.searchStories(query, options);
         const posts: ForumPost[] = [];
-        
+
         for (const hit of results.hits) {
           const post: ForumPost = {
             id: hit.objectID,
@@ -506,14 +528,14 @@ export class HackerNewsScraper {
           };
           posts.push(post);
         }
-        
+
         return posts;
       } catch (error) {
         this.logger.error("Error searching posts:", error);
         return [];
       }
     }
-    
+
     return [];
   }
 
@@ -621,15 +643,15 @@ export class HackerNewsScraper {
     options: ScrapeOptions = {},
   ): Promise<ForumPost[]> {
     this.logger.warn("HackerNews API doesn't support native search");
-    
+
     // Return mock data for testing
     const limit = options.limit || 10;
     const mockPosts: ForumPost[] = [];
-    
+
     for (let i = 0; i < limit; i++) {
       mockPosts.push({
         id: `search-${i}`,
-        platform: 'hackernews',
+        platform: "hackernews",
         title: `Search result ${i + 1} for "${query}"`,
         content: `Mock search result content for ${query}`,
         author: `user${i}`,
@@ -639,16 +661,16 @@ export class HackerNewsScraper {
         score: 100 - i * 10,
         commentCount: 10 - i,
         metadata: {
-          type: 'story',
+          type: "story",
         },
       });
     }
-    
+
     // If sortBy is 'date', sort by date
-    if (options.sortBy === 'date') {
+    if (options.sortBy === "date") {
       mockPosts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     }
-    
+
     return mockPosts;
   }
 
@@ -886,7 +908,7 @@ export class HackerNewsScraper {
    */
   async getTrending(options: ScrapeOptions = {}): Promise<ForumPost[]> {
     // For HackerNews, trending is equivalent to top stories
-    const result = await this._scrapePosts('top', options);
+    const result = await this._scrapePosts("top", options);
     return result.posts;
   }
 

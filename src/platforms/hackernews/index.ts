@@ -76,7 +76,7 @@ export const HackerNewsPlatform: PlatformConstructor = class
     return this.scraper.validateAuth();
   }
 
-  setRateLimiter(rateLimiter: any) {
+  setRateLimiter(_rateLimiter: any) {
     // HackerNewsScraper doesn't use external rate limiter, has internal delay
     // This is a no-op for compatibility
   }

@@ -1047,7 +1047,7 @@ ${trending.predictions
     templateId: string,
     data: any,
     format: "html" | "markdown" | "json" | "pdf" = "html",
-    config?: ReportConfig,
+    _config?: ReportConfig,
   ): Promise<string> {
     const template = this.templates.get(templateId);
     if (!template) {

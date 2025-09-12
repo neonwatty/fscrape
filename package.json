@@ -8,7 +8,7 @@
     "fscrape": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp src/database/schema.sql dist/database/schema.sql",
     "dev": "tsx src/cli.ts",
     "start": "node dist/cli.js",
     "test": "vitest",
@@ -53,6 +53,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@types/better-sqlite3": "^7.6.11",
     "@types/inquirer": "^9.0.9",
     "@types/node": "^20.14.12",

@@ -86,16 +86,16 @@ export class PreparedQueries {
     // ============================================================================
 
     const insertPost = db.prepare(`
-      INSERT INTO forum_posts (
-        id, platform, platform_id, title, content, author, author_id, url,
+      INSERT INTO posts (
+        id, platform, title, content, author, author_id, url,
         score, comment_count, created_at, updated_at, metadata
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
     `);
 
     const updatePost = db.prepare(`
-      UPDATE forum_posts
+      UPDATE posts
       SET score = @score,
           comment_count = @commentCount,
           updated_at = @updatedAt,
@@ -104,50 +104,45 @@ export class PreparedQueries {
     `);
 
     const upsertPost = db.prepare(`
-      INSERT INTO forum_posts (
-        id, platform, platform_id, title, content, author, author_id, url,
+      INSERT OR REPLACE INTO posts (
+        id, platform, title, content, author, author_id, url,
         score, comment_count, created_at, updated_at, metadata
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
-      ON CONFLICT(platform, platform_id) DO UPDATE SET
-        score = excluded.score,
-        comment_count = excluded.comment_count,
-        updated_at = excluded.updated_at,
-        metadata = excluded.metadata
     `);
 
     const getPostById = db.prepare(`
-      SELECT * FROM forum_posts
+      SELECT * FROM posts
       WHERE id = ?
     `);
 
     const getPostsByPlatform = db.prepare(`
-      SELECT * FROM forum_posts
+      SELECT * FROM posts
       WHERE platform = ?
       ORDER BY created_at DESC
       LIMIT ? OFFSET ?
     `);
 
     const getRecentPosts = db.prepare(`
-      SELECT * FROM forum_posts
+      SELECT * FROM posts
       WHERE created_at >= ?
       ORDER BY created_at DESC
       LIMIT ?
     `);
 
     const getAllPosts = db.prepare(`
-      SELECT * FROM forum_posts
+      SELECT * FROM posts
       ORDER BY created_at DESC
       LIMIT ? OFFSET ?
     `);
 
     const countPosts = db.prepare(`
-      SELECT COUNT(*) as count FROM forum_posts
+      SELECT COUNT(*) as count FROM posts
     `);
 
     const countPostsByPlatform = db.prepare(`
-      SELECT COUNT(*) as count FROM forum_posts
+      SELECT COUNT(*) as count FROM posts
       WHERE platform = ?
     `);
 
@@ -173,7 +168,7 @@ export class PreparedQueries {
 
     const insertComment = db.prepare(`
       INSERT INTO comments (
-        id, post_id, parent_id, platform, platform_id, author, author_id,
+        id, platform_id, post_id, parent_id, platform, author, author_id,
         content, score, depth, created_at, updated_at
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
@@ -187,15 +182,12 @@ export class PreparedQueries {
     `);
 
     const upsertComment = db.prepare(`
-      INSERT INTO comments (
-        id, post_id, parent_id, platform, platform_id, author, author_id,
+      INSERT OR REPLACE INTO comments (
+        id, post_id, parent_id, platform, author, author_id,
         content, score, depth, created_at, updated_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
-      ON CONFLICT(platform, platform_id) DO UPDATE SET
-        score = excluded.score,
-        updated_at = excluded.updated_at
     `);
 
     const getCommentById = db.prepare(`
@@ -274,14 +266,11 @@ export class PreparedQueries {
     `);
 
     const upsertUser = db.prepare(`
-      INSERT INTO users (
+      INSERT OR REPLACE INTO users (
         id, platform, username, karma, created_at, last_seen_at
       ) VALUES (
         ?, ?, ?, ?, ?, ?
       )
-      ON CONFLICT(platform, id) DO UPDATE SET
-        karma = excluded.karma,
-        last_seen_at = excluded.last_seen_at
     `);
 
     const getUserById = db.prepare(`
@@ -410,35 +399,26 @@ export class PreparedQueries {
     `);
 
     const upsertMetric = db.prepare(`
-      INSERT INTO scraping_metrics (
+      INSERT OR REPLACE INTO scraping_metrics (
         session_id, platform, time_bucket,
         requests_made, requests_successful, requests_failed,
         posts_scraped, comments_scraped, users_scraped,
         avg_response_time_ms, rate_limit_hits
       ) VALUES (
         @sessionId, @platform, @timeBucket,
-        COALESCE(@requestsMade, 0),
-        COALESCE(@requestsSuccessful, 0),
-        COALESCE(@requestsFailed, 0),
-        COALESCE(@postsScraped, 0),
-        COALESCE(@commentsScraped, 0),
-        COALESCE(@usersScraped, 0),
-        @avgResponseTimeMs,
-        COALESCE(@rateLimitHits, 0)
-      )
-      ON CONFLICT(session_id, time_bucket) DO UPDATE SET
-        requests_made = requests_made + COALESCE(@requestsMade, 0),
-        requests_successful = requests_successful + COALESCE(@requestsSuccessful, 0),
-        requests_failed = requests_failed + COALESCE(@requestsFailed, 0),
-        posts_scraped = posts_scraped + COALESCE(@postsScraped, 0),
-        comments_scraped = comments_scraped + COALESCE(@commentsScraped, 0),
-        users_scraped = users_scraped + COALESCE(@usersScraped, 0),
-        avg_response_time_ms = CASE
-          WHEN avg_response_time_ms IS NULL THEN @avgResponseTimeMs
-          WHEN @avgResponseTimeMs IS NULL THEN avg_response_time_ms
-          ELSE (avg_response_time_ms + @avgResponseTimeMs) / 2
+        COALESCE(@requestsMade, 0) + COALESCE((SELECT requests_made FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
+        COALESCE(@requestsSuccessful, 0) + COALESCE((SELECT requests_successful FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
+        COALESCE(@requestsFailed, 0) + COALESCE((SELECT requests_failed FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
+        COALESCE(@postsScraped, 0) + COALESCE((SELECT posts_scraped FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
+        COALESCE(@commentsScraped, 0) + COALESCE((SELECT comments_scraped FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
+        COALESCE(@usersScraped, 0) + COALESCE((SELECT users_scraped FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
+        CASE
+          WHEN @avgResponseTimeMs IS NULL THEN (SELECT avg_response_time_ms FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket)
+          WHEN (SELECT avg_response_time_ms FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket) IS NULL THEN @avgResponseTimeMs
+          ELSE (@avgResponseTimeMs + COALESCE((SELECT avg_response_time_ms FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0)) / 2
         END,
-        rate_limit_hits = rate_limit_hits + COALESCE(@rateLimitHits, 0)
+        COALESCE(@rateLimitHits, 0) + COALESCE((SELECT rate_limit_hits FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0)
+      )
     `);
 
     const getMetricsBySession = db.prepare(`
@@ -466,7 +446,7 @@ export class PreparedQueries {
 
     const postsPerPlatform = db.prepare(`
       SELECT platform, COUNT(*) as count
-      FROM forum_posts
+      FROM posts
       GROUP BY platform
     `);
 
@@ -478,12 +458,12 @@ export class PreparedQueries {
 
     const avgScoreByPlatform = db.prepare(`
       SELECT platform, AVG(score) as avg_score
-      FROM forum_posts
+      FROM posts
       GROUP BY platform
     `);
 
     const topPostsByScore = db.prepare(`
-      SELECT * FROM forum_posts
+      SELECT * FROM posts
       ORDER BY score DESC
       LIMIT ?
     `);
@@ -502,7 +482,7 @@ export class PreparedQueries {
         AVG(comment_count) as avg_comments,
         SUM(score) as total_score,
         SUM(comment_count) as total_comments
-      FROM forum_posts
+      FROM posts
       GROUP BY platform
     `);
 
@@ -530,16 +510,14 @@ export class PreparedQueries {
     `);
 
     const incrementRateLimit = db.prepare(`
-      INSERT INTO rate_limit_state (
+      INSERT OR REPLACE INTO rate_limit_state (
         platform, window_start, requests_in_window, 
-        last_request_at, retry_after, consecutive_errors
+        last_request_at, retry_after
       ) VALUES (
-        ?, ?, 1, ?, NULL, 0
+        ?, ?, 
+        COALESCE((SELECT requests_in_window FROM rate_limit_state WHERE platform = ?), 0) + 1,
+        ?, NULL
       )
-      ON CONFLICT(platform) DO UPDATE SET
-        requests_in_window = requests_in_window + 1,
-        last_request_at = ?,
-        updated_at = strftime('%s', 'now') * 1000
     `);
 
     const resetRateLimit = db.prepare(`
@@ -569,7 +547,7 @@ export class PreparedQueries {
     // Create basic table structures if they don't exist
     // This is a failsafe - proper schema should be created via migrations
     const tableCreations = [
-      `CREATE TABLE IF NOT EXISTS forum_posts (
+      `CREATE TABLE IF NOT EXISTS posts (
         id TEXT PRIMARY KEY,
         platform TEXT NOT NULL,
         platform_id TEXT,
@@ -658,7 +636,7 @@ export class PreparedQueries {
       `CREATE TABLE IF NOT EXISTS rate_limit_state (
         platform TEXT PRIMARY KEY,
         window_start INTEGER,
-        requests_in_window INTEGER DEFAULT 0,
+        requests_count INTEGER DEFAULT 0,
         last_request_at INTEGER,
         retry_after INTEGER,
         consecutive_errors INTEGER DEFAULT 0,

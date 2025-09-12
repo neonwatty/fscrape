@@ -11,7 +11,7 @@ import {
   isRetryableError,
   ErrorFactory,
 } from "./errors.js";
-import { logger, createLogger } from "./enhanced-logger.js";
+import { createLogger } from "./enhanced-logger.js";
 
 const errorLogger = createLogger("ErrorHandler");
 
@@ -557,7 +557,7 @@ export class ErrorHandler {
         }
         throw error;
 
-      case RecoveryStrategy.FALLBACK:
+      case RecoveryStrategy.FALLBACK: {
         const fallback =
           this.getFallbackForService(context?.name || "") || context?.fallback;
         if (fallback) {
@@ -565,6 +565,7 @@ export class ErrorHandler {
           return fallback();
         }
         throw error;
+      }
 
       case RecoveryStrategy.IGNORE:
         errorLogger.debug("Ignoring error as per recovery strategy");

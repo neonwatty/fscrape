@@ -8,9 +8,7 @@ import type {
   ReportConfig,
   ReportTemplate,
   ScheduledReport,
-  ReportSchedule,
 } from "../report-generator.js";
-import { DatabaseAnalytics } from "../../database/analytics.js";
 
 describe("ReportGenerator", () => {
   let mockAnalytics: any;
@@ -97,7 +95,7 @@ describe("ReportGenerator", () => {
   describe("Template Management", () => {
     it("should initialize with default templates", () => {
       const templates = generator.getTemplates();
-      
+
       expect(templates.has("executive")).toBe(true);
       expect(templates.has("detailed")).toBe(true);
       expect(templates.has("dashboard")).toBe(true);
@@ -151,7 +149,9 @@ describe("ReportGenerator", () => {
       const validation = generator.validateTemplate(invalidTemplate);
       expect(validation.valid).toBe(false);
       expect(validation.errors).toContain("Template must have a name");
-      expect(validation.errors).toContain("Template must have at least one section");
+      expect(validation.errors).toContain(
+        "Template must have at least one section",
+      );
     });
 
     it("should validate dashboard layout positions", () => {
@@ -362,7 +362,11 @@ describe("ReportGenerator", () => {
         includeRecommendations: false,
       };
 
-      const report = generator.generateDashboardReport(mockData, "markdown", config);
+      const report = generator.generateDashboardReport(
+        mockData,
+        "markdown",
+        config,
+      );
 
       expect(report).not.toContain("Executive Summary");
       expect(report).not.toContain("Recommendations");
@@ -381,7 +385,11 @@ describe("ReportGenerator", () => {
         trending: [],
       };
 
-      const report = await generator.generateFromTemplate("executive", data, "markdown");
+      const report = await generator.generateFromTemplate(
+        "executive",
+        data,
+        "markdown",
+      );
 
       expect(report).toContain("Executive Summary");
       expect(report).toBeDefined();
@@ -467,7 +475,11 @@ describe("ReportGenerator", () => {
         },
       };
 
-      const report = await generator.generateFromTemplate("nested", data, "markdown");
+      const report = await generator.generateFromTemplate(
+        "nested",
+        data,
+        "markdown",
+      );
 
       expect(report).toContain("Nested Value");
       expect(report).toContain("42");
@@ -692,7 +704,7 @@ describe("ReportGenerator", () => {
 
     it("should escape CSV values correctly", async () => {
       const data = [
-        { name: 'Item with, comma', value: 100 },
+        { name: "Item with, comma", value: 100 },
         { name: 'Item with "quotes"', value: 200 },
       ];
 

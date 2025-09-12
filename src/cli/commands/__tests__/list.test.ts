@@ -3,7 +3,15 @@
  * Validates querying, filtering, and output formatting
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from "vitest";
 import { Command } from "commander";
 import { createListCommand } from "../list.js";
 import { DatabaseManager } from "../../../database/database.js";
@@ -36,17 +44,21 @@ vi.mock("../../../database/database.js", () => ({
 
 // Mock console methods to capture output
 const mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
-const mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+const mockConsoleError = vi
+  .spyOn(console, "error")
+  .mockImplementation(() => {});
 
 // Mock process.exit to prevent test runner from exiting
-const mockProcessExit = vi.spyOn(process, "exit").mockImplementation((code?: number) => {
-  throw new Error(`process.exit called with code ${code}`);
-});
+const mockProcessExit = vi
+  .spyOn(process, "exit")
+  .mockImplementation((code?: number) => {
+    throw new Error(`process.exit called with code ${code}`);
+  });
 
 describe("List Command", () => {
   let program: Command;
   let listCommand: Command;
-  
+
   beforeAll(() => {
     program = new Command();
     program.exitOverride(); // Prevent process.exit
@@ -65,7 +77,7 @@ describe("List Command", () => {
     mockConsoleError.mockClear();
     mockProcessExit.mockClear();
     vi.clearAllMocks();
-    
+
     // Reset DatabaseManager mock completely
     vi.resetModules();
   });
@@ -86,7 +98,9 @@ describe("List Command", () => {
     });
 
     it("should have all required options", () => {
-      const postsCmd = listCommand.commands.find((cmd) => cmd.name() === "posts");
+      const postsCmd = listCommand.commands.find(
+        (cmd) => cmd.name() === "posts",
+      );
       const options = postsCmd?.options.map((opt) => opt.long) || [];
       expect(options).toContain("--database");
       expect(options).toContain("--platform");
@@ -105,10 +119,12 @@ describe("List Command", () => {
 
   describe("Posts Subcommand", () => {
     it("should have posts subcommand with filtering options", () => {
-      const postsCmd = listCommand.commands.find((cmd) => cmd.name() === "posts");
+      const postsCmd = listCommand.commands.find(
+        (cmd) => cmd.name() === "posts",
+      );
       expect(postsCmd).toBeDefined();
       expect(postsCmd?.description()).toContain("List posts");
-      
+
       const options = postsCmd?.options.map((opt) => opt.long) || [];
       expect(options).toContain("--database");
       expect(options).toContain("--platform");
@@ -140,11 +156,18 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "posts", "--format", "json"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--format",
+          "json",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(mockConsoleLog).toHaveBeenCalled();
       const output = mockConsoleLog.mock.calls.join("\n");
       expect(output).toContain("Test Post");
@@ -153,10 +176,12 @@ describe("List Command", () => {
 
   describe("Comments Subcommand", () => {
     it("should have comments subcommand with options", () => {
-      const commentsCmd = listCommand.commands.find((cmd) => cmd.name() === "comments");
+      const commentsCmd = listCommand.commands.find(
+        (cmd) => cmd.name() === "comments",
+      );
       expect(commentsCmd).toBeDefined();
       expect(commentsCmd?.description()).toContain("List comments");
-      
+
       const options = commentsCmd?.options.map((opt) => opt.long) || [];
       expect(options).toContain("--post-id");
       expect(options).toContain("--platform");
@@ -187,21 +212,30 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "comments", "--format", "simple"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "comments",
+          "--format",
+          "simple",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(mockConsoleLog).toHaveBeenCalled();
     });
   });
 
   describe("Users Subcommand", () => {
     it("should have users subcommand with options", () => {
-      const usersCmd = listCommand.commands.find((cmd) => cmd.name() === "users");
+      const usersCmd = listCommand.commands.find(
+        (cmd) => cmd.name() === "users",
+      );
       expect(usersCmd).toBeDefined();
       expect(usersCmd?.description()).toContain("List users");
-      
+
       const options = usersCmd?.options.map((opt) => opt.long) || [];
       expect(options).toContain("--min-karma");
       expect(options).toContain("--platform");
@@ -227,18 +261,27 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "users", "--min-karma", "500"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "users",
+          "--min-karma",
+          "500",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(mockConsoleLog).toHaveBeenCalled();
     });
   });
 
   describe("Stats Subcommand", () => {
     it("should have stats subcommand", () => {
-      const statsCmd = listCommand.commands.find((cmd) => cmd.name() === "stats");
+      const statsCmd = listCommand.commands.find(
+        (cmd) => cmd.name() === "stats",
+      );
       expect(statsCmd).toBeDefined();
       expect(statsCmd?.description()).toContain("Show database statistics");
     });
@@ -270,7 +313,7 @@ describe("List Command", () => {
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(mockConsoleLog).toHaveBeenCalled();
       const output = mockConsoleLog.mock.calls.join("\n");
       expect(output).toContain("100");
@@ -281,10 +324,12 @@ describe("List Command", () => {
 
   describe("Search Subcommand", () => {
     it("should have search subcommand with query parameter", () => {
-      const searchCmd = listCommand.commands.find((cmd) => cmd.name() === "search");
+      const searchCmd = listCommand.commands.find(
+        (cmd) => cmd.name() === "search",
+      );
       expect(searchCmd).toBeDefined();
       expect(searchCmd?.description()).toContain("Search posts and comments");
-      
+
       const options = searchCmd?.options.map((opt) => opt.long) || [];
       expect(options).toContain("--platform");
       expect(options).toContain("--limit");
@@ -329,11 +374,17 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "search", "search term"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "search",
+          "search term",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(mockConsoleLog).toHaveBeenCalled();
       const output = mockConsoleLog.mock.calls.join("\n");
       expect(output).toContain("Search Result");
@@ -364,11 +415,20 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "posts", "--format", "table", "--limit", "1"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--format",
+          "table",
+          "--limit",
+          "1",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(mockConsoleLog).toHaveBeenCalled();
       // Table format should include borders
       const output = mockConsoleLog.mock.calls.join("\n");
@@ -398,11 +458,18 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "posts", "--format", "json"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--format",
+          "json",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(mockConsoleLog).toHaveBeenCalled();
       const output = mockConsoleLog.mock.calls.join("");
       // Should be valid JSON
@@ -432,11 +499,18 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "posts", "--format", "simple"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--format",
+          "simple",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(mockConsoleLog).toHaveBeenCalled();
       const output = mockConsoleLog.mock.calls.join("\n");
       // Simple format should not have table borders
@@ -449,76 +523,7 @@ describe("List Command", () => {
     it("should filter by platform", async () => {
       const MockedDb = DatabaseManager as unknown as vi.Mock;
       const queryPostsMock = vi.fn().mockResolvedValue([]);
-      
-      MockedDb.mockImplementation(() => ({
-        initialize: vi.fn().mockResolvedValue(undefined),
-        close: vi.fn().mockResolvedValue(undefined),
-        queryPosts: queryPostsMock,
-      }));
 
-      try {
-        await program.parseAsync(["node", "test", "list", "posts", "--platform", "reddit"]);
-      } catch (error) {
-        // Expected to throw due to mocked process.exit
-      }
-      
-      expect(queryPostsMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          platform: "reddit",
-        })
-      );
-    });
-
-    it("should filter by author", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
-      const queryPostsMock = vi.fn().mockResolvedValue([]);
-      
-      MockedDb.mockImplementation(() => ({
-        initialize: vi.fn().mockResolvedValue(undefined),
-        close: vi.fn().mockResolvedValue(undefined),
-        queryPosts: queryPostsMock,
-      }));
-
-      try {
-        await program.parseAsync(["node", "test", "list", "posts", "--author", "testuser"]);
-      } catch (error) {
-        // Expected to throw due to mocked process.exit
-      }
-      
-      expect(queryPostsMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          author: "testuser",
-        })
-      );
-    });
-
-    it("should filter by minimum score", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
-      const queryPostsMock = vi.fn().mockResolvedValue([]);
-      
-      MockedDb.mockImplementation(() => ({
-        initialize: vi.fn().mockResolvedValue(undefined),
-        close: vi.fn().mockResolvedValue(undefined),
-        queryPosts: queryPostsMock,
-      }));
-
-      try {
-        await program.parseAsync(["node", "test", "list", "posts", "--min-score", "100"]);
-      } catch (error) {
-        // Expected to throw due to mocked process.exit
-      }
-      
-      expect(queryPostsMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          minScore: 100,
-        })
-      );
-    });
-
-    it("should filter by date range", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
-      const queryPostsMock = vi.fn().mockResolvedValue([]);
-      
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -527,19 +532,114 @@ describe("List Command", () => {
 
       try {
         await program.parseAsync([
-          "node", "test", "list", "posts",
-          "--start-date", "2024-01-01",
-          "--end-date", "2024-12-31"
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--platform",
+          "reddit",
         ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
+      expect(queryPostsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          platform: "reddit",
+        }),
+      );
+    });
+
+    it("should filter by author", async () => {
+      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const queryPostsMock = vi.fn().mockResolvedValue([]);
+
+      MockedDb.mockImplementation(() => ({
+        initialize: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
+        queryPosts: queryPostsMock,
+      }));
+
+      try {
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--author",
+          "testuser",
+        ]);
+      } catch (error) {
+        // Expected to throw due to mocked process.exit
+      }
+
+      expect(queryPostsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          author: "testuser",
+        }),
+      );
+    });
+
+    it("should filter by minimum score", async () => {
+      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const queryPostsMock = vi.fn().mockResolvedValue([]);
+
+      MockedDb.mockImplementation(() => ({
+        initialize: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
+        queryPosts: queryPostsMock,
+      }));
+
+      try {
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--min-score",
+          "100",
+        ]);
+      } catch (error) {
+        // Expected to throw due to mocked process.exit
+      }
+
+      expect(queryPostsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          minScore: 100,
+        }),
+      );
+    });
+
+    it("should filter by date range", async () => {
+      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const queryPostsMock = vi.fn().mockResolvedValue([]);
+
+      MockedDb.mockImplementation(() => ({
+        initialize: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
+        queryPosts: queryPostsMock,
+      }));
+
+      try {
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--start-date",
+          "2024-01-01",
+          "--end-date",
+          "2024-12-31",
+        ]);
+      } catch (error) {
+        // Expected to throw due to mocked process.exit
+      }
+
       expect(queryPostsMock).toHaveBeenCalledWith(
         expect.objectContaining({
           startDate: expect.any(Date),
           endDate: expect.any(Date),
-        })
+        }),
       );
     });
   });
@@ -548,7 +648,7 @@ describe("List Command", () => {
     it("should sort by date", async () => {
       const MockedDb = DatabaseManager as unknown as vi.Mock;
       const queryPostsMock = vi.fn().mockResolvedValue([]);
-      
+
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -556,23 +656,32 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "posts", "--sort-by", "date", "--sort-order", "desc"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--sort-by",
+          "date",
+          "--sort-order",
+          "desc",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(queryPostsMock).toHaveBeenCalledWith(
         expect.objectContaining({
           sortBy: "date",
           sortOrder: "desc",
-        })
+        }),
       );
     });
 
     it("should sort by score", async () => {
       const MockedDb = DatabaseManager as unknown as vi.Mock;
       const queryPostsMock = vi.fn().mockResolvedValue([]);
-      
+
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -580,23 +689,32 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "posts", "--sort-by", "score", "--sort-order", "asc"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--sort-by",
+          "score",
+          "--sort-order",
+          "asc",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(queryPostsMock).toHaveBeenCalledWith(
         expect.objectContaining({
           sortBy: "score",
           sortOrder: "asc",
-        })
+        }),
       );
     });
 
     it("should sort by comment count", async () => {
       const MockedDb = DatabaseManager as unknown as vi.Mock;
       const queryPostsMock = vi.fn().mockResolvedValue([]);
-      
+
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -604,15 +722,22 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "posts", "--sort-by", "comments"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--sort-by",
+          "comments",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(queryPostsMock).toHaveBeenCalledWith(
         expect.objectContaining({
           sortBy: "comments",
-        })
+        }),
       );
     });
   });
@@ -621,11 +746,11 @@ describe("List Command", () => {
     it("should apply limit and offset", async () => {
       // Create a completely fresh mock
       const freshQueryPostsMock = vi.fn().mockResolvedValue([]);
-      
+
       // Reset the module mock
       vi.resetModules();
       vi.clearAllMocks();
-      
+
       const MockedDb = DatabaseManager as unknown as vi.Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
@@ -640,17 +765,26 @@ describe("List Command", () => {
       freshProgram.addCommand(freshListCommand);
 
       try {
-        await freshProgram.parseAsync(["node", "test", "list", "posts", "--limit", "20", "--offset", "10"]);
+        await freshProgram.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--limit",
+          "20",
+          "--offset",
+          "10",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(freshQueryPostsMock).toHaveBeenCalledTimes(1);
       expect(freshQueryPostsMock).toHaveBeenCalledWith(
         expect.objectContaining({
           limit: 20,
           offset: 10,
-        })
+        }),
       );
     });
   });
@@ -683,11 +817,19 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "posts", "--verbose", "--format", "simple"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--verbose",
+          "--format",
+          "simple",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(mockConsoleLog).toHaveBeenCalled();
       const output = mockConsoleLog.mock.calls.join("\n");
       // Verbose mode should show more details
@@ -699,7 +841,9 @@ describe("List Command", () => {
     it("should handle database errors gracefully", async () => {
       const MockedDb = DatabaseManager as unknown as vi.Mock;
       MockedDb.mockImplementation(() => ({
-        initialize: vi.fn().mockRejectedValue(new Error("Database connection failed")),
+        initialize: vi
+          .fn()
+          .mockRejectedValue(new Error("Database connection failed")),
       }));
 
       try {
@@ -707,7 +851,7 @@ describe("List Command", () => {
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(mockConsoleError).toHaveBeenCalled();
       const errorOutput = mockConsoleError.mock.calls.join("\n");
       expect(errorOutput).toContain("Error");
@@ -722,13 +866,22 @@ describe("List Command", () => {
       }));
 
       try {
-        await program.parseAsync(["node", "test", "list", "posts", "--start-date", "invalid-date"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "list",
+          "posts",
+          "--start-date",
+          "invalid-date",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       // Should either handle gracefully or show error
-      expect(mockConsoleLog.mock.calls.length + mockConsoleError.mock.calls.length).toBeGreaterThan(0);
+      expect(
+        mockConsoleLog.mock.calls.length + mockConsoleError.mock.calls.length,
+      ).toBeGreaterThan(0);
     });
   });
 
@@ -746,7 +899,7 @@ describe("List Command", () => {
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
-      
+
       expect(mockConsoleLog).toHaveBeenCalled();
       const output = mockConsoleLog.mock.calls.join("\n");
       expect(output).toContain("No posts found");

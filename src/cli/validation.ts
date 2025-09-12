@@ -4,7 +4,7 @@
 
 import { z } from "zod";
 import type { Platform } from "../types/core.js";
-import { existsSync } from "fs";
+import { existsSync, mkdirSync, statSync } from "fs";
 import { resolve } from "path";
 
 /**
@@ -448,7 +448,7 @@ export function validateDirectory(path: string, create = false): string {
   if (!existsSync(resolvedPath)) {
     if (create) {
       try {
-        require("fs").mkdirSync(resolvedPath, { recursive: true });
+        mkdirSync(resolvedPath, { recursive: true });
       } catch (error) {
         throw new Error(`Failed to create directory: ${resolvedPath}`);
       }
@@ -457,7 +457,7 @@ export function validateDirectory(path: string, create = false): string {
     }
   }
 
-  const stats = require("fs").statSync(resolvedPath);
+  const stats = statSync(resolvedPath);
   if (!stats.isDirectory()) {
     throw new Error(`Path is not a directory: ${resolvedPath}`);
   }

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { BatchProcessor, BatchConfig, BatchOperation } from "../batch-processor.js";
+import { BatchProcessor, BatchConfig } from "../batch-processor.js";
 import { OutputFormatter } from "../output-formatter.js";
 import { DatabaseManager } from "../../database/database.js";
 import { RedditScraper } from "../../platforms/reddit/scraper.js";
@@ -7,7 +7,6 @@ import { HackerNewsScraper } from "../../platforms/hackernews/scraper.js";
 import { CsvExporter } from "../../export/exporters/csv-exporter.js";
 import { JsonExporter } from "../../export/exporters/json-exporter.js";
 import { promises as fs } from "fs";
-import path from "path";
 
 // Mock all external dependencies
 vi.mock("../output-formatter.js");
@@ -115,7 +114,9 @@ describe("BatchProcessor", () => {
     vi.mocked(OutputFormatter).mockImplementation(() => mockFormatter);
     vi.mocked(DatabaseManager).mockImplementation(() => mockDatabase);
     vi.mocked(RedditScraper).mockImplementation(() => mockRedditScraper);
-    vi.mocked(HackerNewsScraper).mockImplementation(() => mockHackerNewsScraper);
+    vi.mocked(HackerNewsScraper).mockImplementation(
+      () => mockHackerNewsScraper,
+    );
     vi.mocked(CsvExporter).mockImplementation(() => mockCSVExporter);
     vi.mocked(JsonExporter).mockImplementation(() => mockJSONExporter);
   });
@@ -135,9 +136,7 @@ describe("BatchProcessor", () => {
 
     it("should create instance with full config", () => {
       const config: BatchConfig = {
-        operations: [
-          { type: "scrape", platform: "reddit", items: ["test"] },
-        ],
+        operations: [{ type: "scrape", platform: "reddit", items: ["test"] }],
         parallel: true,
         maxConcurrency: 5,
         continueOnError: true,
@@ -154,13 +153,11 @@ describe("BatchProcessor", () => {
   describe("Load from File", () => {
     it("should load JSON config from file", async () => {
       const mockConfig = {
-        operations: [
-          { type: "scrape", platform: "reddit", items: ["test"] },
-        ],
+        operations: [{ type: "scrape", platform: "reddit", items: ["test"] }],
         parallel: true,
       };
       (fs.readFile as any).mockResolvedValueOnce(JSON.stringify(mockConfig));
-      
+
       const config = await BatchProcessor.loadFromFile("batch.json");
       expect(config).toEqual(mockConfig);
       expect(fs.readFile).toHaveBeenCalledWith("batch.json", "utf-8");
@@ -173,7 +170,7 @@ export posts ./exports
 clean old-posts
 `;
       (fs.readFile as any).mockResolvedValueOnce(textContent);
-      
+
       const config = await BatchProcessor.loadFromFile("batch.txt");
       expect(config.operations).toHaveLength(3);
       expect(config.operations[0].type).toBe("scrape");
@@ -183,9 +180,9 @@ clean old-posts
 
     it("should throw error for unsupported file format", async () => {
       (fs.readFile as any).mockResolvedValueOnce("content");
-      await expect(
-        BatchProcessor.loadFromFile("batch.xml")
-      ).rejects.toThrow("Unsupported batch file format");
+      await expect(BatchProcessor.loadFromFile("batch.xml")).rejects.toThrow(
+        "Unsupported batch file format",
+      );
     });
   });
 
@@ -214,12 +211,12 @@ clean old-posts
         processor = new BatchProcessor(config);
 
         const results = await processor.execute();
-        
+
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
         expect(mockRedditScraper.scrapeSubreddit).toHaveBeenCalledWith(
           "/r/programming",
-          { limit: 10 }
+          { limit: 10 },
         );
       });
 
@@ -237,7 +234,7 @@ clean old-posts
         processor = new BatchProcessor(config);
 
         const results = await processor.execute();
-        
+
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
         expect(mockHackerNewsScraper.scrapeStory).toHaveBeenCalledWith("12345");
@@ -245,9 +242,9 @@ clean old-posts
 
       it("should handle scrape operation failures", async () => {
         mockRedditScraper.scrapeSubreddit.mockRejectedValue(
-          new Error("Scrape failed")
+          new Error("Scrape failed"),
         );
-        
+
         const config: BatchConfig = {
           operations: [
             {
@@ -262,7 +259,7 @@ clean old-posts
         processor = new BatchProcessor(config);
 
         const results = await processor.execute();
-        
+
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("failed");
         expect(results[0].error?.message).toBe("Scrape failed");
@@ -287,7 +284,7 @@ clean old-posts
         processor = new BatchProcessor(config);
 
         const results = await processor.execute();
-        
+
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
         expect(mockCSVExporter.exportPosts).toHaveBeenCalled();
@@ -310,7 +307,7 @@ clean old-posts
         processor = new BatchProcessor(config);
 
         const results = await processor.execute();
-        
+
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
         expect(mockJSONExporter.exportComments).toHaveBeenCalled();
@@ -318,9 +315,9 @@ clean old-posts
 
       it("should handle export failures", async () => {
         mockCSVExporter.exportPosts.mockRejectedValue(
-          new Error("Export failed")
+          new Error("Export failed"),
         );
-        
+
         const config: BatchConfig = {
           operations: [
             {
@@ -337,7 +334,7 @@ clean old-posts
         processor = new BatchProcessor(config);
 
         const results = await processor.execute();
-        
+
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("failed");
         expect(results[0].error?.message).toBe("Export failed");
@@ -361,7 +358,7 @@ clean old-posts
         processor = new BatchProcessor(config);
 
         const results = await processor.execute();
-        
+
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
         expect(mockDatabase.deletePosts).toHaveBeenCalled();
@@ -382,7 +379,7 @@ clean old-posts
         processor = new BatchProcessor(config);
 
         const results = await processor.execute();
-        
+
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
         expect(mockDatabase.deletePosts).toHaveBeenCalled();
@@ -408,7 +405,7 @@ clean old-posts
         processor = new BatchProcessor(config);
 
         const results = await processor.execute();
-        
+
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
         expect(mockDatabase.backup).toHaveBeenCalledWith("./backup.db");
@@ -430,7 +427,7 @@ clean old-posts
         processor = new BatchProcessor(config);
 
         const results = await processor.execute();
-        
+
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
         expect(mockDatabase.restore).toHaveBeenCalledWith("./backup.db");
@@ -453,30 +450,32 @@ clean old-posts
       processor = new BatchProcessor(config);
 
       const results = await processor.execute();
-      
+
       expect(results).toHaveLength(3);
-      expect(results.every(r => r.status === "success")).toBe(true);
+      expect(results.every((r) => r.status === "success")).toBe(true);
       expect(mockRedditScraper.scrapeSubreddit).toHaveBeenCalledTimes(3);
     });
 
     it("should respect max concurrency", async () => {
       let concurrentCalls = 0;
       let maxConcurrent = 0;
-      
+
       mockRedditScraper.scrapeSubreddit.mockImplementation(async () => {
         concurrentCalls++;
         maxConcurrent = Math.max(maxConcurrent, concurrentCalls);
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         concurrentCalls--;
         return { posts: [], comments: [] };
       });
 
       const config: BatchConfig = {
-        operations: Array(10).fill(null).map((_, i) => ({
-          type: "scrape" as const,
-          platform: "reddit" as const,
-          items: [`/r/test${i}`],
-        })),
+        operations: Array(10)
+          .fill(null)
+          .map((_, i) => ({
+            type: "scrape" as const,
+            platform: "reddit" as const,
+            items: [`/r/test${i}`],
+          })),
         parallel: true,
         maxConcurrency: 3,
         database: "./test.db",
@@ -484,7 +483,7 @@ clean old-posts
       processor = new BatchProcessor(config);
 
       await processor.execute();
-      
+
       expect(maxConcurrent).toBeLessThanOrEqual(3);
     });
   });
@@ -503,9 +502,9 @@ clean old-posts
       processor = new BatchProcessor(config);
 
       const results = await processor.execute();
-      
+
       expect(results).toHaveLength(3);
-      expect(results.every(r => r.status === "skipped")).toBe(true);
+      expect(results.every((r) => r.status === "skipped")).toBe(true);
       expect(mockRedditScraper.scrapeSubreddit).not.toHaveBeenCalled();
       expect(mockCSVExporter.exportPosts).not.toHaveBeenCalled();
       expect(mockDatabase.deletePosts).not.toHaveBeenCalled();
@@ -515,7 +514,7 @@ clean old-posts
   describe("Continue on Error", () => {
     it("should stop on first error when continueOnError is false", async () => {
       mockRedditScraper.scrapeSubreddit.mockRejectedValue(
-        new Error("First operation failed")
+        new Error("First operation failed"),
       );
 
       const config: BatchConfig = {
@@ -528,7 +527,9 @@ clean old-posts
       };
       processor = new BatchProcessor(config);
 
-      await expect(processor.execute()).rejects.toThrow("First operation failed");
+      await expect(processor.execute()).rejects.toThrow(
+        "First operation failed",
+      );
       expect(mockRedditScraper.scrapeSubreddit).toHaveBeenCalledTimes(1);
     });
 
@@ -548,7 +549,7 @@ clean old-posts
       processor = new BatchProcessor(config);
 
       const results = await processor.execute();
-      
+
       expect(results).toHaveLength(2);
       expect(results[0].status).toBe("failed");
       expect(results[1].status).toBe("success");
@@ -566,13 +567,13 @@ clean old-posts
       };
       processor = new BatchProcessor(config);
 
-      const results = await processor.execute();
+      await processor.execute();
       await processor.saveResults("results.json");
 
       expect(fs.writeFile).toHaveBeenCalledWith(
         "results.json",
         expect.stringContaining('"status":"success"'),
-        "utf-8"
+        "utf-8",
       );
     });
   });
@@ -592,7 +593,10 @@ clean old-posts
 
       await processor.execute();
 
-      expect(mockFormatter.startBatch).toHaveBeenCalledWith(3, "Executing operations");
+      expect(mockFormatter.startBatch).toHaveBeenCalledWith(
+        3,
+        "Executing operations",
+      );
       expect(mockFormatter.updateBatch).toHaveBeenCalledTimes(3);
     });
   });

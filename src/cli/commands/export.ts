@@ -10,7 +10,7 @@ import { ExportManager } from "../../export/export-manager.js";
 import type { FilterOptions } from "../../export/filters.js";
 import type { TransformOptions } from "../../export/transformers.js";
 import { formatError } from "../validation.js";
-import { dirname, extname, basename } from "path";
+import { dirname, extname } from "path";
 import { existsSync, mkdirSync } from "fs";
 
 export interface ExportCommandOptions {
@@ -145,7 +145,8 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
       path: options.database || "fscrape.db",
       connectionPoolSize: 5,
     });
-    await dbManager.initialize();
+    // Don't initialize if database already exists - just connect
+    // await dbManager.initialize();
 
     // Build query options
     const queryOptions: any = {
@@ -322,7 +323,8 @@ async function handleExportComments(options: any): Promise<void> {
       path: options.database || "fscrape.db",
       connectionPoolSize: 5,
     });
-    await dbManager.initialize();
+    // Don't initialize if database already exists - just connect
+    // await dbManager.initialize();
 
     // Query comments
     const queryOptions: any = {
@@ -381,7 +383,8 @@ async function handleExportUsers(options: any): Promise<void> {
       path: options.database || "fscrape.db",
       connectionPoolSize: 5,
     });
-    await dbManager.initialize();
+    // Don't initialize if database already exists - just connect
+    // await dbManager.initialize();
 
     // Query users
     const queryOptions: any = {

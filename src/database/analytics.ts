@@ -88,7 +88,7 @@ export class DatabaseAnalytics {
         AVG(p.score) as avg_post_score,
         AVG(c.score) as avg_comment_score,
         MAX(p.scraped_at) as last_update
-      FROM forum_posts p
+      FROM posts p
       LEFT JOIN comments c ON c.platform = p.platform
       LEFT JOIN users u ON u.platform = p.platform
       WHERE p.platform = ?
@@ -108,7 +108,7 @@ export class DatabaseAnalytics {
         MIN(COALESCE(p.created_at, c.created_at)) as first_seen,
         MAX(COALESCE(p.created_at, c.created_at)) as last_seen
       FROM users u
-      LEFT JOIN forum_posts p ON p.author_id = u.id AND p.platform = u.platform
+      LEFT JOIN posts p ON p.author_id = u.id AND p.platform = u.platform
       LEFT JOIN comments c ON c.author_id = u.id AND c.platform = u.platform
       WHERE u.platform = ? AND u.username = ?
       GROUP BY u.username, u.platform
@@ -139,7 +139,7 @@ export class DatabaseAnalytics {
         strftime('%Y-%m-%d %H:00:00', datetime(created_at / 1000, 'unixepoch')) as hour,
         COUNT(*) as posts,
         AVG(score) as avg_score
-      FROM forum_posts
+      FROM posts
       WHERE platform = ? 
         AND created_at >= ?
         AND created_at <= ?
@@ -170,7 +170,7 @@ export class DatabaseAnalytics {
         SUM(score) as total_score,
         AVG(score) as avg_score,
         MAX(score) as best_score
-      FROM forum_posts
+      FROM posts
       WHERE platform = ?
         AND created_at >= ?
       GROUP BY author
@@ -186,7 +186,7 @@ export class DatabaseAnalytics {
         MAX(engagement_rate) as max_engagement,
         COUNT(CASE WHEN engagement_rate > 0.1 THEN 1 END) as high_engagement_posts,
         COUNT(CASE WHEN engagement_rate < 0.01 THEN 1 END) as low_engagement_posts
-      FROM forum_posts
+      FROM posts
       WHERE platform = ?
         AND created_at >= ?
     `);
@@ -197,7 +197,7 @@ export class DatabaseAnalytics {
         date(created_at / 1000, 'unixepoch') as day,
         COUNT(*) as new_posts,
         SUM(COUNT(*)) OVER (ORDER BY date(created_at / 1000, 'unixepoch')) as cumulative_posts
-      FROM forum_posts
+      FROM posts
       WHERE platform = ?
         AND created_at >= ?
       GROUP BY day
@@ -229,8 +229,8 @@ export class DatabaseAnalytics {
     platform?: Platform,
   ): any[] {
     const query = platform
-      ? `SELECT * FROM forum_posts WHERE created_at >= ? AND created_at <= ? AND platform = ? ORDER BY created_at DESC`
-      : `SELECT * FROM forum_posts WHERE created_at >= ? AND created_at <= ? ORDER BY created_at DESC`;
+      ? `SELECT * FROM posts WHERE created_at >= ? AND created_at <= ? AND platform = ? ORDER BY created_at DESC`
+      : `SELECT * FROM posts WHERE created_at >= ? AND created_at <= ? ORDER BY created_at DESC`;
 
     const params = platform
       ? [startDate.getTime(), endDate.getTime(), platform]
@@ -289,7 +289,7 @@ export class DatabaseAnalytics {
           SUM(comment_count) as totalComments,
           AVG(score) as avgScore,
           AVG(comment_count) as avgComments
-        FROM forum_posts
+        FROM posts
         WHERE created_at >= ? AND platform = ?
         GROUP BY date, platform
         ORDER BY date DESC
@@ -305,7 +305,7 @@ export class DatabaseAnalytics {
           SUM(comment_count) as totalComments,
           AVG(score) as avgScore,
           AVG(comment_count) as avgComments
-        FROM forum_posts
+        FROM posts
         WHERE created_at >= ?
         GROUP BY date
         ORDER BY date DESC
@@ -331,7 +331,7 @@ export class DatabaseAnalytics {
           comment_count,
           (score + comment_count) as totalEngagement,
           platform
-        FROM forum_posts
+        FROM posts
         WHERE platform = ?
         ORDER BY totalEngagement DESC
         LIMIT ?
@@ -348,7 +348,7 @@ export class DatabaseAnalytics {
           comment_count,
           (score + comment_count) as totalEngagement,
           platform
-        FROM forum_posts
+        FROM posts
         ORDER BY totalEngagement DESC
         LIMIT ?
       `;
@@ -372,7 +372,7 @@ export class DatabaseAnalytics {
           score,
           comment_count as commentCount,
           platform
-        FROM forum_posts
+        FROM posts
         WHERE platform = ? AND comment_count > 0
         ORDER BY comment_count DESC
         LIMIT ?
@@ -388,7 +388,7 @@ export class DatabaseAnalytics {
           score,
           comment_count as commentCount,
           platform
-        FROM forum_posts
+        FROM posts
         WHERE comment_count > 0
         ORDER BY comment_count DESC
         LIMIT ?
@@ -417,7 +417,7 @@ export class DatabaseAnalytics {
             ELSE CAST(comment_count AS REAL) / score
           END as commentRatio,
           platform
-        FROM forum_posts
+        FROM posts
         WHERE platform = ? AND score > 0
         ORDER BY commentRatio DESC
         LIMIT ?
@@ -437,7 +437,7 @@ export class DatabaseAnalytics {
             ELSE CAST(comment_count AS REAL) / score
           END as commentRatio,
           platform
-        FROM forum_posts
+        FROM posts
         WHERE score > 0
         ORDER BY commentRatio DESC
         LIMIT ?
@@ -458,7 +458,7 @@ export class DatabaseAnalytics {
           platform,
           created_at,
           LAG(created_at, 1) OVER (PARTITION BY platform ORDER BY created_at) as prev_created_at
-        FROM forum_posts
+        FROM posts
         ORDER BY platform, created_at
       )
       SELECT 
@@ -523,7 +523,7 @@ export class DatabaseAnalytics {
         u.created_at as firstSeen,
         u.last_seen_at as lastSeen
       FROM users u
-      LEFT JOIN forum_posts p ON p.author_id = u.id
+      LEFT JOIN posts p ON p.author_id = u.id
       LEFT JOIN comments c ON c.author_id = u.id
       WHERE u.id = ?
       GROUP BY u.id
@@ -566,7 +566,7 @@ export class DatabaseAnalytics {
     // Get average comment count per post
     const avgCommentQuery = this.db.prepare(`
       SELECT AVG(comment_count) as avg_comment_count
-      FROM forum_posts
+      FROM posts
       WHERE platform = ?
     `);
     const avgCommentRow = avgCommentQuery.get(platform) as any;
@@ -578,7 +578,7 @@ export class DatabaseAnalytics {
         COUNT(DISTINCT p.id) as posts,
         COUNT(DISTINCT c.id) as comments
       FROM users u
-      LEFT JOIN forum_posts p ON p.author_id = u.id AND p.platform = u.platform
+      LEFT JOIN posts p ON p.author_id = u.id AND p.platform = u.platform
       LEFT JOIN comments c ON c.author_id = u.id AND c.platform = u.platform
       WHERE u.platform = ?
       GROUP BY u.username
@@ -671,7 +671,7 @@ export class DatabaseAnalytics {
           p.platform,
           CAST((p.score + p.comment_count * 2) AS REAL) / 
             (1 + (strftime('%s', 'now') * 1000 - p.created_at) / 3600000.0) AS hotness
-        FROM forum_posts p
+        FROM posts p
         WHERE p.platform = ? 
           AND p.created_at > ?
         ORDER BY hotness DESC
@@ -691,7 +691,7 @@ export class DatabaseAnalytics {
           p.platform,
           CAST((p.score + p.comment_count * 2) AS REAL) / 
             (1 + (strftime('%s', 'now') * 1000 - p.created_at) / 3600000.0) AS hotness
-        FROM forum_posts p
+        FROM posts p
         WHERE p.created_at > ?
         ORDER BY hotness DESC
         LIMIT ?
@@ -903,7 +903,7 @@ export class DatabaseAnalytics {
   private ensureTablesExist(): void {
     // Check if core tables exist
     const tables = [
-      "forum_posts",
+      "posts",
       "comments",
       "users",
       "scraping_sessions",
@@ -930,8 +930,8 @@ export class DatabaseAnalytics {
     // Create minimal table structures to prevent crashes
     // These will be properly migrated later
     const schemas: Record<string, string> = {
-      forum_posts: `
-        CREATE TABLE IF NOT EXISTS forum_posts (
+      posts: `
+        CREATE TABLE IF NOT EXISTS posts (
           id TEXT PRIMARY KEY,
           platform TEXT NOT NULL,
           title TEXT,
@@ -1023,7 +1023,7 @@ export class DatabaseAnalytics {
     try {
       // Get total counts
       const postCount = this.db
-        .prepare("SELECT COUNT(*) as count FROM forum_posts")
+        .prepare("SELECT COUNT(*) as count FROM posts")
         .get() as any;
       const commentCount = this.db
         .prepare("SELECT COUNT(*) as count FROM comments")
@@ -1037,10 +1037,10 @@ export class DatabaseAnalytics {
 
       // Get oldest and newest posts
       const oldestPost = this.db
-        .prepare("SELECT MIN(created_at) as created_at FROM forum_posts")
+        .prepare("SELECT MIN(created_at) as created_at FROM posts")
         .get() as any;
       const newestPost = this.db
-        .prepare("SELECT MAX(created_at) as created_at FROM forum_posts")
+        .prepare("SELECT MAX(created_at) as created_at FROM posts")
         .get() as any;
 
       // Get database size
@@ -1055,7 +1055,7 @@ export class DatabaseAnalytics {
         SELECT 
           platform,
           COUNT(*) as posts
-        FROM forum_posts
+        FROM posts
         GROUP BY platform
       `,
         )

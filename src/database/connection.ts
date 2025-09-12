@@ -69,6 +69,20 @@ export class DatabaseConnection {
       throw new Error("Database not connected");
     }
 
+    // Check if schema already exists by checking for the posts table
+    const tableExists = this.db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='posts'",
+      )
+      .get();
+
+    if (tableExists) {
+      this.logger.debug(
+        "Database schema already exists, skipping initialization",
+      );
+      return;
+    }
+
     const transaction = this.db.transaction(() => {
       // Create tables
       for (const [tableName, schema] of Object.entries(DATABASE_SCHEMA)) {

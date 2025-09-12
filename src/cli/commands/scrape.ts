@@ -13,6 +13,7 @@ import {
   formatInfo,
 } from "../validation.js";
 import { PlatformFactory } from "../../platforms/platform-factory.js";
+import { PlatformRegistry } from "../../platforms/platform-registry.js";
 import { DatabaseManager } from "../../database/database.js";
 import { ExportManager } from "../../export/export-manager.js";
 import { ConfigManager } from "../../config/manager.js";
@@ -137,6 +138,9 @@ async function handleScrape(url: string, options: any): Promise<void> {
   const spinner = ora(`Initializing ${platform} scraper...`).start();
 
   try {
+    // Initialize platform registry first
+    await PlatformRegistry.initializeAsync();
+
     const platformConfig = config.platforms?.[platform] || {};
     const scraper = await PlatformFactory.create(platform, platformConfig);
 
@@ -311,7 +315,7 @@ function parseUrlForTarget(
 
   if (platform === "reddit") {
     // Check for subreddit
-    const subredditMatch = path.match(/\/r\/([^\/]+)/);
+    const subredditMatch = path.match(/\/r\/([^/]+)/);
     if (subredditMatch) {
       // Check if it's a specific post
       const postMatch = path.match(/\/comments\/([a-z0-9]+)/);

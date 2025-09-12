@@ -95,19 +95,21 @@ export class ExportManager {
 
     // Export using the appropriate exporter
     switch (format.toLowerCase()) {
-      case "json":
+      case "json": {
         const jsonFiles = await this.jsonExporter.export(
           processedData,
           outputPath,
         );
         return jsonFiles.length === 1 ? jsonFiles[0]! : jsonFiles;
+      }
 
-      case "csv":
+      case "csv": {
         const csvFiles = await this.csvExporter.export(
           processedData,
           outputPath,
         );
         return csvFiles.length === 1 ? csvFiles[0]! : csvFiles;
+      }
 
       case "markdown":
       case "md":
@@ -220,15 +222,15 @@ export class ExportManager {
       totalCount: data.posts.length,
       commentCount: data.comments?.length || 0,
       userCount: data.users?.length || 0,
-      platforms: [...new Set(data.posts.map(p => p.platform))],
+      platforms: [...new Set(data.posts.map((p) => p.platform))],
       dateRange: {
-        earliest: data.posts.reduce((min, p) => 
-          p.createdAt < min ? p.createdAt : min, 
-          data.posts[0]?.createdAt || new Date()
+        earliest: data.posts.reduce(
+          (min, p) => (p.createdAt < min ? p.createdAt : min),
+          data.posts[0]?.createdAt || new Date(),
         ),
-        latest: data.posts.reduce((max, p) => 
-          p.createdAt > max ? p.createdAt : max, 
-          data.posts[0]?.createdAt || new Date()
+        latest: data.posts.reduce(
+          (max, p) => (p.createdAt > max ? p.createdAt : max),
+          data.posts[0]?.createdAt || new Date(),
         ),
       },
     };

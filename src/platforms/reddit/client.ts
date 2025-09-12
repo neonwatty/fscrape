@@ -1,10 +1,6 @@
 import { logger } from "../../utils/logger.js";
 import { RedditAuth, type RedditAuthConfig } from "./auth.js";
-import {
-  RedditEndpoints,
-  QueryParams,
-  REDDIT_BASE_URL,
-} from "./endpoints.js";
+import { RedditEndpoints, QueryParams, REDDIT_BASE_URL } from "./endpoints.js";
 import {
   AdvancedRateLimiter,
   RateLimiterFactory,
@@ -238,9 +234,10 @@ export class RedditClient {
   ): Promise<RedditListing<RedditPost>> {
     const endpoint = RedditEndpoints.subreddit[sort](subreddit);
     const params = QueryParams.listing(options);
-    const endpointWithParams = params && params.toString() 
-      ? `${endpoint}?${params.toString()}`
-      : endpoint;
+    const endpointWithParams =
+      params && params.toString()
+        ? `${endpoint}?${params.toString()}`
+        : endpoint;
 
     return this.request<RedditListing<RedditPost>>(endpointWithParams);
   }
@@ -281,9 +278,10 @@ export class RedditClient {
   ): Promise<[RedditListing<RedditPost>, RedditListing<RedditComment>]> {
     const endpoint = RedditEndpoints.post.comments(subreddit, postId);
     const params = QueryParams.comments(options);
-    const endpointWithParams = params && params.toString() 
-      ? `${endpoint}?${params.toString()}`
-      : endpoint;
+    const endpointWithParams =
+      params && params.toString()
+        ? `${endpoint}?${params.toString()}`
+        : endpoint;
 
     return this.request<
       [RedditListing<RedditPost>, RedditListing<RedditComment>]
@@ -316,9 +314,10 @@ export class RedditClient {
   ): Promise<RedditListing<RedditPost>> {
     const endpoint = RedditEndpoints.user.submitted(username);
     const params = QueryParams.listing(options);
-    const endpointWithParams = params && params.toString() 
-      ? `${endpoint}?${params.toString()}`
-      : endpoint;
+    const endpointWithParams =
+      params && params.toString()
+        ? `${endpoint}?${params.toString()}`
+        : endpoint;
 
     return this.request<RedditListing<RedditPost>>(endpointWithParams);
   }
@@ -338,9 +337,10 @@ export class RedditClient {
   ): Promise<RedditListing<RedditComment>> {
     const endpoint = RedditEndpoints.user.comments(username);
     const params = QueryParams.listing(options);
-    const endpointWithParams = params && params.toString() 
-      ? `${endpoint}?${params.toString()}`
-      : endpoint;
+    const endpointWithParams =
+      params && params.toString()
+        ? `${endpoint}?${params.toString()}`
+        : endpoint;
 
     return this.request<RedditListing<RedditComment>>(endpointWithParams);
   }
@@ -369,9 +369,10 @@ export class RedditClient {
       ...options,
     });
 
-    const endpointWithParams = params && params.toString() 
-      ? `${endpoint}?${params.toString()}`
-      : endpoint;
+    const endpointWithParams =
+      params && params.toString()
+        ? `${endpoint}?${params.toString()}`
+        : endpoint;
     return this.request<RedditListing<RedditPost>>(endpointWithParams);
   }
 

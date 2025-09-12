@@ -272,7 +272,7 @@ export class HackerNewsClient {
    * Search for stories (Note: HN API doesn't have native search, this is a placeholder)
    * In a real implementation, you might want to use Algolia's HN Search API
    */
-  async searchStories(query: string, options: any = {}): Promise<any> {
+  async searchStories(query: string, _options: any = {}): Promise<any> {
     this.logger.warn(
       "Native HN API doesn't support search. Consider using Algolia HN Search API.",
     );

@@ -4,7 +4,11 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { AnalyticsVisualizer } from "../visualizer.js";
-import type { DataPoint, MultiSeriesData, ChartOptions } from "../visualizer.js";
+import type {
+  DataPoint,
+  MultiSeriesData,
+  ChartOptions,
+} from "../visualizer.js";
 
 describe("AnalyticsVisualizer", () => {
   let visualizer: AnalyticsVisualizer;
@@ -24,7 +28,7 @@ describe("AnalyticsVisualizer", () => {
       ];
 
       const chart = visualizer.createLineChart(data, "Test Line Chart");
-      
+
       expect(chart).toContain("Test Line Chart");
       expect(chart).toContain("│"); // Y-axis
       expect(chart).toContain("└"); // X-axis corner
@@ -43,17 +47,13 @@ describe("AnalyticsVisualizer", () => {
     it("should handle single data point", () => {
       const data: DataPoint[] = [{ value: 42 }];
       const chart = visualizer.createLineChart(data);
-      
+
       expect(chart).toContain("●");
       expect(chart).toContain("42");
     });
 
     it("should respect chart options", () => {
-      const data: DataPoint[] = [
-        { value: 10 },
-        { value: 20 },
-        { value: 30 },
-      ];
+      const data: DataPoint[] = [{ value: 10 }, { value: 20 }, { value: 30 }];
 
       const options: ChartOptions = {
         width: 40,
@@ -65,11 +65,11 @@ describe("AnalyticsVisualizer", () => {
 
       const chart = visualizer.createLineChart(data, "Small Chart", options);
       const lines = chart.split("\n");
-      
+
       // Check dimensions
       expect(lines[0].length).toBeLessThanOrEqual(40);
       expect(lines.length).toBeLessThanOrEqual(12); // height + title + spacing
-      
+
       // Should not contain legend
       expect(chart).not.toContain("Min:");
     });
@@ -84,7 +84,7 @@ describe("AnalyticsVisualizer", () => {
       ];
 
       const chart = visualizer.createBarChart(data, "Sales vs Costs");
-      
+
       expect(chart).toContain("Sales vs Costs");
       expect(chart).toContain("│"); // Y-axis
       expect(chart).toContain("█"); // Bar character
@@ -121,7 +121,7 @@ describe("AnalyticsVisualizer", () => {
       ];
 
       const chart = visualizer.createPieChart(data, "Device Distribution");
-      
+
       expect(chart).toContain("Device Distribution");
       expect(chart).toContain("Distribution:");
       expect(chart).toContain("Desktop");
@@ -159,12 +159,12 @@ describe("AnalyticsVisualizer", () => {
       const colLabels = ["Col1", "Col2", "Col3"];
 
       const chart = visualizer.createHeatmap(
-        data, 
-        rowLabels, 
-        colLabels, 
-        "Test Heatmap"
+        data,
+        rowLabels,
+        colLabels,
+        "Test Heatmap",
       );
-      
+
       expect(chart).toContain("Test Heatmap");
       expect(chart).toContain("Row1");
       expect(chart).toContain("Col1");
@@ -193,7 +193,7 @@ describe("AnalyticsVisualizer", () => {
     it("should create a sparkline from numeric data", () => {
       const data = [1, 5, 3, 8, 2, 9, 4];
       const sparkline = visualizer.createSparkline(data);
-      
+
       expect(sparkline.length).toBe(data.length);
       expect(sparkline).toMatch(/[▁▂▃▄▅▆▇█]+/);
     });
@@ -219,7 +219,7 @@ describe("AnalyticsVisualizer", () => {
   describe("Progress Bar", () => {
     it("should create a progress bar", () => {
       const bar = visualizer.createProgressBar(75, 100);
-      
+
       expect(bar).toContain("[");
       expect(bar).toContain("]");
       expect(bar).toContain("█"); // Filled portion
@@ -258,8 +258,11 @@ describe("AnalyticsVisualizer", () => {
         { metric: "Eco", car: 20, bike: 90, walk: 100 },
       ];
 
-      const table = visualizer.createComparisonTable(data, "Transport Comparison");
-      
+      const table = visualizer.createComparisonTable(
+        data,
+        "Transport Comparison",
+      );
+
       expect(table).toContain("Transport Comparison");
       expect(table).toContain("═"); // Title underline
       expect(table).toContain("│"); // Column separator
@@ -276,9 +279,7 @@ describe("AnalyticsVisualizer", () => {
     });
 
     it("should format numeric values", () => {
-      const data = [
-        { metric: "Value", a: 3.14159, b: 2.71828 },
-      ];
+      const data = [{ metric: "Value", a: 3.14159, b: 2.71828 }];
 
       const table = visualizer.createComparisonTable(data);
       expect(table).toContain("3.14");
@@ -299,7 +300,7 @@ describe("AnalyticsVisualizer", () => {
       };
 
       const tree = visualizer.createTree(data, "File Structure");
-      
+
       expect(tree).toContain("File Structure");
       expect(tree).toContain("├──"); // Branch connector
       expect(tree).toContain("└──"); // Last branch connector
@@ -339,7 +340,7 @@ describe("AnalyticsVisualizer", () => {
       ];
 
       const chart = visualizer.createScatterPlot(data, "Scatter Test");
-      
+
       expect(chart).toContain("Scatter Test");
       expect(chart).toContain("│"); // Y-axis
       expect(chart).toContain("└"); // X-axis corner
@@ -362,7 +363,7 @@ describe("AnalyticsVisualizer", () => {
       const chart = visualizer.createScatterPlot(data, "Grid Test", {
         showGrid: true,
       });
-      
+
       expect(chart).toContain("·"); // Grid points
     });
   });
@@ -370,9 +371,9 @@ describe("AnalyticsVisualizer", () => {
   describe("Histogram", () => {
     it("should create a histogram", () => {
       const data = [1, 2, 2, 3, 3, 3, 4, 4, 5, 5, 5, 5, 6, 7, 8, 9, 10];
-      
+
       const chart = visualizer.createHistogram(data, 5, "Distribution");
-      
+
       expect(chart).toContain("Distribution");
       expect(chart).toContain("│"); // Y-axis
       expect(chart).toContain("█"); // Bar
@@ -389,7 +390,7 @@ describe("AnalyticsVisualizer", () => {
     it("should calculate statistics correctly", () => {
       const data = [1, 2, 3, 4, 5];
       const chart = visualizer.createHistogram(data, 5);
-      
+
       expect(chart).toContain("Count: 5");
       expect(chart).toContain("Mean: 3.00");
       expect(chart).toContain("Min: 1.00");
@@ -399,7 +400,7 @@ describe("AnalyticsVisualizer", () => {
     it("should respect bin count", () => {
       const data = Array.from({ length: 100 }, (_, i) => i);
       const chart = visualizer.createHistogram(data, 10);
-      
+
       expect(chart).toContain("Bins: 10");
     });
   });
@@ -407,18 +408,18 @@ describe("AnalyticsVisualizer", () => {
   describe("Box Plot", () => {
     it("should create a box plot", () => {
       const datasets = [
-        { 
-          label: "Group A", 
-          values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] 
+        {
+          label: "Group A",
+          values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         },
-        { 
-          label: "Group B", 
-          values: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14] 
+        {
+          label: "Group B",
+          values: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
         },
       ];
 
       const chart = visualizer.createBoxPlot(datasets, "Comparison");
-      
+
       expect(chart).toContain("Comparison");
       expect(chart).toContain("Group A");
       expect(chart).toContain("Group B");
@@ -435,9 +436,9 @@ describe("AnalyticsVisualizer", () => {
 
     it("should detect outliers", () => {
       const datasets = [
-        { 
-          label: "With Outlier", 
-          values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 100] // 100 is an outlier
+        {
+          label: "With Outlier",
+          values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 100], // 100 is an outlier
         },
       ];
 
@@ -447,9 +448,9 @@ describe("AnalyticsVisualizer", () => {
 
     it("should handle single dataset", () => {
       const datasets = [
-        { 
-          label: "Single", 
-          values: [10, 20, 30, 40, 50] 
+        {
+          label: "Single",
+          values: [10, 20, 30, 40, 50],
         },
       ];
 
@@ -462,11 +463,7 @@ describe("AnalyticsVisualizer", () => {
 
   describe("Edge Cases", () => {
     it("should handle negative values in line chart", () => {
-      const data: DataPoint[] = [
-        { value: -10 },
-        { value: 0 },
-        { value: 10 },
-      ];
+      const data: DataPoint[] = [{ value: -10 }, { value: 0 }, { value: 10 }];
 
       const chart = visualizer.createLineChart(data);
       expect(chart).toContain("-10");
@@ -474,10 +471,7 @@ describe("AnalyticsVisualizer", () => {
     });
 
     it("should handle very large numbers", () => {
-      const data: DataPoint[] = [
-        { value: 1000000 },
-        { value: 2000000 },
-      ];
+      const data: DataPoint[] = [{ value: 1000000 }, { value: 2000000 }];
 
       const chart = visualizer.createLineChart(data);
       expect(chart).toBeDefined();
@@ -497,9 +491,9 @@ describe("AnalyticsVisualizer", () => {
 
     it("should handle very long labels", () => {
       const data: MultiSeriesData[] = [
-        { 
-          label: "This is a very long label that should be truncated", 
-          value: 100 
+        {
+          label: "This is a very long label that should be truncated",
+          value: 100,
         },
       ];
 
@@ -512,9 +506,9 @@ describe("AnalyticsVisualizer", () => {
     it("should respect width option", () => {
       const data: DataPoint[] = [{ value: 50 }];
       const chart = visualizer.createLineChart(data, "Test", { width: 40 });
-      
+
       const lines = chart.split("\n");
-      lines.forEach(line => {
+      lines.forEach((line) => {
         expect(line.length).toBeLessThanOrEqual(40);
       });
     });
@@ -522,52 +516,49 @@ describe("AnalyticsVisualizer", () => {
     it("should respect height option", () => {
       const data: DataPoint[] = [{ value: 50 }];
       const chart = visualizer.createLineChart(data, "Test", { height: 10 });
-      
+
       const lines = chart.split("\n");
       expect(lines.length).toBeLessThanOrEqual(15); // Height + title + labels
     });
 
     it("should respect showLabels option", () => {
       const data: DataPoint[] = [{ value: 50 }];
-      const chart = visualizer.createLineChart(data, "Test", { 
-        showLabels: false 
+      const chart = visualizer.createLineChart(data, "Test", {
+        showLabels: false,
       });
-      
+
       // Should not show axis labels when disabled
       const lines = chart.split("\n");
-      const hasLabels = lines.some(line => 
-        line.includes("Min:") || line.includes("Max:")
+      const hasLabels = lines.some(
+        (line) => line.includes("Min:") || line.includes("Max:"),
       );
       expect(hasLabels).toBe(true); // Legend is separate from labels
     });
 
     it("should respect showLegend option", () => {
       const data: DataPoint[] = [{ value: 50 }];
-      const chart = visualizer.createLineChart(data, "Test", { 
-        showLegend: false 
+      const chart = visualizer.createLineChart(data, "Test", {
+        showLegend: false,
       });
-      
+
       expect(chart).not.toContain("Min:");
       expect(chart).not.toContain("Max:");
       expect(chart).not.toContain("Avg:");
     });
 
     it("should respect showGrid option", () => {
-      const data: DataPoint[] = [
-        { value: 10 },
-        { value: 20 },
-      ];
-      
-      const chartWithGrid = visualizer.createLineChart(data, "Test", { 
-        showGrid: true 
+      const data: DataPoint[] = [{ value: 10 }, { value: 20 }];
+
+      const chartWithGrid = visualizer.createLineChart(data, "Test", {
+        showGrid: true,
       });
-      const chartWithoutGrid = visualizer.createLineChart(data, "Test", { 
-        showGrid: false 
+      const chartWithoutGrid = visualizer.createLineChart(data, "Test", {
+        showGrid: false,
       });
-      
+
       const gridCount = (chartWithGrid.match(/·/g) || []).length;
       const noGridCount = (chartWithoutGrid.match(/·/g) || []).length;
-      
+
       expect(gridCount).toBeGreaterThanOrEqual(noGridCount);
     });
   });

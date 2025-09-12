@@ -1,8 +1,7 @@
-import * as os from 'os';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { advancedLogger } from '../utils/advanced-logger';
-import { HealthCheckResult, HealthCheckConfig } from './health-checker';
+import * as os from "os";
+import * as fs from "fs/promises";
+import { advancedLogger } from "../utils/advanced-logger";
+import { HealthCheckResult, HealthCheckConfig } from "./health-checker";
 
 export interface SystemMetrics {
   cpu: {
@@ -41,7 +40,7 @@ interface NetworkInterface {
 }
 
 export class SystemMonitor {
-  private readonly logger = advancedLogger.child({ module: 'SystemMonitor' });
+  private readonly logger = advancedLogger.child({ module: "SystemMonitor" });
   private config: HealthCheckConfig;
   private lastCpuInfo?: os.CpuInfo[];
   private lastCpuUsage?: NodeJS.CpuUsage;
@@ -103,15 +102,16 @@ export class SystemMonitor {
   /**
    * Check CPU health
    */
-  private checkCpu(cpu: SystemMetrics['cpu']): HealthCheckResult {
+  private checkCpu(cpu: SystemMetrics["cpu"]): HealthCheckResult {
     const threshold = this.config.thresholds?.cpu || 80;
-    const status = cpu.usage > threshold ? 'warning' : 'pass';
-    const message = cpu.usage > threshold
-      ? `CPU usage high: ${cpu.usage.toFixed(1)}% (threshold: ${threshold}%)`
-      : `CPU usage normal: ${cpu.usage.toFixed(1)}%`;
+    const status = cpu.usage > threshold ? "warning" : "pass";
+    const message =
+      cpu.usage > threshold
+        ? `CPU usage high: ${cpu.usage.toFixed(1)}% (threshold: ${threshold}%)`
+        : `CPU usage normal: ${cpu.usage.toFixed(1)}%`;
 
     return {
-      name: 'system:cpu',
+      name: "system:cpu",
       status,
       message,
       details: {
@@ -126,15 +126,16 @@ export class SystemMonitor {
   /**
    * Check memory health
    */
-  private checkMemory(memory: SystemMetrics['memory']): HealthCheckResult {
+  private checkMemory(memory: SystemMetrics["memory"]): HealthCheckResult {
     const threshold = this.config.thresholds?.memory || 90;
-    const status = memory.usagePercent > threshold ? 'warning' : 'pass';
-    const message = memory.usagePercent > threshold
-      ? `Memory usage high: ${memory.usagePercent.toFixed(1)}% (threshold: ${threshold}%)`
-      : `Memory usage normal: ${memory.usagePercent.toFixed(1)}%`;
+    const status = memory.usagePercent > threshold ? "warning" : "pass";
+    const message =
+      memory.usagePercent > threshold
+        ? `Memory usage high: ${memory.usagePercent.toFixed(1)}% (threshold: ${threshold}%)`
+        : `Memory usage normal: ${memory.usagePercent.toFixed(1)}%`;
 
     return {
-      name: 'system:memory',
+      name: "system:memory",
       status,
       message,
       details: {
@@ -154,13 +155,14 @@ export class SystemMonitor {
     try {
       const diskInfo = await this.getDiskInfo();
       const threshold = this.config.thresholds?.diskSpace || 90;
-      const status = diskInfo.usagePercent > threshold ? 'warning' : 'pass';
-      const message = diskInfo.usagePercent > threshold
-        ? `Disk usage high: ${diskInfo.usagePercent.toFixed(1)}% (threshold: ${threshold}%)`
-        : `Disk usage normal: ${diskInfo.usagePercent.toFixed(1)}%`;
+      const status = diskInfo.usagePercent > threshold ? "warning" : "pass";
+      const message =
+        diskInfo.usagePercent > threshold
+          ? `Disk usage high: ${diskInfo.usagePercent.toFixed(1)}% (threshold: ${threshold}%)`
+          : `Disk usage normal: ${diskInfo.usagePercent.toFixed(1)}%`;
 
       return {
-        name: 'system:disk',
+        name: "system:disk",
         status,
         message,
         details: {
@@ -173,11 +175,11 @@ export class SystemMonitor {
       };
     } catch (error) {
       return {
-        name: 'system:disk',
-        status: 'warning',
-        message: 'Unable to check disk usage',
+        name: "system:disk",
+        status: "warning",
+        message: "Unable to check disk usage",
         details: {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : "Unknown error",
         },
       };
     }
@@ -186,18 +188,19 @@ export class SystemMonitor {
   /**
    * Check process health
    */
-  private checkProcess(process: SystemMetrics['process']): HealthCheckResult {
+  private checkProcess(process: SystemMetrics["process"]): HealthCheckResult {
     const heapUsed = process.memoryUsage.heapUsed;
     const heapTotal = process.memoryUsage.heapTotal;
     const heapPercent = (heapUsed / heapTotal) * 100;
-    
-    const status = heapPercent > 90 ? 'warning' : 'pass';
-    const message = heapPercent > 90
-      ? `Process heap usage high: ${heapPercent.toFixed(1)}%`
-      : `Process healthy`;
+
+    const status = heapPercent > 90 ? "warning" : "pass";
+    const message =
+      heapPercent > 90
+        ? `Process heap usage high: ${heapPercent.toFixed(1)}%`
+        : `Process healthy`;
 
     return {
-      name: 'system:process',
+      name: "system:process",
       status,
       message,
       details: {
@@ -214,7 +217,7 @@ export class SystemMonitor {
    */
   private calculateCpuUsage(): number {
     const cpus = os.cpus();
-    
+
     let totalIdle = 0;
     let totalTick = 0;
 
@@ -227,7 +230,7 @@ export class SystemMonitor {
 
     const idle = totalIdle / cpus.length;
     const total = totalTick / cpus.length;
-    const usage = 100 - ~~(100 * idle / total);
+    const usage = 100 - ~~((100 * idle) / total);
 
     return Math.max(0, Math.min(100, usage));
   }
@@ -235,7 +238,7 @@ export class SystemMonitor {
   /**
    * Get memory information
    */
-  private getMemoryInfo(): SystemMetrics['memory'] {
+  private getMemoryInfo(): SystemMetrics["memory"] {
     const total = os.totalmem();
     const free = os.freemem();
     const used = total - free;
@@ -252,7 +255,7 @@ export class SystemMonitor {
   /**
    * Get disk information
    */
-  private async getDiskInfo(): Promise<SystemMetrics['disk']> {
+  private async getDiskInfo(): Promise<SystemMetrics["disk"]> {
     // Simplified disk check - in production, use proper disk usage library
     try {
       const stats = await fs.statfs(process.cwd());
@@ -281,7 +284,7 @@ export class SystemMonitor {
   /**
    * Get process information
    */
-  private getProcessInfo(): SystemMetrics['process'] {
+  private getProcessInfo(): SystemMetrics["process"] {
     return {
       pid: process.pid,
       uptime: process.uptime(),
@@ -293,7 +296,7 @@ export class SystemMonitor {
   /**
    * Get network information
    */
-  private getNetworkInfo(): SystemMetrics['network'] {
+  private getNetworkInfo(): SystemMetrics["network"] {
     const networkInterfaces = os.networkInterfaces();
     const interfaces: NetworkInterface[] = [];
 
@@ -318,7 +321,7 @@ export class SystemMonitor {
    */
   private addToHistory(metrics: SystemMetrics): void {
     this.metricsHistory.push(metrics);
-    
+
     // Keep history size limited
     if (this.metricsHistory.length > this.maxHistorySize) {
       this.metricsHistory.shift();
@@ -340,9 +343,15 @@ export class SystemMonitor {
       return {};
     }
 
-    const avgCpu = this.metricsHistory.reduce((sum, m) => sum + m.cpu.usage, 0) / this.metricsHistory.length;
-    const avgMemory = this.metricsHistory.reduce((sum, m) => sum + m.memory.usagePercent, 0) / this.metricsHistory.length;
-    const avgDisk = this.metricsHistory.reduce((sum, m) => sum + m.disk.usagePercent, 0) / this.metricsHistory.length;
+    const avgCpu =
+      this.metricsHistory.reduce((sum, m) => sum + m.cpu.usage, 0) /
+      this.metricsHistory.length;
+    const avgMemory =
+      this.metricsHistory.reduce((sum, m) => sum + m.memory.usagePercent, 0) /
+      this.metricsHistory.length;
+    const avgDisk =
+      this.metricsHistory.reduce((sum, m) => sum + m.disk.usagePercent, 0) /
+      this.metricsHistory.length;
 
     return {
       cpu: {
@@ -370,7 +379,7 @@ export class SystemMonitor {
    */
   public clearHistory(): void {
     this.metricsHistory = [];
-    this.logger.info('System metrics history cleared');
+    this.logger.info("System metrics history cleared");
   }
 
   /**
@@ -385,7 +394,7 @@ export class SystemMonitor {
    */
   public async isSystemHealthy(): Promise<boolean> {
     const metrics = await this.collectMetrics();
-    
+
     const cpuThreshold = this.config.thresholds?.cpu || 80;
     const memoryThreshold = this.config.thresholds?.memory || 90;
     const diskThreshold = this.config.thresholds?.diskSpace || 90;

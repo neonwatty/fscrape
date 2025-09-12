@@ -11,11 +11,7 @@ import { createStatusCommand } from "./commands/status.js";
 import { createExportCommand } from "./commands/export.js";
 import { createListCommand } from "./commands/list.js";
 import { createConfigCommand } from "./commands/config.js";
-import {
-  formatError,
-  validateCleanOptions,
-  validateConfigOptions,
-} from "./validation.js";
+import { formatError, validateCleanOptions } from "./validation.js";
 import chalk from "chalk";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
@@ -38,7 +34,7 @@ function createProgram(): Command {
     .description(
       "Multi-platform forum scraper with database storage and export capabilities",
     )
-    .version(packageJson.version)
+    .version(packageJson.version, "-v, --version", "output the version number")
     .option("--no-color", "Disable colored output")
     .option("--quiet", "Suppress non-error output")
     .option("--debug", "Enable debug output")
@@ -99,7 +95,6 @@ function createProgram(): Command {
     });
 
   // Error handling
-  program.exitOverride();
   program.showHelpAfterError(true);
 
   return program;
@@ -238,29 +233,8 @@ async function handleClean(options: any): Promise<void> {
  */
 async function main(): Promise<void> {
   const program = createProgram();
-
-  try {
-    await program.parseAsync(process.argv);
-  } catch (error: any) {
-    // Commander will handle its own errors
-    if (
-      error.code !== "commander.help" &&
-      error.code !== "commander.helpDisplayed"
-    ) {
-      console.error(chalk.red(formatError(error)));
-      process.exit(1);
-    }
-  }
+  await program.parseAsync(process.argv);
 }
 
 // Export for testing and as module
 export { createProgram, main };
-
-// Only run if directly executed (not when imported)
-// This prevents double execution when imported by src/cli.ts
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((error) => {
-    console.error(chalk.red("Fatal error:"), error);
-    process.exit(1);
-  });
-}

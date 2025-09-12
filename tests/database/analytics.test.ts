@@ -49,6 +49,12 @@ describe("DatabaseAnalytics", () => {
   });
 
   async function seedTestData() {
+    // Clear any existing data first
+    db.exec(`
+      DELETE FROM comments;
+      DELETE FROM forum_posts;
+      DELETE FROM users;
+    `);
     // Create posts with different scores and dates
     const now = new Date();
     const oneDayAgo = new Date(now.getTime() - 23 * 60 * 60 * 1000); // 23 hours ago to be within 24 hour window
@@ -190,6 +196,7 @@ describe("DatabaseAnalytics", () => {
       },
     ];
 
+    // Insert data in order: users, posts, then comments (respects foreign keys)
     await dbManager.bulkUpsertUsers(users);
     await dbManager.bulkUpsertPosts(posts);
     await dbManager.bulkUpsertComments(comments);

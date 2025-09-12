@@ -21,7 +21,7 @@ export interface HtmlExportOptions {
   collapsibleComments?: boolean;
   maxCommentDepth?: number;
   includeSearch?: boolean;
-  format?: 'cards' | 'table';
+  format?: "cards" | "table";
   sortable?: boolean;
 }
 
@@ -39,7 +39,7 @@ export class HtmlExporter {
       collapsibleComments: true,
       maxCommentDepth: 10,
       includeSearch: true,
-      format: 'table',
+      format: "table",
       sortable: true,
       ...options,
     };
@@ -547,10 +547,10 @@ export class HtmlExporter {
    * Generate posts section
    */
   private generatePostsSection(data: ScrapeResult): string {
-    if (this.options.format === 'table') {
+    if (this.options.format === "table") {
       return this.generatePostsTable(data);
     }
-    
+
     const postsHtml = data.posts
       .map((post) => this.generatePost(post, data.comments))
       .join("");
@@ -565,9 +565,13 @@ export class HtmlExporter {
    * Generate posts as table
    */
   private generatePostsTable(data: ScrapeResult): string {
-    const sortableAttr = this.options.sortable ? ' onclick="sortTable(event, this)"' : '';
-    
-    const tableRows = data.posts.map(post => `
+    const sortableAttr = this.options.sortable
+      ? ' onclick="sortTable(event, this)"'
+      : "";
+
+    const tableRows = data.posts
+      .map(
+        (post) => `
         <tr>
             <td><a href="${post.url}" target="_blank">${this.escapeHtml(post.title)}</a></td>
             <td>${this.escapeHtml(post.author)}</td>
@@ -576,7 +580,9 @@ export class HtmlExporter {
             <td>${post.platform}</td>
             <td>${this.formatDate(post.createdAt)}</td>
         </tr>
-    `).join('');
+    `,
+      )
+      .join("");
 
     return `<section class="posts-section">
         <h2>Posts</h2>

@@ -6,13 +6,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import chalk from "chalk";
 import { OutputFormatter } from "../output-formatter.js";
-import type { 
-  OutputOptions, 
-  BatchProgress,
-  OutputFormat,
-  OutputLevel 
-} from "../output-formatter.js";
-import type { ForumPost, Comment, User } from "../../types/core.js";
+import type { OutputOptions } from "../output-formatter.js";
+import type { ForumPost, Comment } from "../../types/core.js";
 
 // Mock ora spinner
 vi.mock("ora", () => ({
@@ -35,7 +30,9 @@ vi.mock("table", () => ({
 
 // Mock console methods to capture output
 const mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
-const mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+const mockConsoleError = vi
+  .spyOn(console, "error")
+  .mockImplementation(() => {});
 
 describe("OutputFormatter", () => {
   let formatter: OutputFormatter;
@@ -237,9 +234,11 @@ describe("OutputFormatter", () => {
       formatter.updateBatch("Item 2", "failed");
       formatter.updateBatch("Item 3", "completed");
       formatter.endBatch(true);
-      
+
       expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join("\n");
+      const output = mockConsoleLog.mock.calls
+        .map((call) => call[0])
+        .join("\n");
       expect(output).toContain("Batch Processing Summary");
     });
   });
@@ -274,7 +273,9 @@ describe("OutputFormatter", () => {
       formatter = new OutputFormatter({ format: "table" });
       formatter.formatPosts(mockPosts);
       expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join("\n");
+      const output = mockConsoleLog.mock.calls
+        .map((call) => call[0])
+        .join("\n");
       expect(output).toContain("Test Post 1");
       expect(output).toContain("user1");
     });
@@ -293,8 +294,12 @@ describe("OutputFormatter", () => {
       formatter = new OutputFormatter({ format: "csv" });
       formatter.formatPosts(mockPosts);
       expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join("\n");
-      expect(output).toContain("id,title,author,score,comments,platform,url,created_at");
+      const output = mockConsoleLog.mock.calls
+        .map((call) => call[0])
+        .join("\n");
+      expect(output).toContain(
+        "id,title,author,score,comments,platform,url,created_at",
+      );
       expect(output).toContain("Test Post 1");
     });
 
@@ -302,7 +307,9 @@ describe("OutputFormatter", () => {
       formatter = new OutputFormatter({ format: "simple" });
       formatter.formatPosts(mockPosts);
       expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join("\n");
+      const output = mockConsoleLog.mock.calls
+        .map((call) => call[0])
+        .join("\n");
       expect(output).toContain("1. Test Post 1");
       expect(output).toContain("Author: user1");
       expect(output).toContain("Score: 100");
@@ -312,7 +319,9 @@ describe("OutputFormatter", () => {
       formatter = new OutputFormatter({ format: "verbose" });
       formatter.formatPosts(mockPosts);
       expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join("\n");
+      const output = mockConsoleLog.mock.calls
+        .map((call) => call[0])
+        .join("\n");
       expect(output).toContain("Post 1: Test Post 1");
       expect(output).toContain("ID:");
       expect(output).toContain("URL:");
@@ -358,7 +367,9 @@ describe("OutputFormatter", () => {
       formatter = new OutputFormatter({ format: "table" });
       formatter.formatComments(mockComments);
       expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join("\n");
+      const output = mockConsoleLog.mock.calls
+        .map((call) => call[0])
+        .join("\n");
       expect(output).toContain("commenter1");
       expect(output).toContain("Comment content 1");
     });
@@ -377,8 +388,12 @@ describe("OutputFormatter", () => {
       formatter = new OutputFormatter({ format: "csv" });
       formatter.formatComments(mockComments);
       expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join("\n");
-      expect(output).toContain("id,post_id,author,content,score,platform,created_at");
+      const output = mockConsoleLog.mock.calls
+        .map((call) => call[0])
+        .join("\n");
+      expect(output).toContain(
+        "id,post_id,author,content,score,platform,created_at",
+      );
       expect(output).toContain("commenter1");
     });
 
@@ -391,7 +406,7 @@ describe("OutputFormatter", () => {
       // Should have multiple console.log calls for verbose output
       expect(calls.length).toBeGreaterThan(0);
       // Join all arguments from all calls into one string for checking
-      const output = calls.map(call => call.join(" ")).join("\n");
+      const output = calls.map((call) => call.join(" ")).join("\n");
       expect(output).toContain("Comment 1:");
       expect(output).toContain("commenter1");
       expect(output).toContain("Content:");
@@ -413,7 +428,9 @@ describe("OutputFormatter", () => {
       };
       formatter.formatStats(stats);
       expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join("\n");
+      const output = mockConsoleLog.mock.calls
+        .map((call) => call[0])
+        .join("\n");
       expect(output).toContain("Statistics");
       expect(output).toContain("totalPosts");
       expect(output).toContain("100");
@@ -482,7 +499,7 @@ describe("OutputFormatter", () => {
       formatter = new OutputFormatter({ level: "normal" });
       formatter.log("Normal message", "normal");
       expect(mockConsoleLog).toHaveBeenCalledTimes(1);
-      
+
       mockConsoleLog.mockClear();
       formatter.log("Verbose message", "verbose");
       expect(mockConsoleLog).not.toHaveBeenCalled();
@@ -493,7 +510,7 @@ describe("OutputFormatter", () => {
       formatter.log("Normal message", "normal");
       formatter.log("Verbose message", "verbose");
       expect(mockConsoleLog).toHaveBeenCalledTimes(2);
-      
+
       mockConsoleLog.mockClear();
       formatter.debug("Debug message");
       expect(mockConsoleLog).not.toHaveBeenCalled();
@@ -531,7 +548,9 @@ describe("OutputFormatter", () => {
       };
       formatter.formatPosts([longPost]);
       expect(mockConsoleLog).toHaveBeenCalled();
-      const output = mockConsoleLog.mock.calls.map(call => call[0]).join("\n");
+      const output = mockConsoleLog.mock.calls
+        .map((call) => call[0])
+        .join("\n");
       // Title should be truncated in table view
       expect(output).toContain("...");
     });

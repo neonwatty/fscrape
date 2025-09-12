@@ -5,7 +5,6 @@
 
 import winston from "winston";
 import path from "path";
-import { promises as fs } from "fs";
 import os from "os";
 
 /**

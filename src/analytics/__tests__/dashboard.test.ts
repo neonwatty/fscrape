@@ -4,7 +4,6 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { AnalyticsDashboard } from "../dashboard.js";
-import { DatabaseAnalytics } from "../../database/analytics.js";
 import type { Platform } from "../../types/core.js";
 
 describe("AnalyticsDashboard", () => {
@@ -115,8 +114,8 @@ describe("AnalyticsDashboard", () => {
     });
 
     it("should cache metrics when auto-refresh is disabled", async () => {
-      const firstCall = await dashboard.getMetrics();
-      const secondCall = await dashboard.getMetrics();
+      await dashboard.getMetrics();
+      await dashboard.getMetrics();
 
       // Analytics should only be called once due to caching
       expect(mockAnalytics.getPlatformStats).toHaveBeenCalledTimes(2); // Once per platform
@@ -142,13 +141,13 @@ describe("AnalyticsDashboard", () => {
         end: new Date(),
       };
 
-      const result = await dashboard.getPlatformDashboard("reddit", dateRange);
+      await dashboard.getPlatformDashboard("reddit", dateRange);
 
       expect(mockAnalytics.getTimeSeriesData).toHaveBeenCalledWith(
         "reddit",
         dateRange.start,
         dateRange.end,
-        "daily"
+        "daily",
       );
     });
   });
@@ -256,7 +255,7 @@ describe("AnalyticsDashboard", () => {
 
   describe("exportData", () => {
     it("should export data as CSV", async () => {
-      const metrics = await dashboard.getMetrics();
+      await dashboard.getMetrics();
       const exported = await dashboard.exportData("csv");
 
       expect(exported).toBeInstanceOf(Buffer);
@@ -265,7 +264,7 @@ describe("AnalyticsDashboard", () => {
     });
 
     it("should export data as JSON", async () => {
-      const metrics = await dashboard.getMetrics();
+      await dashboard.getMetrics();
       const exported = await dashboard.exportData("json");
 
       expect(exported).toBeInstanceOf(Buffer);
@@ -276,10 +275,13 @@ describe("AnalyticsDashboard", () => {
 
   describe("auto-refresh", () => {
     it("should start and stop auto-refresh", () => {
-      const dashboardWithRefresh = new AnalyticsDashboard(mockAnalytics as any, {
-        enableAutoRefresh: true,
-        refreshInterval: 1000,
-      });
+      const dashboardWithRefresh = new AnalyticsDashboard(
+        mockAnalytics as any,
+        {
+          enableAutoRefresh: true,
+          refreshInterval: 1000,
+        },
+      );
 
       // Should have started timer
       expect(dashboardWithRefresh).toBeDefined();
@@ -303,7 +305,9 @@ describe("AnalyticsDashboard", () => {
     });
 
     it("should handle analytics errors", async () => {
-      mockAnalytics.getTrendingPosts.mockRejectedValue(new Error("Database error"));
+      mockAnalytics.getTrendingPosts.mockRejectedValue(
+        new Error("Database error"),
+      );
 
       // Should not throw, but handle error gracefully
       await expect(dashboard.getMetrics()).rejects.toThrow();

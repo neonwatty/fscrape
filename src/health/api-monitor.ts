@@ -1,6 +1,6 @@
-import { advancedLogger } from '../utils/advanced-logger';
-import { HealthCheckResult, HealthCheckConfig } from './health-checker';
-import fetch from 'node-fetch';
+import { advancedLogger } from "../utils/advanced-logger";
+import { HealthCheckResult, HealthCheckConfig } from "./health-checker";
+import fetch from "node-fetch";
 
 export interface ApiEndpoint {
   url: string;
@@ -12,7 +12,7 @@ export interface ApiEndpoint {
 }
 
 export class ApiMonitor {
-  private readonly logger = advancedLogger.child({ module: 'ApiMonitor' });
+  private readonly logger = advancedLogger.child({ module: "ApiMonitor" });
   private config: HealthCheckConfig;
   private endpointStats: Map<string, EndpointStats>;
 
@@ -24,13 +24,16 @@ export class ApiMonitor {
   /**
    * Check multiple endpoints
    */
-  public async checkEndpoints(endpoints: string[] | ApiEndpoint[]): Promise<HealthCheckResult[]> {
+  public async checkEndpoints(
+    endpoints: string[] | ApiEndpoint[],
+  ): Promise<HealthCheckResult[]> {
     const checks: HealthCheckResult[] = [];
 
     for (const endpoint of endpoints) {
-      const endpointConfig = typeof endpoint === 'string' 
-        ? { url: endpoint, name: endpoint }
-        : endpoint;
+      const endpointConfig =
+        typeof endpoint === "string"
+          ? { url: endpoint, name: endpoint }
+          : endpoint;
 
       const result = await this.checkEndpoint(endpointConfig);
       checks.push(result);
@@ -42,7 +45,9 @@ export class ApiMonitor {
   /**
    * Check single endpoint
    */
-  public async checkEndpoint(endpoint: ApiEndpoint): Promise<HealthCheckResult> {
+  public async checkEndpoint(
+    endpoint: ApiEndpoint,
+  ): Promise<HealthCheckResult> {
     const startTime = Date.now();
     const timeout = endpoint.timeout || this.config.timeout || 5000;
     let result: HealthCheckResult;
@@ -52,7 +57,7 @@ export class ApiMonitor {
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
       const response = await fetch(endpoint.url, {
-        method: endpoint.method || 'GET',
+        method: endpoint.method || "GET",
         headers: endpoint.headers || {},
         signal: controller.signal,
       });
@@ -65,10 +70,11 @@ export class ApiMonitor {
       if (response.status === expectedStatus) {
         // Check response time threshold
         const threshold = this.config.thresholds?.responseTime || 1000;
-        const status = responseTime > threshold ? 'warning' : 'pass';
-        const message = responseTime > threshold
-          ? `Endpoint responding slowly (${responseTime}ms > ${threshold}ms)`
-          : `Endpoint healthy (${responseTime}ms)`;
+        const status = responseTime > threshold ? "warning" : "pass";
+        const message =
+          responseTime > threshold
+            ? `Endpoint responding slowly (${responseTime}ms > ${threshold}ms)`
+            : `Endpoint healthy (${responseTime}ms)`;
 
         result = {
           name: `api:${endpoint.name}`,
@@ -84,7 +90,7 @@ export class ApiMonitor {
       } else {
         result = {
           name: `api:${endpoint.name}`,
-          status: 'fail',
+          status: "fail",
           message: `Unexpected status code: ${response.status} (expected ${expectedStatus})`,
           responseTime,
           details: {
@@ -96,13 +102,17 @@ export class ApiMonitor {
       }
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const isTimeout = errorMessage.includes('abort') || errorMessage.includes('timeout');
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      const isTimeout =
+        errorMessage.includes("abort") || errorMessage.includes("timeout");
 
       result = {
         name: `api:${endpoint.name}`,
-        status: 'fail',
-        message: isTimeout ? `Endpoint timeout after ${timeout}ms` : `Endpoint error: ${errorMessage}`,
+        status: "fail",
+        message: isTimeout
+          ? `Endpoint timeout after ${timeout}ms`
+          : `Endpoint error: ${errorMessage}`,
         responseTime,
         details: {
           url: endpoint.url,
@@ -114,7 +124,7 @@ export class ApiMonitor {
 
     // Update statistics for this endpoint
     this.updateStats(endpoint.name, result);
-    
+
     return result;
   }
 
@@ -127,13 +137,13 @@ export class ApiMonitor {
     // Check common internal endpoints
     const internalEndpoints: ApiEndpoint[] = [
       {
-        name: 'reddit-api',
-        url: 'https://www.reddit.com/api/v1/me.json',
+        name: "reddit-api",
+        url: "https://www.reddit.com/api/v1/me.json",
         expectedStatus: 401, // Expect unauthorized without credentials
       },
       {
-        name: 'hackernews-api',
-        url: 'https://hacker-news.firebaseio.com/v0/maxitem.json',
+        name: "hackernews-api",
+        url: "https://hacker-news.firebaseio.com/v0/maxitem.json",
         expectedStatus: 200,
       },
     ];
@@ -157,18 +167,18 @@ export class ApiMonitor {
       warningChecks: 0,
       totalResponseTime: 0,
       lastCheck: new Date(),
-      lastStatus: 'unknown' as const,
+      lastStatus: "unknown" as const,
     };
 
     stats.totalChecks++;
     stats.lastCheck = new Date();
     stats.lastStatus = result.status;
 
-    if (result.status === 'pass') {
+    if (result.status === "pass") {
       stats.successfulChecks++;
-    } else if (result.status === 'fail') {
+    } else if (result.status === "fail") {
       stats.failedChecks++;
-    } else if (result.status === 'warning') {
+    } else if (result.status === "warning") {
       stats.warningChecks++;
     }
 
@@ -182,17 +192,21 @@ export class ApiMonitor {
   /**
    * Get endpoint statistics
    */
-  public getStats(endpointName?: string): EndpointStats | Map<string, EndpointStats> {
+  public getStats(
+    endpointName?: string,
+  ): EndpointStats | Map<string, EndpointStats> {
     if (endpointName) {
-      return this.endpointStats.get(endpointName) || {
-        totalChecks: 0,
-        successfulChecks: 0,
-        failedChecks: 0,
-        warningChecks: 0,
-        totalResponseTime: 0,
-        lastCheck: new Date(),
-        lastStatus: 'unknown',
-      };
+      return (
+        this.endpointStats.get(endpointName) || {
+          totalChecks: 0,
+          successfulChecks: 0,
+          failedChecks: 0,
+          warningChecks: 0,
+          totalResponseTime: 0,
+          lastCheck: new Date(),
+          lastStatus: "unknown",
+        }
+      );
     }
 
     return this.endpointStats;
@@ -232,7 +246,9 @@ export class ApiMonitor {
       this.endpointStats.clear();
     }
 
-    this.logger.info('API monitor statistics reset', { endpoint: endpointName });
+    this.logger.info("API monitor statistics reset", {
+      endpoint: endpointName,
+    });
   }
 
   /**
@@ -247,7 +263,7 @@ export class ApiMonitor {
     overallAvailability: number;
   } {
     const endpoints = Array.from(this.endpointStats.entries());
-    
+
     let healthyCount = 0;
     let degradedCount = 0;
     let unhealthyCount = 0;
@@ -255,12 +271,12 @@ export class ApiMonitor {
     let totalChecks = 0;
     let totalSuccessful = 0;
 
-    for (const [_, stats] of endpoints) {
-      if (stats.lastStatus === 'pass') {
+    for (const [, stats] of endpoints) {
+      if (stats.lastStatus === "pass") {
         healthyCount++;
-      } else if (stats.lastStatus === 'warning') {
+      } else if (stats.lastStatus === "warning") {
         degradedCount++;
-      } else if (stats.lastStatus === 'fail') {
+      } else if (stats.lastStatus === "fail") {
         unhealthyCount++;
       }
 
@@ -274,8 +290,10 @@ export class ApiMonitor {
       healthyEndpoints: healthyCount,
       degradedEndpoints: degradedCount,
       unhealthyEndpoints: unhealthyCount,
-      averageResponseTime: totalChecks > 0 ? totalResponseTime / totalChecks : 0,
-      overallAvailability: totalChecks > 0 ? (totalSuccessful / totalChecks) * 100 : 0,
+      averageResponseTime:
+        totalChecks > 0 ? totalResponseTime / totalChecks : 0,
+      overallAvailability:
+        totalChecks > 0 ? (totalSuccessful / totalChecks) * 100 : 0,
     };
   }
 }
@@ -287,5 +305,5 @@ interface EndpointStats {
   warningChecks: number;
   totalResponseTime: number;
   lastCheck: Date;
-  lastStatus: 'pass' | 'fail' | 'warning' | 'unknown';
+  lastStatus: "pass" | "fail" | "warning" | "unknown";
 }

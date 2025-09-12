@@ -435,14 +435,8 @@ export class AnalyticsDashboard {
     // Calculate growth rate
     const growthRate = this.calculateGrowthRate();
 
-    // Get trending posts - handle potential errors
-    let trending;
-    try {
-      trending = await Promise.resolve(this.analytics.getTrendingPosts(20));
-    } catch (error) {
-      // Re-throw if this is a critical error
-      throw error;
-    }
+    // Get trending posts
+    const trending = await Promise.resolve(this.analytics.getTrendingPosts(20));
 
     // Get time series data
     const endDate = new Date();

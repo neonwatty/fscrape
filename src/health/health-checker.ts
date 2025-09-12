@@ -1,10 +1,10 @@
-import { advancedLogger } from '../utils/advanced-logger';
-import { ApiMonitor } from './api-monitor';
-import { SystemMonitor } from './system-monitor';
-import { Database } from '../database/database';
+import { advancedLogger } from "../utils/advanced-logger";
+import { ApiMonitor } from "./api-monitor";
+import { SystemMonitor } from "./system-monitor";
+import { Database } from "../database/database";
 
 export interface HealthStatus {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   timestamp: Date;
   uptime: number;
   checks: HealthCheckResult[];
@@ -18,7 +18,7 @@ export interface HealthStatus {
 
 export interface HealthCheckResult {
   name: string;
-  status: 'pass' | 'fail' | 'warning';
+  status: "pass" | "fail" | "warning";
   message: string;
   responseTime?: number;
   details?: Record<string, any>;
@@ -50,7 +50,7 @@ const DEFAULT_CONFIG: HealthCheckConfig = {
 };
 
 export class HealthChecker {
-  private readonly logger = advancedLogger.child({ module: 'HealthChecker' });
+  private readonly logger = advancedLogger.child({ module: "HealthChecker" });
   private config: HealthCheckConfig;
   private apiMonitor: ApiMonitor;
   private systemMonitor: SystemMonitor;
@@ -59,10 +59,7 @@ export class HealthChecker {
   private checkInterval?: NodeJS.Timeout;
   private lastStatus?: HealthStatus;
 
-  constructor(
-    config?: Partial<HealthCheckConfig>,
-    database?: Database,
-  ) {
+  constructor(config?: Partial<HealthCheckConfig>, database?: Database) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.apiMonitor = new ApiMonitor(this.config);
     this.systemMonitor = new SystemMonitor(this.config);
@@ -75,11 +72,11 @@ export class HealthChecker {
    */
   public async start(): Promise<void> {
     if (!this.config.enabled) {
-      this.logger.info('Health checks disabled');
+      this.logger.info("Health checks disabled");
       return;
     }
 
-    this.logger.info('Starting health checker', {
+    this.logger.info("Starting health checker", {
       interval: this.config.interval,
       timeout: this.config.timeout,
     });
@@ -100,7 +97,7 @@ export class HealthChecker {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = undefined;
-      this.logger.info('Health checker stopped');
+      this.logger.info("Health checker stopped");
     }
   }
 
@@ -111,14 +108,16 @@ export class HealthChecker {
     const startTime = Date.now();
     const checks: HealthCheckResult[] = [];
 
-    this.logger.debug('Running health checks');
+    this.logger.debug("Running health checks");
 
     // Database check
     checks.push(await this.checkDatabase());
 
     // API checks
     if (this.config.endpoints && this.config.endpoints.length > 0) {
-      const apiChecks = await this.apiMonitor.checkEndpoints(this.config.endpoints);
+      const apiChecks = await this.apiMonitor.checkEndpoints(
+        this.config.endpoints,
+      );
       checks.push(...apiChecks);
     }
 
@@ -143,26 +142,29 @@ export class HealthChecker {
     this.lastStatus = healthStatus;
 
     const duration = Date.now() - startTime;
-    this.logger.info('Health check completed', {
+    this.logger.info("Health check completed", {
       status,
       duration,
       summary,
     });
 
     // Log warnings or errors if any
-    if (status !== 'healthy') {
-      const failedChecks = checks.filter(c => c.status === 'fail');
-      const warnings = checks.filter(c => c.status === 'warning');
+    if (status !== "healthy") {
+      const failedChecks = checks.filter((c) => c.status === "fail");
+      const warnings = checks.filter((c) => c.status === "warning");
 
       if (failedChecks.length > 0) {
-        this.logger.error('Health check failures detected', {
-          failures: failedChecks.map(c => ({ name: c.name, message: c.message })),
+        this.logger.error("Health check failures detected", {
+          failures: failedChecks.map((c) => ({
+            name: c.name,
+            message: c.message,
+          })),
         });
       }
 
       if (warnings.length > 0) {
-        this.logger.warn('Health check warnings detected', {
-          warnings: warnings.map(c => ({ name: c.name, message: c.message })),
+        this.logger.warn("Health check warnings detected", {
+          warnings: warnings.map((c) => ({ name: c.name, message: c.message })),
         });
       }
     }
@@ -192,7 +194,7 @@ export class HealthChecker {
    */
   public async isHealthy(): Promise<boolean> {
     const status = await this.getStatus();
-    return status.status === 'healthy';
+    return status.status === "healthy";
   }
 
   /**
@@ -204,13 +206,13 @@ export class HealthChecker {
     try {
       // Test database connection
       await this.database.testConnection();
-      
+
       const responseTime = Date.now() - startTime;
 
       return {
-        name: 'database',
-        status: 'pass',
-        message: 'Database connection healthy',
+        name: "database",
+        status: "pass",
+        message: "Database connection healthy",
         responseTime,
         details: {
           connected: true,
@@ -220,13 +222,13 @@ export class HealthChecker {
       const responseTime = Date.now() - startTime;
 
       return {
-        name: 'database',
-        status: 'fail',
-        message: `Database connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        name: "database",
+        status: "fail",
+        message: `Database connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
         responseTime,
         details: {
           connected: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : "Unknown error",
         },
       };
     }
@@ -235,11 +237,13 @@ export class HealthChecker {
   /**
    * Calculate summary statistics
    */
-  private calculateSummary(checks: HealthCheckResult[]): HealthStatus['summary'] {
+  private calculateSummary(
+    checks: HealthCheckResult[],
+  ): HealthStatus["summary"] {
     const totalChecks = checks.length;
-    const passedChecks = checks.filter(c => c.status === 'pass').length;
-    const failedChecks = checks.filter(c => c.status === 'fail').length;
-    const warnings = checks.filter(c => c.status === 'warning').length;
+    const passedChecks = checks.filter((c) => c.status === "pass").length;
+    const failedChecks = checks.filter((c) => c.status === "fail").length;
+    const warnings = checks.filter((c) => c.status === "warning").length;
 
     return {
       totalChecks,
@@ -252,19 +256,21 @@ export class HealthChecker {
   /**
    * Determine overall health status
    */
-  private determineOverallStatus(checks: HealthCheckResult[]): 'healthy' | 'degraded' | 'unhealthy' {
-    const hasFailures = checks.some(c => c.status === 'fail');
-    const hasWarnings = checks.some(c => c.status === 'warning');
+  private determineOverallStatus(
+    checks: HealthCheckResult[],
+  ): "healthy" | "degraded" | "unhealthy" {
+    const hasFailures = checks.some((c) => c.status === "fail");
+    const hasWarnings = checks.some((c) => c.status === "warning");
 
     if (hasFailures) {
-      return 'unhealthy';
+      return "unhealthy";
     }
 
     if (hasWarnings) {
-      return 'degraded';
+      return "degraded";
     }
 
-    return 'healthy';
+    return "healthy";
   }
 
   /**
@@ -273,7 +279,7 @@ export class HealthChecker {
   public getMetrics(): Record<string, any> {
     if (!this.lastStatus) {
       return {
-        status: 'unknown',
+        status: "unknown",
         uptime: Date.now() - this.startTime.getTime(),
       };
     }
@@ -283,7 +289,7 @@ export class HealthChecker {
       uptime: this.lastStatus.uptime,
       lastCheck: this.lastStatus.timestamp,
       summary: this.lastStatus.summary,
-      checks: this.lastStatus.checks.map(c => ({
+      checks: this.lastStatus.checks.map((c) => ({
         name: c.name,
         status: c.status,
         responseTime: c.responseTime,
@@ -296,7 +302,7 @@ export class HealthChecker {
    */
   public registerCheck(
     name: string,
-    check: () => Promise<HealthCheckResult>,
+    _check: () => Promise<HealthCheckResult>,
   ): void {
     this.logger.info(`Registering custom health check: ${name}`);
     // Store custom checks for execution during health check runs
@@ -310,7 +316,7 @@ export class HealthChecker {
     this.config = { ...this.config, ...config };
     this.apiMonitor = new ApiMonitor(this.config);
     this.systemMonitor = new SystemMonitor(this.config);
-    
-    this.logger.info('Health checker reconfigured', this.config);
+
+    this.logger.info("Health checker reconfigured", this.config);
   }
 }

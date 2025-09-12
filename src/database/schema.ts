@@ -14,6 +14,19 @@ export const DATABASE_SCHEMA = {
       updated_at INTEGER,
       metadata TEXT,
       scraped_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      engagement_rate REAL GENERATED ALWAYS AS (
+        CASE 
+          WHEN (score + comment_count) = 0 THEN 0.0
+          ELSE CAST(comment_count AS REAL) / (score + comment_count)
+        END
+      ) STORED,
+      score_normalized REAL GENERATED ALWAYS AS (
+        CASE 
+          WHEN score < 0 THEN 0.0
+          WHEN score > 10000 THEN 1.0
+          ELSE score / 10000.0
+        END
+      ) STORED,
       UNIQUE(platform, id)
     )
   `,
@@ -44,6 +57,7 @@ export const DATABASE_SCHEMA = {
       username TEXT NOT NULL,
       karma INTEGER,
       created_at INTEGER,
+      last_seen_at INTEGER,
       metadata TEXT,
       scraped_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
       UNIQUE(platform, id)
@@ -74,7 +88,10 @@ export const DATABASE_SCHEMA = {
       requests_count INTEGER DEFAULT 0,
       window_start INTEGER NOT NULL,
       last_request_at INTEGER,
-      retry_after INTEGER
+      retry_after INTEGER,
+      consecutive_errors INTEGER DEFAULT 0,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
     )
   `,
 };
@@ -92,6 +109,7 @@ export const DATABASE_INDEXES = [
 
   "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
   "CREATE INDEX IF NOT EXISTS idx_users_platform ON users(platform)",
+  "CREATE INDEX IF NOT EXISTS idx_users_karma ON users(karma DESC) WHERE karma > 0",
 
   "CREATE INDEX IF NOT EXISTS idx_sessions_platform ON scrape_sessions(platform)",
   "CREATE INDEX IF NOT EXISTS idx_sessions_status ON scrape_sessions(status)",

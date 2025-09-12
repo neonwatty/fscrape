@@ -284,8 +284,10 @@ export class RedditScraper extends BasePlatform {
 
       return this.client.convertToForumPost(post);
     } catch (error) {
-      if ((error as any).message?.toLowerCase().includes("not found") ||
-          (error as any).message?.toLowerCase().includes("network error")) {
+      if (
+        (error as any).message?.toLowerCase().includes("not found") ||
+        (error as any).message?.toLowerCase().includes("network error")
+      ) {
         return null;
       }
       this.handleApiError(error, `scrapePost(${postId})`);
@@ -340,9 +342,11 @@ export class RedditScraper extends BasePlatform {
 
       return this.client.convertToUser(user);
     } catch (error) {
-      if ((error as any).statusCode === 404 || 
-          (error as any).message?.toLowerCase().includes('user not found') ||
-          (error as any).message?.toLowerCase().includes('404 not found')) {
+      if (
+        (error as any).statusCode === 404 ||
+        (error as any).message?.toLowerCase().includes("user not found") ||
+        (error as any).message?.toLowerCase().includes("404 not found")
+      ) {
         return null;
       }
       this.handleApiError(error, `scrapeUser(${username})`);

@@ -181,7 +181,7 @@ export class AnalyticsVisualizer {
       line += "│";
 
       // Draw bars
-      data.forEach((item, itemIndex) => {
+      data.forEach((item, _itemIndex) => {
         series.forEach((s, seriesIndex) => {
           const value = item[s] || 0;
           const barHeight = Math.floor(value * scale);
@@ -781,18 +781,13 @@ export class AnalyticsVisualizer {
     const range = overallMax - overallMin || 1;
 
     // Chart dimensions
-    const chartHeight = opts.height - 4;
     const chartWidth = opts.width - 10;
-    const boxHeight = Math.floor(chartHeight / datasets.length) - 1;
-    const boxCenter = Math.floor(boxHeight / 2);
 
     // Y-axis scale
     const scale = (chartWidth - 2) / range;
 
     // Draw each box plot
-    stats.forEach((stat, index) => {
-      const yStart = index * (boxHeight + 1) + 2;
-
+    stats.forEach((stat, _index) => {
       // Label
       if (opts.showLabels) {
         lines.push(this.padRight(stat.label.substring(0, 8), 10));
@@ -893,7 +888,7 @@ export class AnalyticsVisualizer {
   private generateYAxisLabels(
     min: number,
     max: number,
-    steps: number,
+    _steps: number,
   ): number[] {
     const labels: number[] = [];
     const range = max - min || 1;

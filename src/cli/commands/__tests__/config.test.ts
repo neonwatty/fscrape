@@ -28,12 +28,16 @@ vi.mock("inquirer", () => ({
 
 // Mock console methods to capture output
 const mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
-const mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+const mockConsoleError = vi
+  .spyOn(console, "error")
+  .mockImplementation(() => {});
 
 // Mock process.exit to prevent test runner from exiting
-const mockProcessExit = vi.spyOn(process, "exit").mockImplementation((code?: number) => {
-  throw new Error(`process.exit called with code ${code}`);
-});
+const mockProcessExit = vi
+  .spyOn(process, "exit")
+  .mockImplementation((code?: number) => {
+    throw new Error(`process.exit called with code ${code}`);
+  });
 
 describe("Config Command", () => {
   let program: Command;
@@ -146,7 +150,13 @@ describe("Config Command", () => {
       mockFs.readFile.mockResolvedValueOnce(JSON.stringify(defaultConfig));
 
       try {
-        await program.parseAsync(["node", "test", "config", "--global", "--list"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--global",
+          "--list",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -159,7 +169,14 @@ describe("Config Command", () => {
       mockFs.readFile.mockResolvedValueOnce(JSON.stringify(defaultConfig));
 
       try {
-        await program.parseAsync(["node", "test", "config", "--config", customPath, "--list"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--config",
+          customPath,
+          "--list",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -182,7 +199,7 @@ describe("Config Command", () => {
       expect(mockFs.writeFile).toHaveBeenCalled();
       const [filePath, content] = mockFs.writeFile.mock.calls[0];
       expect(filePath).toBe(testConfigPath);
-      
+
       const savedConfig = JSON.parse(content);
       expect(savedConfig.defaultDatabase).toBe("fscrape.db");
       expect(savedConfig.defaultPlatform).toBe("reddit");
@@ -199,7 +216,13 @@ describe("Config Command", () => {
       mockFs.readFile.mockResolvedValueOnce(JSON.stringify(defaultConfig));
 
       try {
-        await program.parseAsync(["node", "test", "config", "--get", "defaultDatabase"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--get",
+          "defaultDatabase",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -211,7 +234,13 @@ describe("Config Command", () => {
       mockFs.readFile.mockResolvedValueOnce(JSON.stringify(defaultConfig));
 
       try {
-        await program.parseAsync(["node", "test", "config", "--get", "rateLimit.reddit"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--get",
+          "rateLimit.reddit",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -223,7 +252,13 @@ describe("Config Command", () => {
       mockFs.readFile.mockResolvedValueOnce(JSON.stringify(defaultConfig));
 
       try {
-        await program.parseAsync(["node", "test", "config", "--get", "nonexistent"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--get",
+          "nonexistent",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -237,7 +272,13 @@ describe("Config Command", () => {
       mockFs.readFile.mockResolvedValueOnce(JSON.stringify(defaultConfig));
 
       try {
-        await program.parseAsync(["node", "test", "config", "--get", "rateLimit"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--get",
+          "rateLimit",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -257,7 +298,13 @@ describe("Config Command", () => {
       mockFs.writeFile.mockResolvedValueOnce(undefined);
 
       try {
-        await program.parseAsync(["node", "test", "config", "--set", "verbose=true"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--set",
+          "verbose=true",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -278,7 +325,13 @@ describe("Config Command", () => {
       mockFs.writeFile.mockResolvedValueOnce(undefined);
 
       try {
-        await program.parseAsync(["node", "test", "config", "--set", "rateLimit.reddit=120"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--set",
+          "rateLimit.reddit=120",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -296,10 +349,13 @@ describe("Config Command", () => {
 
       try {
         await program.parseAsync([
-          "node", "test", "config", 
-          "--set", "verbose=true",
+          "node",
+          "test",
+          "config",
+          "--set",
+          "verbose=true",
           "maxConcurrency=10",
-          "defaultDatabase=new.db"
+          "defaultDatabase=new.db",
         ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
@@ -317,7 +373,13 @@ describe("Config Command", () => {
       mockFs.readFile.mockResolvedValueOnce(JSON.stringify(defaultConfig));
 
       try {
-        await program.parseAsync(["node", "test", "config", "--set", "invalid"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--set",
+          "invalid",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -334,7 +396,13 @@ describe("Config Command", () => {
       mockFs.writeFile.mockResolvedValueOnce(undefined);
 
       try {
-        await program.parseAsync(["node", "test", "config", "--set", "verbose=false"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--set",
+          "verbose=false",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -351,7 +419,13 @@ describe("Config Command", () => {
       mockFs.writeFile.mockResolvedValueOnce(undefined);
 
       try {
-        await program.parseAsync(["node", "test", "config", "--set", "maxConcurrency=15"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--set",
+          "maxConcurrency=15",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -368,7 +442,13 @@ describe("Config Command", () => {
       mockFs.writeFile.mockResolvedValueOnce(undefined);
 
       try {
-        await program.parseAsync(["node", "test", "config", "--set", "defaultDatabase=my-database.db"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--set",
+          "defaultDatabase=my-database.db",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -407,7 +487,7 @@ describe("Config Command", () => {
 
       expect(mockPrompt).toHaveBeenCalled();
       expect(mockFs.writeFile).toHaveBeenCalled();
-      
+
       const [, content] = mockFs.writeFile.mock.calls[0];
       const savedConfig = JSON.parse(content);
       expect(savedConfig.defaultDatabase).toBe("interactive.db");
@@ -521,7 +601,13 @@ describe("Config Command", () => {
       mockFs.writeFile.mockRejectedValueOnce(new Error("Disk full"));
 
       try {
-        await program.parseAsync(["node", "test", "config", "--set", "verbose=true"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--set",
+          "verbose=true",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
@@ -554,14 +640,20 @@ describe("Config Command", () => {
       mockFs.writeFile.mockResolvedValueOnce(undefined);
 
       try {
-        await program.parseAsync(["node", "test", "config", "--global", "--reset"]);
+        await program.parseAsync([
+          "node",
+          "test",
+          "config",
+          "--global",
+          "--reset",
+        ]);
       } catch (error) {
         // Expected to throw due to mocked process.exit
       }
 
       expect(mockFs.mkdir).toHaveBeenCalledWith(
         path.dirname(globalConfigPath),
-        { recursive: true }
+        { recursive: true },
       );
     });
   });
