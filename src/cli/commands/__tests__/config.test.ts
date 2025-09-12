@@ -26,6 +26,17 @@ vi.mock("inquirer", () => ({
   },
 }));
 
+vi.mock("chalk", () => ({
+  default: {
+    cyan: (str: string) => str,
+    green: (str: string) => str,
+    yellow: (str: string) => str,
+    red: (str: string) => str,
+    gray: (str: string) => str,
+    blue: (str: string) => str,
+  },
+}))
+
 // Mock console methods to capture output
 const mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
 const mockConsoleError = vi
@@ -107,13 +118,11 @@ describe("Config Command", () => {
 
   describe("Default Configuration", () => {
     it("should create default config when file doesn't exist", async () => {
-      mockFs.readFile.mockRejectedValueOnce({ code: "ENOENT" });
+      const error = new Error("ENOENT: no such file or directory");
+      (error as any).code = "ENOENT";
+      mockFs.readFile.mockRejectedValueOnce(error);
 
-      try {
-        await program.parseAsync(["node", "test", "config", "--list"]);
-      } catch (error) {
-        // Expected to throw due to mocked process.exit
-      }
+      await program.parseAsync(["node", "test", "config", "--list"]);
 
       expect(mockConsoleLog).toHaveBeenCalled();
       const output = mockConsoleLog.mock.calls.join("\n");

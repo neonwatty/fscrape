@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from
 import Database from "better-sqlite3";
 import { DatabaseAnalytics } from "../../src/database/analytics.js";
 import { DatabaseManager } from "../../src/database/database.js";
-import { MigrationManager } from "../../src/database/migrations.js";
+import { DATABASE_SCHEMA, DATABASE_INDEXES } from "../../src/database/schema.js";
 import type { ForumPost, Comment, User } from "../../src/types/core.js";
 import { mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
@@ -23,8 +23,25 @@ describe("DatabaseAnalytics", () => {
   beforeEach(() => {
     db = new Database(dbPath);
     
-    const migrationManager = new MigrationManager(db);
-    migrationManager.loadSchemaFromFile();
+    // Drop all tables first to ensure clean state
+    db.exec(`
+      DROP TABLE IF EXISTS comments;
+      DROP TABLE IF EXISTS posts;
+      DROP TABLE IF EXISTS users;
+      DROP TABLE IF EXISTS scrape_sessions;
+      DROP TABLE IF EXISTS rate_limit_state;
+      DROP TABLE IF EXISTS scraping_metrics;
+    `);
+    
+    // Create tables
+    for (const [, tableSchema] of Object.entries(DATABASE_SCHEMA)) {
+      db.exec(tableSchema as string);
+    }
+    
+    // Create indexes
+    for (const indexSql of DATABASE_INDEXES) {
+      db.exec(indexSql);
+    }
     
     dbManager = new DatabaseManager(db);
     analytics = new DatabaseAnalytics(db);
@@ -34,11 +51,11 @@ describe("DatabaseAnalytics", () => {
     // Clean up database between tests
     if (db) {
       db.exec(`
-        DELETE FROM forum_posts;
+        DELETE FROM posts;
         DELETE FROM comments;
         DELETE FROM users;
-        DELETE FROM scraping_sessions;
-        DELETE FROM scraping_metrics;
+        DELETE FROM scrape_sessions;
+        DELETE FROM rate_limit_state;
       `);
       db.close();
     }
@@ -52,7 +69,7 @@ describe("DatabaseAnalytics", () => {
     // Clear any existing data first
     db.exec(`
       DELETE FROM comments;
-      DELETE FROM forum_posts;
+      DELETE FROM posts;
       DELETE FROM users;
     `);
     // Create posts with different scores and dates
@@ -528,7 +545,7 @@ describe("DatabaseAnalytics", () => {
             json_extract(metadata, '$.subreddit') as subreddit,
             COUNT(*) as post_count,
             AVG(score) as avg_score
-          FROM forum_posts
+          FROM posts
           WHERE platform = 'reddit' 
             AND json_extract(metadata, '$.subreddit') IS NOT NULL
           GROUP BY json_extract(metadata, '$.subreddit')
@@ -552,7 +569,7 @@ describe("DatabaseAnalytics", () => {
             score,
             comment_count,
             CAST(comment_count AS REAL) / NULLIF(score, 0) as engagement_rate
-          FROM forum_posts
+          FROM posts
           WHERE score > 0
           ORDER BY engagement_rate DESC
         `)

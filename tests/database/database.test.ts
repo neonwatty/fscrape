@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import Database from "better-sqlite3";
 import { DatabaseManager } from "../../src/database/database.js";
-import { MigrationManager } from "../../src/database/migrations.js";
+import { DATABASE_SCHEMA, DATABASE_INDEXES } from "../../src/database/schema.js";
 import type { ForumPost, Comment, User } from "../../src/types/core.js";
 import { mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
@@ -23,9 +23,24 @@ describe("DatabaseManager", () => {
     // Create fresh database for each test
     db = new Database(dbPath);
     
-    // Initialize schema
-    const migrationManager = new MigrationManager(db);
-    migrationManager.loadSchemaFromFile();
+    // Drop all tables first to ensure clean state
+    db.exec(`
+      DROP TABLE IF EXISTS comments;
+      DROP TABLE IF EXISTS posts;
+      DROP TABLE IF EXISTS users;
+      DROP TABLE IF EXISTS scrape_sessions;
+      DROP TABLE IF EXISTS rate_limit_state;
+      DROP TABLE IF EXISTS scraping_metrics;
+    `);
+    
+    // Initialize schema from schema.ts
+    for (const [, tableSchema] of Object.entries(DATABASE_SCHEMA)) {
+      db.exec(tableSchema as string);
+    }
+    
+    for (const indexSql of DATABASE_INDEXES) {
+      db.exec(indexSql);
+    }
     
     dbManager = new DatabaseManager(db);
   });
@@ -33,11 +48,12 @@ describe("DatabaseManager", () => {
   afterEach(() => {
     // Clean up database between tests
     db.exec(`
-      DELETE FROM forum_posts;
+      DELETE FROM posts;
       DELETE FROM comments;
       DELETE FROM users;
-      DELETE FROM scraping_sessions;
+      DELETE FROM scrape_sessions;
       DELETE FROM rate_limit_state;
+      DELETE FROM scraping_metrics;
     `);
   });
 
@@ -74,7 +90,7 @@ describe("DatabaseManager", () => {
       const result = await dbManager.upsertPost(updatedPost);
       
       expect(result.changes).toBe(1);
-      const post = db.prepare("SELECT score FROM forum_posts WHERE id = ?").get(samplePost.id) as any;
+      const post = db.prepare("SELECT score FROM posts WHERE id = ?").get(samplePost.id) as any;
       expect(post.score).toBe(200);
     });
 
@@ -98,7 +114,7 @@ describe("DatabaseManager", () => {
       });
 
       const redditPosts = db
-        .prepare("SELECT * FROM forum_posts WHERE platform = ?")
+        .prepare("SELECT * FROM posts WHERE platform = ?")
         .all("reddit") as any[];
       
       expect(redditPosts).toHaveLength(1);
@@ -285,7 +301,7 @@ describe("DatabaseManager", () => {
       await dbManager.updateSession(activeId, { status: "completed" });
 
       const activeSessions = db
-        .prepare("SELECT * FROM scraping_sessions WHERE status = 'running'")
+        .prepare("SELECT * FROM scrape_sessions WHERE status = 'running'")
         .all() as any[];
       
       expect(activeSessions).toHaveLength(2);
@@ -323,7 +339,7 @@ describe("DatabaseManager", () => {
       await expect(dbManager.bulkUpsertPosts(posts)).rejects.toThrow();
 
       // Verify no posts were inserted
-      const count = db.prepare("SELECT COUNT(*) as count FROM forum_posts").get() as any;
+      const count = db.prepare("SELECT COUNT(*) as count FROM posts").get() as any;
       expect(count.count).toBe(0);
     });
 
@@ -349,7 +365,7 @@ describe("DatabaseManager", () => {
       const results = await Promise.all(promises);
       expect(results).toHaveLength(10);
       
-      const count = db.prepare("SELECT COUNT(*) as count FROM forum_posts").get() as any;
+      const count = db.prepare("SELECT COUNT(*) as count FROM posts").get() as any;
       expect(count.count).toBe(10);
     });
   });
@@ -372,7 +388,7 @@ describe("DatabaseManager", () => {
       const result = await dbManager.upsertPost(post);
       expect(result.changes).toBe(1);
       
-      const saved = db.prepare("SELECT * FROM forum_posts WHERE id = ?").get("null-test") as any;
+      const saved = db.prepare("SELECT * FROM posts WHERE id = ?").get("null-test") as any;
       expect(saved.content).toBeNull();
       expect(saved.author_id).toBeNull();
       expect(saved.updated_at).toBeNull();
@@ -395,7 +411,7 @@ describe("DatabaseManager", () => {
       const result = await dbManager.upsertPost(post);
       expect(result.changes).toBe(1);
       
-      const saved = db.prepare("SELECT * FROM forum_posts WHERE id = ?").get("long-content") as any;
+      const saved = db.prepare("SELECT * FROM posts WHERE id = ?").get("long-content") as any;
       expect(saved.content).toHaveLength(10000);
     });
 

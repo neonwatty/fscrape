@@ -65,9 +65,7 @@
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.json",
-    "tests/**/*.ts",
-    "e2e/**/*.ts"
+    "src/**/*.json"
   ],
   "exclude": [
     "node_modules",

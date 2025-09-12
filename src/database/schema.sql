@@ -13,7 +13,7 @@ PRAGMA journal_mode = WAL;
 -- ============================================================================
 
 -- Forum posts table with generated columns for analytics
-CREATE TABLE IF NOT EXISTS forum_posts (
+CREATE TABLE IF NOT EXISTS posts (
     -- Primary identifiers
     id TEXT NOT NULL,
     platform TEXT NOT NULL CHECK(platform IN ('reddit', 'hackernews')),
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS comments (
     -- Constraints
     PRIMARY KEY (platform, platform_id),
     UNIQUE(id),
-    FOREIGN KEY (post_id) REFERENCES forum_posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE,
     CHECK(length(content) > 0)
 );
@@ -224,15 +224,15 @@ CREATE TABLE IF NOT EXISTS rate_limit_state (
 -- ============================================================================
 
 -- Forum posts indexes
-CREATE INDEX IF NOT EXISTS idx_posts_platform ON forum_posts(platform);
-CREATE INDEX IF NOT EXISTS idx_posts_author ON forum_posts(author);
-CREATE INDEX IF NOT EXISTS idx_posts_created_at ON forum_posts(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_posts_score ON forum_posts(score DESC);
-CREATE INDEX IF NOT EXISTS idx_posts_engagement ON forum_posts(engagement_rate DESC);
-CREATE INDEX IF NOT EXISTS idx_posts_scraped_at ON forum_posts(scraped_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_platform ON posts(platform);
+CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author);
+CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_score ON posts(score DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_engagement ON posts(engagement_rate DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_scraped_at ON posts(scraped_at DESC);
 
 -- Covering index for common queries
-CREATE INDEX IF NOT EXISTS idx_posts_listing ON forum_posts(
+CREATE INDEX IF NOT EXISTS idx_posts_listing ON posts(
     platform, created_at DESC, score DESC
 ) WHERE score > 0;
 
@@ -263,10 +263,10 @@ CREATE INDEX IF NOT EXISTS idx_metrics_time ON scraping_metrics(time_bucket DESC
 
 -- Update scraped_at on modifications
 CREATE TRIGGER IF NOT EXISTS update_post_scraped_at
-    AFTER UPDATE ON forum_posts
+    AFTER UPDATE ON posts
     FOR EACH ROW
 BEGIN
-    UPDATE forum_posts 
+    UPDATE posts 
     SET scraped_at = strftime('%s', 'now') * 1000 
     WHERE id = NEW.id;
 END;
@@ -282,7 +282,7 @@ END;
 
 -- Update user activity
 CREATE TRIGGER IF NOT EXISTS update_user_activity
-    AFTER INSERT ON forum_posts
+    AFTER INSERT ON posts
     FOR EACH ROW
 BEGIN
     UPDATE users 
@@ -322,7 +322,7 @@ SELECT
     p.*,
     CAST((p.score + p.comment_count * 2) AS REAL) / 
         (1 + (strftime('%s', 'now') * 1000 - p.created_at) / 3600000) AS hotness
-FROM forum_posts p
+FROM posts p
 WHERE p.created_at > (strftime('%s', 'now') * 1000 - 86400000)  -- Last 24 hours
 ORDER BY hotness DESC;
 
@@ -339,7 +339,7 @@ SELECT
     AVG(p.score) AS avg_post_score,
     AVG(c.score) AS avg_comment_score
 FROM users u
-LEFT JOIN forum_posts p ON u.platform = p.platform AND u.id = p.author_id
+LEFT JOIN posts p ON u.platform = p.platform AND u.id = p.author_id
 LEFT JOIN comments c ON u.platform = c.platform AND u.id = c.author_id
 GROUP BY u.platform, u.id;
 

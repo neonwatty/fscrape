@@ -18,6 +18,7 @@ import type { ScraperConfig } from "../../types/config.js";
 import type { Platform } from "../../types/core.js";
 import { DatabaseManager } from "../../database/database.js";
 import { MigrationManager } from "../../database/migrations.js";
+import { getErrorMessage } from "../../types/errors.js";
 import { validatePartialConfig } from "../../config/config-validator.js";
 import Database from "better-sqlite3";
 import chalk from "chalk";
@@ -127,9 +128,9 @@ async function handleInit(directory: string, options: any): Promise<void> {
   // Validate configuration
   try {
     validatePartialConfig(config);
-  } catch (error: any) {
+  } catch (error) {
     console.error(chalk.red("Configuration validation failed:"));
-    console.error(chalk.red(error.message));
+    console.error(chalk.red(getErrorMessage(error)));
     process.exit(1);
   }
 

@@ -6,6 +6,17 @@ import type {
   Platform,
   ScrapeResult,
 } from "../types/core.js";
+import type {
+  PostDBRow,
+  CommentDBRow,
+  UserDBRow,
+  MaybeDBRow,
+  DBRowArray,
+} from "../types/database.js";
+import {
+  dbTimestampToDate,
+  parseDBMetadata,
+} from "../types/database.js";
 
 export class DatabaseOperations {
   private connection: DatabaseConnection;
@@ -48,7 +59,7 @@ export class DatabaseOperations {
       SELECT * FROM posts WHERE id = ? AND platform = ?
     `);
 
-    const row = stmt.get(id, platform) as any;
+    const row = stmt.get(id, platform) as MaybeDBRow<PostDBRow>;
 
     if (!row) return null;
 
@@ -57,7 +68,7 @@ export class DatabaseOperations {
 
   getPosts(platform?: Platform, limit = 100, offset = 0): ForumPost[] {
     let query = "SELECT * FROM posts";
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (platform) {
       query += " WHERE platform = ?";
@@ -68,7 +79,7 @@ export class DatabaseOperations {
     params.push(limit, offset);
 
     const stmt = this.connection.prepare(query);
-    const rows = stmt.all(...params) as any[];
+    const rows = stmt.all(...params) as DBRowArray<PostDBRow>;
 
     return rows.map((row) => this.mapRowToPost(row));
   }
@@ -109,7 +120,7 @@ export class DatabaseOperations {
       ORDER BY created_at ASC
     `);
 
-    const rows = stmt.all(postId, platform) as any[];
+    const rows = stmt.all(postId, platform) as DBRowArray<CommentDBRow>;
 
     return rows.map((row) => this.mapRowToComment(row));
   }
@@ -145,7 +156,7 @@ export class DatabaseOperations {
       SELECT * FROM users WHERE id = ? AND platform = ?
     `);
 
-    const row = stmt.get(id, platform) as any;
+    const row = stmt.get(id, platform) as MaybeDBRow<UserDBRow>;
 
     if (!row) return null;
 
@@ -303,7 +314,7 @@ export class DatabaseOperations {
   }
 
   // Helper methods
-  private mapRowToPost(row: any): ForumPost {
+  private mapRowToPost(row: PostDBRow): ForumPost {
     return {
       id: row.id,
       title: row.title,
@@ -316,11 +327,11 @@ export class DatabaseOperations {
       createdAt: new Date(row.created_at),
       updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
       platform: row.platform as Platform,
-      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+      metadata: parseDBMetadata(row.metadata) || undefined,
     };
   }
 
-  private mapRowToComment(row: any): Comment {
+  private mapRowToComment(row: CommentDBRow): Comment {
     return {
       id: row.id,
       postId: row.post_id,
@@ -336,14 +347,14 @@ export class DatabaseOperations {
     };
   }
 
-  private mapRowToUser(row: any): User {
+  private mapRowToUser(row: UserDBRow): User {
     return {
       id: row.id,
       username: row.username,
       karma: row.karma || undefined,
       createdAt: row.created_at ? new Date(row.created_at) : undefined,
       platform: row.platform as Platform,
-      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+      metadata: parseDBMetadata(row.metadata) || undefined,
     };
   }
 }

@@ -8,6 +8,7 @@ import chalk from "chalk";
 import inquirer from "inquirer";
 import { promises as fs } from "fs";
 import path from "path";
+import { isNodeError } from "../../types/errors.js";
 import { homedir } from "os";
 import { formatError } from "../validation.js";
 
@@ -89,8 +90,8 @@ async function loadConfig(configPath: string): Promise<ConfigData> {
   try {
     const data = await fs.readFile(configPath, "utf-8");
     return JSON.parse(data);
-  } catch (error: any) {
-    if (error.code === "ENOENT") {
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
       return getDefaultConfig();
     }
     throw error;

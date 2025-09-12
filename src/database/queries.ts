@@ -168,10 +168,10 @@ export class PreparedQueries {
 
     const insertComment = db.prepare(`
       INSERT INTO comments (
-        id, platform_id, post_id, parent_id, platform, author, author_id,
-        content, score, depth, created_at, updated_at
+        id, post_id, platform, parent_id, author, author_id,
+        content, score, created_at, updated_at, depth
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
     `);
 
@@ -315,56 +315,49 @@ export class PreparedQueries {
     // ============================================================================
 
     const createSession = db.prepare(`
-      INSERT INTO scraping_sessions (
-        session_id, platform, status, query_type, query_value,
-        total_items_target, total_items_scraped, total_posts, total_comments, total_users,
-        started_at, last_activity_at
+      INSERT INTO scrape_sessions (
+        platform, query, subreddit, category, started_at, 
+        status, total_posts, total_comments, total_users, metadata
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
     `);
 
     const updateSession = db.prepare(`
-      UPDATE scraping_sessions
+      UPDATE scrape_sessions
       SET status = COALESCE(@status, status),
-          total_items_target = COALESCE(@totalItemsTarget, total_items_target),
-          total_items_scraped = COALESCE(@totalItemsScraped, total_items_scraped),
           total_posts = COALESCE(@totalPosts, total_posts),
           total_comments = COALESCE(@totalComments, total_comments),
           total_users = COALESCE(@totalUsers, total_users),
-          last_item_id = COALESCE(@lastItemId, last_item_id),
-          resume_token = COALESCE(@resumeToken, resume_token),
-          last_activity_at = @lastActivityAt,
           completed_at = COALESCE(@completedAt, completed_at),
-          error_count = COALESCE(@errorCount, error_count),
-          last_error = COALESCE(@lastError, last_error)
-      WHERE session_id = @sessionId
+          error_message = COALESCE(@errorMessage, error_message),
+          metadata = COALESCE(@metadata, metadata)
+      WHERE id = @id
     `);
 
     const getSession = db.prepare(`
-      SELECT * FROM scraping_sessions
-      WHERE session_id = ?
+      SELECT * FROM scrape_sessions
+      WHERE id = ?
     `);
 
     const getActiveSessions = db.prepare(`
-      SELECT * FROM scraping_sessions
+      SELECT * FROM scrape_sessions
       WHERE status IN ('pending', 'running')
       ORDER BY started_at DESC
     `);
 
     const getSessionsByPlatform = db.prepare(`
-      SELECT * FROM scraping_sessions
+      SELECT * FROM scrape_sessions
       WHERE platform = ?
       ORDER BY started_at DESC
       LIMIT ? OFFSET ?
     `);
 
     const completeSession = db.prepare(`
-      UPDATE scraping_sessions
+      UPDATE scrape_sessions
       SET status = 'completed',
-          completed_at = @completedAt,
-          last_activity_at = @completedAt
-      WHERE session_id = @sessionId
+          completed_at = @completedAt
+      WHERE id = @id
     `);
 
     this.sessions = {
@@ -386,7 +379,7 @@ export class PreparedQueries {
 
     const insertMetric = db.prepare(`
       INSERT INTO scraping_metrics (
-        session_id, platform, time_bucket,
+        id, platform, time_bucket,
         requests_made, requests_successful, requests_failed,
         posts_scraped, comments_scraped, users_scraped,
         avg_response_time_ms, rate_limit_hits
@@ -400,30 +393,30 @@ export class PreparedQueries {
 
     const upsertMetric = db.prepare(`
       INSERT OR REPLACE INTO scraping_metrics (
-        session_id, platform, time_bucket,
+        id, platform, time_bucket,
         requests_made, requests_successful, requests_failed,
         posts_scraped, comments_scraped, users_scraped,
         avg_response_time_ms, rate_limit_hits
       ) VALUES (
         @sessionId, @platform, @timeBucket,
-        COALESCE(@requestsMade, 0) + COALESCE((SELECT requests_made FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
-        COALESCE(@requestsSuccessful, 0) + COALESCE((SELECT requests_successful FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
-        COALESCE(@requestsFailed, 0) + COALESCE((SELECT requests_failed FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
-        COALESCE(@postsScraped, 0) + COALESCE((SELECT posts_scraped FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
-        COALESCE(@commentsScraped, 0) + COALESCE((SELECT comments_scraped FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
-        COALESCE(@usersScraped, 0) + COALESCE((SELECT users_scraped FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0),
+        COALESCE(@requestsMade, 0) + COALESCE((SELECT requests_made FROM scraping_metrics WHERE id = @sessionId AND time_bucket = @timeBucket), 0),
+        COALESCE(@requestsSuccessful, 0) + COALESCE((SELECT requests_successful FROM scraping_metrics WHERE id = @sessionId AND time_bucket = @timeBucket), 0),
+        COALESCE(@requestsFailed, 0) + COALESCE((SELECT requests_failed FROM scraping_metrics WHERE id = @sessionId AND time_bucket = @timeBucket), 0),
+        COALESCE(@postsScraped, 0) + COALESCE((SELECT posts_scraped FROM scraping_metrics WHERE id = @sessionId AND time_bucket = @timeBucket), 0),
+        COALESCE(@commentsScraped, 0) + COALESCE((SELECT comments_scraped FROM scraping_metrics WHERE id = @sessionId AND time_bucket = @timeBucket), 0),
+        COALESCE(@usersScraped, 0) + COALESCE((SELECT users_scraped FROM scraping_metrics WHERE id = @sessionId AND time_bucket = @timeBucket), 0),
         CASE
-          WHEN @avgResponseTimeMs IS NULL THEN (SELECT avg_response_time_ms FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket)
-          WHEN (SELECT avg_response_time_ms FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket) IS NULL THEN @avgResponseTimeMs
-          ELSE (@avgResponseTimeMs + COALESCE((SELECT avg_response_time_ms FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0)) / 2
+          WHEN @avgResponseTimeMs IS NULL THEN (SELECT avg_response_time_ms FROM scraping_metrics WHERE id = @sessionId AND time_bucket = @timeBucket)
+          WHEN (SELECT avg_response_time_ms FROM scraping_metrics WHERE id = @sessionId AND time_bucket = @timeBucket) IS NULL THEN @avgResponseTimeMs
+          ELSE (@avgResponseTimeMs + COALESCE((SELECT avg_response_time_ms FROM scraping_metrics WHERE id = @sessionId AND time_bucket = @timeBucket), 0)) / 2
         END,
-        COALESCE(@rateLimitHits, 0) + COALESCE((SELECT rate_limit_hits FROM scraping_metrics WHERE session_id = @sessionId AND time_bucket = @timeBucket), 0)
+        COALESCE(@rateLimitHits, 0) + COALESCE((SELECT rate_limit_hits FROM scraping_metrics WHERE id = @sessionId AND time_bucket = @timeBucket), 0)
       )
     `);
 
     const getMetricsBySession = db.prepare(`
       SELECT * FROM scraping_metrics
-      WHERE session_id = ?
+      WHERE id = ?
       ORDER BY time_bucket DESC
     `);
 
@@ -511,18 +504,18 @@ export class PreparedQueries {
 
     const incrementRateLimit = db.prepare(`
       INSERT OR REPLACE INTO rate_limit_state (
-        platform, window_start, requests_in_window, 
+        platform, window_start, requests_count, 
         last_request_at, retry_after
       ) VALUES (
         ?, ?, 
-        COALESCE((SELECT requests_in_window FROM rate_limit_state WHERE platform = ?), 0) + 1,
+        COALESCE((SELECT requests_count FROM rate_limit_state WHERE platform = ?), 0) + 1,
         ?, NULL
       )
     `);
 
     const resetRateLimit = db.prepare(`
       UPDATE rate_limit_state
-      SET requests_in_window = 0,
+      SET requests_count = 0,
           window_start = @windowStart,
           consecutive_errors = 0,
           retry_after = NULL,
@@ -595,9 +588,9 @@ export class PreparedQueries {
         last_seen_at INTEGER,
         metadata TEXT
       )`,
-      `CREATE TABLE IF NOT EXISTS scraping_sessions (
+      `CREATE TABLE IF NOT EXISTS scrape_sessions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id TEXT UNIQUE NOT NULL,
+        id TEXT UNIQUE NOT NULL,
         platform TEXT NOT NULL,
         query_type TEXT,
         query_value TEXT,
@@ -617,7 +610,7 @@ export class PreparedQueries {
       )`,
       `CREATE TABLE IF NOT EXISTS scraping_metrics (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id TEXT,
+        id TEXT,
         platform TEXT,
         time_bucket INTEGER,
         requests_made INTEGER DEFAULT 0,
@@ -631,7 +624,7 @@ export class PreparedQueries {
         avg_response_time_ms REAL DEFAULT 0,
         rate_limit_hits INTEGER DEFAULT 0,
         created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
-        UNIQUE(session_id, time_bucket)
+        UNIQUE(id, time_bucket)
       )`,
       `CREATE TABLE IF NOT EXISTS rate_limit_state (
         platform TEXT PRIMARY KEY,
@@ -654,11 +647,11 @@ export class PreparedQueries {
       }
     }
 
-    // Add new columns to scraping_sessions if they don't exist
+    // Add new columns to scrape_sessions if they don't exist
     const columnAdditions = [
-      `ALTER TABLE scraping_sessions ADD COLUMN total_posts INTEGER DEFAULT 0`,
-      `ALTER TABLE scraping_sessions ADD COLUMN total_comments INTEGER DEFAULT 0`,
-      `ALTER TABLE scraping_sessions ADD COLUMN total_users INTEGER DEFAULT 0`,
+      `ALTER TABLE scrape_sessions ADD COLUMN total_posts INTEGER DEFAULT 0`,
+      `ALTER TABLE scrape_sessions ADD COLUMN total_comments INTEGER DEFAULT 0`,
+      `ALTER TABLE scrape_sessions ADD COLUMN total_users INTEGER DEFAULT 0`,
     ];
 
     for (const sql of columnAdditions) {

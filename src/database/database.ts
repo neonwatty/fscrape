@@ -202,17 +202,16 @@ export class DatabaseManager {
         // Insert new comment
         const result = this.queries.insertComment.run(
           comment.id,
-          comment.id, // platform_id is the same as id for comments
           comment.postId,
-          comment.parentId || null,
           comment.platform,
+          comment.parentId || null,
           comment.author,
           comment.authorId || null,
           comment.content,
           comment.score,
-          comment.depth,
           comment.createdAt.getTime(),
           comment.updatedAt?.getTime() || null,
+          comment.depth,
         );
 
         return { changes: result.changes, inserted: true };

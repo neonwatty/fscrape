@@ -94,6 +94,24 @@ export const DATABASE_SCHEMA = {
       updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
     )
   `,
+
+  scraping_metrics: `
+    CREATE TABLE IF NOT EXISTS scraping_metrics (
+      id TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      time_bucket INTEGER NOT NULL,
+      requests_made INTEGER DEFAULT 0,
+      requests_successful INTEGER DEFAULT 0,
+      requests_failed INTEGER DEFAULT 0,
+      posts_scraped INTEGER DEFAULT 0,
+      comments_scraped INTEGER DEFAULT 0,
+      users_scraped INTEGER DEFAULT 0,
+      avg_response_time_ms REAL,
+      rate_limit_hits INTEGER DEFAULT 0,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      PRIMARY KEY (id, platform, time_bucket)
+    )
+  `,
 };
 
 export const DATABASE_INDEXES = [

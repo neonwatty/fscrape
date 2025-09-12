@@ -10,6 +10,7 @@ import {
   formatError,
 } from "../validation.js";
 import type { StatusOptions } from "../validation.js";
+import type { StatusCommandOptions } from "../../types/cli.js";
 import { DatabaseManager } from "../../database/database.js";
 import chalk from "chalk";
 import Table from "cli-table3";
@@ -34,7 +35,7 @@ export function createStatusCommand(): Command {
       7,
     )
     .option("--verbose", "Show detailed statistics", false)
-    .action(async (options: any) => {
+    .action(async (options: StatusCommandOptions) => {
       try {
         await handleStatus(options);
       } catch (error) {
@@ -49,7 +50,7 @@ export function createStatusCommand(): Command {
 /**
  * Handle the status command
  */
-async function handleStatus(options: any): Promise<void> {
+async function handleStatus(options: StatusCommandOptions): Promise<void> {
   // Validate options
   const statusOptions = validateStatusOptions({
     database: options.database,
