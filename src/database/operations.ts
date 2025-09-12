@@ -171,18 +171,18 @@ export class DatabaseOperations {
     category?: string,
   ): number {
     const stmt = this.connection.prepare(`
-      INSERT INTO scrape_sessions (
-        platform, query, subreddit, category, started_at, status
+      INSERT INTO scraping_sessions (
+        session_id, platform, query_type, query_value, started_at, status
       ) VALUES (
-        @platform, @query, @subreddit, @category, @startedAt, 'running'
+        @sessionId, @platform, @queryType, @queryValue, @startedAt, 'running'
       )
     `);
 
     const result = stmt.run({
+      sessionId: `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       platform,
-      query: query || null,
-      subreddit: subreddit || null,
-      category: category || null,
+      queryType: subreddit ? 'subreddit' : query ? 'search' : 'frontpage',
+      queryValue: subreddit || query || null,
       startedAt: Date.now(),
     });
 
@@ -196,13 +196,13 @@ export class DatabaseOperations {
     error?: string,
   ): void {
     const stmt = this.connection.prepare(`
-      UPDATE scrape_sessions
+      UPDATE scraping_sessions
       SET status = @status,
           completed_at = @completedAt,
           total_posts = @totalPosts,
           total_comments = @totalComments,
           total_users = @totalUsers,
-          error_message = @errorMessage
+          last_error = @errorMessage
       WHERE id = @id
     `);
 
@@ -282,7 +282,7 @@ export class DatabaseOperations {
     const recentSessions = db
       .prepare(
         `
-      SELECT * FROM scrape_sessions${baseQuery}
+      SELECT * FROM scraping_sessions${baseQuery}
       ORDER BY started_at DESC
       LIMIT 10
     `,
@@ -307,7 +307,7 @@ export class DatabaseOperations {
       db.prepare("DELETE FROM comments WHERE scraped_at < ?").run(cutoffTime);
       db.prepare("DELETE FROM posts WHERE scraped_at < ?").run(cutoffTime);
       db.prepare("DELETE FROM users WHERE scraped_at < ?").run(cutoffTime);
-      db.prepare("DELETE FROM scrape_sessions WHERE started_at < ?").run(
+      db.prepare("DELETE FROM scraping_sessions WHERE started_at < ?").run(
         cutoffTime,
       );
     })();

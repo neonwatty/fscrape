@@ -87,10 +87,10 @@ export class PreparedQueries {
 
     const insertPost = db.prepare(`
       INSERT INTO posts (
-        id, platform, title, content, author, author_id, url,
+        id, platform, platform_id, title, content, author, author_id, url,
         score, comment_count, created_at, updated_at, metadata
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
     `);
 
@@ -315,8 +315,8 @@ export class PreparedQueries {
     // ============================================================================
 
     const createSession = db.prepare(`
-      INSERT INTO scrape_sessions (
-        platform, query, subreddit, category, started_at, 
+      INSERT INTO scraping_sessions (
+        session_id, platform, query_type, query_value, started_at, 
         status, total_posts, total_comments, total_users, metadata
       ) VALUES (
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
@@ -324,37 +324,37 @@ export class PreparedQueries {
     `);
 
     const updateSession = db.prepare(`
-      UPDATE scrape_sessions
+      UPDATE scraping_sessions
       SET status = COALESCE(@status, status),
           total_posts = COALESCE(@totalPosts, total_posts),
           total_comments = COALESCE(@totalComments, total_comments),
           total_users = COALESCE(@totalUsers, total_users),
           completed_at = COALESCE(@completedAt, completed_at),
-          error_message = COALESCE(@errorMessage, error_message),
+          last_error = COALESCE(@errorMessage, last_error),
           metadata = COALESCE(@metadata, metadata)
       WHERE id = @id
     `);
 
     const getSession = db.prepare(`
-      SELECT * FROM scrape_sessions
+      SELECT * FROM scraping_sessions
       WHERE id = ?
     `);
 
     const getActiveSessions = db.prepare(`
-      SELECT * FROM scrape_sessions
+      SELECT * FROM scraping_sessions
       WHERE status IN ('pending', 'running')
       ORDER BY started_at DESC
     `);
 
     const getSessionsByPlatform = db.prepare(`
-      SELECT * FROM scrape_sessions
+      SELECT * FROM scraping_sessions
       WHERE platform = ?
       ORDER BY started_at DESC
       LIMIT ? OFFSET ?
     `);
 
     const completeSession = db.prepare(`
-      UPDATE scrape_sessions
+      UPDATE scraping_sessions
       SET status = 'completed',
           completed_at = @completedAt
       WHERE id = @id
@@ -504,18 +504,18 @@ export class PreparedQueries {
 
     const incrementRateLimit = db.prepare(`
       INSERT OR REPLACE INTO rate_limit_state (
-        platform, window_start, requests_count, 
+        platform, window_start, requests_in_window, 
         last_request_at, retry_after
       ) VALUES (
         ?, ?, 
-        COALESCE((SELECT requests_count FROM rate_limit_state WHERE platform = ?), 0) + 1,
+        COALESCE((SELECT requests_in_window FROM rate_limit_state WHERE platform = ?), 0) + 1,
         ?, NULL
       )
     `);
 
     const resetRateLimit = db.prepare(`
       UPDATE rate_limit_state
-      SET requests_count = 0,
+      SET requests_in_window = 0,
           window_start = @windowStart,
           consecutive_errors = 0,
           retry_after = NULL,
@@ -588,7 +588,7 @@ export class PreparedQueries {
         last_seen_at INTEGER,
         metadata TEXT
       )`,
-      `CREATE TABLE IF NOT EXISTS scrape_sessions (
+      `CREATE TABLE IF NOT EXISTS scraping_sessions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         id TEXT UNIQUE NOT NULL,
         platform TEXT NOT NULL,
@@ -629,7 +629,7 @@ export class PreparedQueries {
       `CREATE TABLE IF NOT EXISTS rate_limit_state (
         platform TEXT PRIMARY KEY,
         window_start INTEGER,
-        requests_count INTEGER DEFAULT 0,
+        requests_in_window INTEGER DEFAULT 0,
         last_request_at INTEGER,
         retry_after INTEGER,
         consecutive_errors INTEGER DEFAULT 0,
@@ -647,11 +647,11 @@ export class PreparedQueries {
       }
     }
 
-    // Add new columns to scrape_sessions if they don't exist
+    // Add new columns to scraping_sessions if they don't exist
     const columnAdditions = [
-      `ALTER TABLE scrape_sessions ADD COLUMN total_posts INTEGER DEFAULT 0`,
-      `ALTER TABLE scrape_sessions ADD COLUMN total_comments INTEGER DEFAULT 0`,
-      `ALTER TABLE scrape_sessions ADD COLUMN total_users INTEGER DEFAULT 0`,
+      `ALTER TABLE scraping_sessions ADD COLUMN total_posts INTEGER DEFAULT 0`,
+      `ALTER TABLE scraping_sessions ADD COLUMN total_comments INTEGER DEFAULT 0`,
+      `ALTER TABLE scraping_sessions ADD COLUMN total_users INTEGER DEFAULT 0`,
     ];
 
     for (const sql of columnAdditions) {

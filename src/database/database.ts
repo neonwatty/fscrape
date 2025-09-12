@@ -107,6 +107,7 @@ export class DatabaseManager {
         const result = this.queries.insertPost.run(
           post.id,
           post.platform,
+          post.platformId,
           post.title,
           post.content,
           post.author,
@@ -443,7 +444,7 @@ export class DatabaseManager {
 
   getSession(sessionId: number): SessionInfo | null {
     const row = this.db
-      .prepare("SELECT * FROM scrape_sessions WHERE id = ?")
+      .prepare("SELECT * FROM scraping_sessions WHERE id = ?")
       .get(sessionId);
     return row ? this.mapRowToSession(row as any) : null;
   }
@@ -452,12 +453,12 @@ export class DatabaseManager {
     const rows = platform
       ? this.db
           .prepare(
-            'SELECT * FROM scrape_sessions WHERE platform = ? AND status IN ("pending", "running")',
+            'SELECT * FROM scraping_sessions WHERE platform = ? AND status IN ("pending", "running")',
           )
           .all(platform)
       : this.db
           .prepare(
-            'SELECT * FROM scrape_sessions WHERE status IN ("pending", "running")',
+            'SELECT * FROM scraping_sessions WHERE status IN ("pending", "running")',
           )
           .all();
 
@@ -470,7 +471,7 @@ export class DatabaseManager {
   getActiveSessions(limit = 10): SessionInfo[] {
     const rows = this.db
       .prepare(
-        `SELECT * FROM scrape_sessions 
+        `SELECT * FROM scraping_sessions 
          WHERE status IN ('running', 'pending') 
          ORDER BY started_at DESC 
          LIMIT ?`,
@@ -485,11 +486,11 @@ export class DatabaseManager {
    */
   getRecentSessions(limit = 10, platform?: Platform): SessionInfo[] {
     const query = platform
-      ? `SELECT * FROM scrape_sessions 
+      ? `SELECT * FROM scraping_sessions 
          WHERE platform = ? 
          ORDER BY started_at DESC 
          LIMIT ?`
-      : `SELECT * FROM scrape_sessions 
+      : `SELECT * FROM scraping_sessions 
          ORDER BY started_at DESC 
          LIMIT ?`;
 
@@ -675,10 +676,10 @@ export class DatabaseManager {
     if (row.total_users !== null && row.total_users !== undefined)
       session.totalUsers = row.total_users;
     if (row.completed_at) session.completedAt = new Date(row.completed_at);
-    if (row.error_message) {
-      session.lastError = row.error_message;
+    if (row.last_error) {
+      session.lastError = row.last_error;
       // Add errorMessage property for test compatibility
-      (session as any).errorMessage = row.error_message;
+      (session as any).errorMessage = row.last_error;
     }
 
     return session;
@@ -866,7 +867,7 @@ export class DatabaseManager {
 
       // Clean up orphaned sessions
       this.db
-        .prepare("DELETE FROM scrape_sessions WHERE started_at < ?")
+        .prepare("DELETE FROM scraping_sessions WHERE started_at < ?")
         .run(cutoffTime);
     });
 

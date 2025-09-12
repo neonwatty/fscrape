@@ -17,6 +17,7 @@ export interface BaseDBRow {
 export interface PostDBRow extends BaseDBRow {
   id: string;
   platform: string;
+  platform_id: string;
   title: string;
   content: string | null;
   author: string;
@@ -36,16 +37,17 @@ export interface PostDBRow extends BaseDBRow {
  */
 export interface CommentDBRow extends BaseDBRow {
   id: string;
-  post_id: string;
   platform: string;
+  platform_id: string;
+  post_id: string;
   parent_id: string | null;
   author: string;
   author_id: string | null;
   content: string;
   score: number;
+  depth: number;
   created_at: number;
   updated_at: number | null;
-  depth: number;
 }
 
 /**
@@ -56,6 +58,8 @@ export interface UserDBRow extends BaseDBRow {
   platform: string;
   username: string;
   karma: number | null;
+  post_count: number;
+  comment_count: number;
   created_at: number | null;
   last_seen_at: number | null;
   metadata: string | null;
@@ -66,17 +70,25 @@ export interface UserDBRow extends BaseDBRow {
  */
 export interface SessionDBRow {
   id: number;
+  session_id: string;
   platform: string;
-  query: string | null;
-  subreddit: string | null;
-  category: string | null;
-  started_at: number;
-  completed_at: number | null;
+  query_type: string | null;
+  query_value: string | null;
+  sort_by: string | null;
+  time_range: string | null;
   status: string;
+  total_items_target: number | null;
+  total_items_scraped: number;
   total_posts: number;
   total_comments: number;
   total_users: number;
-  error_message: string | null;
+  last_item_id: string | null;
+  resume_token: string | null;
+  started_at: number;
+  completed_at: number | null;
+  last_activity_at: number;
+  error_count: number;
+  last_error: string | null;
   metadata: string | null;
 }
 
@@ -85,7 +97,7 @@ export interface SessionDBRow {
  */
 export interface RateLimitDBRow {
   platform: string;
-  requests_count: number;
+  requests_in_window: number;
   window_start: number;
   last_request_at: number | null;
   retry_after: number | null;

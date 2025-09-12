@@ -64,20 +64,28 @@ export const DATABASE_SCHEMA = {
     )
   `,
 
-  scrape_sessions: `
-    CREATE TABLE IF NOT EXISTS scrape_sessions (
+  scraping_sessions: `
+    CREATE TABLE IF NOT EXISTS scraping_sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT UNIQUE NOT NULL,
       platform TEXT NOT NULL,
-      query TEXT,
-      subreddit TEXT,
-      category TEXT,
-      started_at INTEGER NOT NULL,
-      completed_at INTEGER,
-      status TEXT NOT NULL,
+      query_type TEXT,
+      query_value TEXT,
+      sort_by TEXT,
+      time_range TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      total_items_target INTEGER,
+      total_items_scraped INTEGER DEFAULT 0,
       total_posts INTEGER DEFAULT 0,
       total_comments INTEGER DEFAULT 0,
       total_users INTEGER DEFAULT 0,
-      error_message TEXT,
+      last_item_id TEXT,
+      resume_token TEXT,
+      started_at INTEGER NOT NULL,
+      completed_at INTEGER,
+      last_activity_at INTEGER,
+      error_count INTEGER DEFAULT 0,
+      last_error TEXT,
       metadata TEXT
     )
   `,
@@ -85,7 +93,7 @@ export const DATABASE_SCHEMA = {
   rate_limit_state: `
     CREATE TABLE IF NOT EXISTS rate_limit_state (
       platform TEXT PRIMARY KEY,
-      requests_count INTEGER DEFAULT 0,
+      requests_in_window INTEGER DEFAULT 0,
       window_start INTEGER NOT NULL,
       last_request_at INTEGER,
       retry_after INTEGER,
@@ -129,9 +137,9 @@ export const DATABASE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_users_platform ON users(platform)",
   "CREATE INDEX IF NOT EXISTS idx_users_karma ON users(karma DESC) WHERE karma > 0",
 
-  "CREATE INDEX IF NOT EXISTS idx_sessions_platform ON scrape_sessions(platform)",
-  "CREATE INDEX IF NOT EXISTS idx_sessions_status ON scrape_sessions(status)",
-  "CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON scrape_sessions(started_at)",
+  "CREATE INDEX IF NOT EXISTS idx_sessions_platform ON scraping_sessions(platform)",
+  "CREATE INDEX IF NOT EXISTS idx_sessions_status ON scraping_sessions(status)",
+  "CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON scraping_sessions(started_at)",
 ];
 
 export const DATABASE_TRIGGERS = [

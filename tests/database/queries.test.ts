@@ -465,7 +465,7 @@ describe("PreparedQueries", () => {
       queries.rateLimit.increment.run("reddit", now, "reddit", now);
       
       const limit = queries.rateLimit.get.get("reddit") as any;
-      expect(limit.requests_count).toBe(2);
+      expect(limit.requests_in_window).toBe(2);
     });
 
     it("should reset old rate limits", () => {

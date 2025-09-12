@@ -127,7 +127,7 @@ export class DatabaseAnalytics {
         AVG(m.avg_response_time_ms) as avg_response_time,
         CAST((s.total_posts + s.total_comments + s.total_users) AS REAL) / 
           MAX(1, (COALESCE(s.completed_at, strftime('%s', 'now') * 1000) - s.started_at) / 1000.0) as items_per_second
-      FROM scrape_sessions s
+      FROM scraping_sessions s
       LEFT JOIN scraping_metrics m ON m.id = CAST(s.id AS TEXT)
       WHERE s.id = ?
       GROUP BY s.id
@@ -489,7 +489,7 @@ export class DatabaseAnalytics {
          COALESCE(total_users, 0)) as totalItems,
         started_at as created_at,
         completed_at as updated_at
-      FROM scrape_sessions
+      FROM scraping_sessions
       WHERE status = 'completed'
       ORDER BY started_at DESC
     `;
@@ -502,7 +502,7 @@ export class DatabaseAnalytics {
       SELECT 
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful,
         COUNT(*) as total
-      FROM scrape_sessions
+      FROM scraping_sessions
     `;
 
     const result = this.db.prepare(query).get() as any;
@@ -906,7 +906,7 @@ export class DatabaseAnalytics {
       "posts",
       "comments",
       "users",
-      "scrape_sessions",
+      "scraping_sessions",
       "scraping_metrics",
       "daily_stats",
     ];
@@ -972,8 +972,8 @@ export class DatabaseAnalytics {
           last_seen_at INTEGER
         )
       `,
-      scrape_sessions: `
-        CREATE TABLE IF NOT EXISTS scrape_sessions (
+      scraping_sessions: `
+        CREATE TABLE IF NOT EXISTS scraping_sessions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           session_id TEXT UNIQUE NOT NULL,
           platform TEXT NOT NULL,
@@ -1032,7 +1032,7 @@ export class DatabaseAnalytics {
         .prepare("SELECT COUNT(*) as count FROM users")
         .get() as any;
       const sessionCount = this.db
-        .prepare("SELECT COUNT(*) as count FROM scrape_sessions")
+        .prepare("SELECT COUNT(*) as count FROM scraping_sessions")
         .get() as any;
 
       // Get oldest and newest posts
