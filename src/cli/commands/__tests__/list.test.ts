@@ -12,6 +12,7 @@ import {
   beforeEach,
   vi,
 } from "vitest";
+import type { Mock } from "vitest";
 import { Command } from "commander";
 import { createListCommand } from "../list.js";
 import { DatabaseManager } from "../../../database/database.js";
@@ -148,7 +149,7 @@ describe("List Command", () => {
         },
       ];
 
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -164,7 +165,7 @@ describe("List Command", () => {
           "--format",
           "json",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -204,7 +205,7 @@ describe("List Command", () => {
         },
       ];
 
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -220,7 +221,7 @@ describe("List Command", () => {
           "--format",
           "simple",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -253,7 +254,7 @@ describe("List Command", () => {
         },
       ];
 
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -269,7 +270,7 @@ describe("List Command", () => {
           "--min-karma",
           "500",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -301,7 +302,7 @@ describe("List Command", () => {
         },
       };
 
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -310,7 +311,7 @@ describe("List Command", () => {
 
       try {
         await program.parseAsync(["node", "test", "list", "stats"]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -366,7 +367,7 @@ describe("List Command", () => {
         ],
       };
 
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -381,7 +382,7 @@ describe("List Command", () => {
           "search",
           "search term",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -407,7 +408,7 @@ describe("List Command", () => {
         },
       ];
 
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -425,7 +426,7 @@ describe("List Command", () => {
           "--limit",
           "1",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -450,7 +451,7 @@ describe("List Command", () => {
         },
       ];
 
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -466,7 +467,7 @@ describe("List Command", () => {
           "--format",
           "json",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -491,7 +492,7 @@ describe("List Command", () => {
         },
       ];
 
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -507,7 +508,7 @@ describe("List Command", () => {
           "--format",
           "simple",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -521,7 +522,7 @@ describe("List Command", () => {
 
   describe("Filtering Options", () => {
     it("should filter by platform", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       const queryPostsMock = vi.fn().mockResolvedValue([]);
 
       MockedDb.mockImplementation(() => ({
@@ -539,7 +540,7 @@ describe("List Command", () => {
           "--platform",
           "reddit",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -551,7 +552,7 @@ describe("List Command", () => {
     });
 
     it("should filter by author", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       const queryPostsMock = vi.fn().mockResolvedValue([]);
 
       MockedDb.mockImplementation(() => ({
@@ -569,7 +570,7 @@ describe("List Command", () => {
           "--author",
           "testuser",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -581,7 +582,7 @@ describe("List Command", () => {
     });
 
     it("should filter by minimum score", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       const queryPostsMock = vi.fn().mockResolvedValue([]);
 
       MockedDb.mockImplementation(() => ({
@@ -599,7 +600,7 @@ describe("List Command", () => {
           "--min-score",
           "100",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -611,7 +612,7 @@ describe("List Command", () => {
     });
 
     it("should filter by date range", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       const queryPostsMock = vi.fn().mockResolvedValue([]);
 
       MockedDb.mockImplementation(() => ({
@@ -631,7 +632,7 @@ describe("List Command", () => {
           "--end-date",
           "2024-12-31",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -646,7 +647,7 @@ describe("List Command", () => {
 
   describe("Sorting Options", () => {
     it("should sort by date", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       const queryPostsMock = vi.fn().mockResolvedValue([]);
 
       MockedDb.mockImplementation(() => ({
@@ -666,7 +667,7 @@ describe("List Command", () => {
           "--sort-order",
           "desc",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -679,7 +680,7 @@ describe("List Command", () => {
     });
 
     it("should sort by score", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       const queryPostsMock = vi.fn().mockResolvedValue([]);
 
       MockedDb.mockImplementation(() => ({
@@ -699,7 +700,7 @@ describe("List Command", () => {
           "--sort-order",
           "asc",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -712,7 +713,7 @@ describe("List Command", () => {
     });
 
     it("should sort by comment count", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       const queryPostsMock = vi.fn().mockResolvedValue([]);
 
       MockedDb.mockImplementation(() => ({
@@ -730,7 +731,7 @@ describe("List Command", () => {
           "--sort-by",
           "comments",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -751,7 +752,7 @@ describe("List Command", () => {
       vi.resetModules();
       vi.clearAllMocks();
 
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -775,7 +776,7 @@ describe("List Command", () => {
           "--offset",
           "10",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -809,7 +810,7 @@ describe("List Command", () => {
         },
       ];
 
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -826,7 +827,7 @@ describe("List Command", () => {
           "--format",
           "simple",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -839,7 +840,7 @@ describe("List Command", () => {
 
   describe("Error Handling", () => {
     it("should handle database errors gracefully", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi
           .fn()
@@ -848,7 +849,7 @@ describe("List Command", () => {
 
       try {
         await program.parseAsync(["node", "test", "list", "posts"]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -858,7 +859,7 @@ describe("List Command", () => {
     });
 
     it("should handle invalid date format", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -874,7 +875,7 @@ describe("List Command", () => {
           "--start-date",
           "invalid-date",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -887,7 +888,7 @@ describe("List Command", () => {
 
   describe("Empty Results", () => {
     it("should handle empty results gracefully", async () => {
-      const MockedDb = DatabaseManager as unknown as vi.Mock;
+      const MockedDb = DatabaseManager as unknown as Mock;
       MockedDb.mockImplementation(() => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -896,7 +897,7 @@ describe("List Command", () => {
 
       try {
         await program.parseAsync(["node", "test", "list", "posts"]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 

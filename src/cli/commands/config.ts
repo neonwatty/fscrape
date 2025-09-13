@@ -110,7 +110,7 @@ async function saveConfig(
   // Ensure directory exists
   try {
     await fs.mkdir(dir, { recursive: true });
-  } catch (error) {
+  } catch (_error) {
     // Directory might already exist
   }
 

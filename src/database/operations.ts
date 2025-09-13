@@ -13,10 +13,7 @@ import type {
   MaybeDBRow,
   DBRowArray,
 } from "../types/database.js";
-import {
-  dbTimestampToDate,
-  parseDBMetadata,
-} from "../types/database.js";
+import { parseDBMetadata } from "../types/database.js";
 
 export class DatabaseOperations {
   private connection: DatabaseConnection;
@@ -168,7 +165,7 @@ export class DatabaseOperations {
     platform: Platform,
     query?: string,
     subreddit?: string,
-    category?: string,
+    _category?: string,
   ): number {
     const stmt = this.connection.prepare(`
       INSERT INTO scraping_sessions (
@@ -181,7 +178,7 @@ export class DatabaseOperations {
     const result = stmt.run({
       sessionId: `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       platform,
-      queryType: subreddit ? 'subreddit' : query ? 'search' : 'frontpage',
+      queryType: subreddit ? "subreddit" : query ? "search" : "frontpage",
       queryValue: subreddit || query || null,
       startedAt: Date.now(),
     });

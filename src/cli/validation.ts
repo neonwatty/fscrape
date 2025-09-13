@@ -38,7 +38,7 @@ export function validateUrl(value: string): string {
       throw new Error("URL must use HTTP or HTTPS protocol");
     }
     return value;
-  } catch (error) {
+  } catch (_error) {
     throw new Error(`Invalid URL: ${value}`);
   }
 }
@@ -449,7 +449,7 @@ export function validateDirectory(path: string, create = false): string {
     if (create) {
       try {
         mkdirSync(resolvedPath, { recursive: true });
-      } catch (error) {
+      } catch (_error) {
         throw new Error(`Failed to create directory: ${resolvedPath}`);
       }
     } else {
@@ -484,7 +484,7 @@ export function validateDatabaseConnection(connStr: string): string {
       );
     }
     return connStr;
-  } catch (error) {
+  } catch (_error) {
     throw new Error(`Invalid database connection string: ${connStr}`);
   }
 }

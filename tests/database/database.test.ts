@@ -51,7 +51,7 @@ describe("DatabaseManager", () => {
       DELETE FROM comments;
       DELETE FROM posts;
       DELETE FROM users;
-      DELETE FROM scrape_sessions;
+      DELETE FROM scraping_sessions;
       DELETE FROM rate_limit_state;
       DELETE FROM scraping_metrics;
     `);
@@ -301,7 +301,7 @@ describe("DatabaseManager", () => {
       await dbManager.updateSession(activeId, { status: "completed" });
 
       const activeSessions = db
-        .prepare("SELECT * FROM scrape_sessions WHERE status = 'running'")
+        .prepare("SELECT * FROM scraping_sessions WHERE status = 'running'")
         .all() as any[];
       
       expect(activeSessions).toHaveLength(2);

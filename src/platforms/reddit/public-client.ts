@@ -4,7 +4,7 @@
  */
 
 import { logger } from "../../utils/logger.js";
-import type { ForumPost, Comment, User, Platform } from "../../types/core.js";
+import type { ForumPost, Comment, Platform } from "../../types/core.js";
 
 /**
  * Reddit public client configuration
@@ -89,9 +89,9 @@ export class RedditPublicClient {
    */
   private async request<T>(endpoint: string): Promise<T> {
     const url = `${this.baseUrl}${endpoint}.json`;
-    
+
     logger.info(`Making Reddit request to: ${url}`);
-    
+
     const response = await fetch(url, {
       headers: {
         "User-Agent": this.config.userAgent!,
@@ -101,8 +101,12 @@ export class RedditPublicClient {
 
     if (!response.ok) {
       const responseText = await response.text();
-      logger.error(`Reddit API error: ${response.status} ${response.statusText} - ${responseText.slice(0, 200)}`);
-      throw new Error(`Reddit API error: ${response.status} ${response.statusText}`);
+      logger.error(
+        `Reddit API error: ${response.status} ${response.statusText} - ${responseText.slice(0, 200)}`,
+      );
+      throw new Error(
+        `Reddit API error: ${response.status} ${response.statusText}`,
+      );
     }
 
     return response.json() as Promise<T>;
@@ -115,14 +119,14 @@ export class RedditPublicClient {
     subreddit: string,
     sort: string = "hot",
     limit: number = 25,
-    after?: string
+    after?: string,
   ): Promise<RedditJsonListing<RedditJsonPost>> {
     let endpoint = `/r/${subreddit}/${sort}`;
     const params = new URLSearchParams();
-    
+
     if (limit) params.append("limit", limit.toString());
     if (after) params.append("after", after);
-    
+
     // Add .json before query params
     endpoint += ".json";
     if (params.toString()) {
@@ -131,20 +135,25 @@ export class RedditPublicClient {
 
     // Remove .json from request method since we're adding it here
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     logger.info(`Making Reddit request to: ${url}`);
-    
+
     const response = await fetch(url, {
       headers: {
         "User-Agent": this.config.userAgent!,
+        "Accept": "application/json",
       },
       signal: AbortSignal.timeout(this.config.requestTimeout!),
     });
 
     if (!response.ok) {
       const responseText = await response.text();
-      logger.error(`Reddit API error: ${response.status} ${response.statusText} - ${responseText.slice(0, 200)}`);
-      throw new Error(`Reddit API error: ${response.status} ${response.statusText}`);
+      logger.error(
+        `Reddit API error: ${response.status} ${response.statusText} - ${responseText.slice(0, 200)}`,
+      );
+      throw new Error(
+        `Reddit API error: ${response.status} ${response.statusText}`,
+      );
     }
 
     return response.json() as Promise<RedditJsonListing<RedditJsonPost>>;
@@ -157,19 +166,23 @@ export class RedditPublicClient {
     subreddit: string,
     postId: string,
     sort: string = "best",
-    limit?: number
-  ): Promise<[RedditJsonListing<RedditJsonPost>, RedditJsonListing<RedditJsonComment>]> {
+    limit?: number,
+  ): Promise<
+    [RedditJsonListing<RedditJsonPost>, RedditJsonListing<RedditJsonComment>]
+  > {
     let endpoint = `/r/${subreddit}/comments/${postId}`;
     const params = new URLSearchParams();
-    
+
     if (sort) params.append("sort", sort);
     if (limit) params.append("limit", limit.toString());
-    
+
     if (params.toString()) {
       endpoint += `?${params.toString()}`;
     }
 
-    return this.request<[RedditJsonListing<RedditJsonPost>, RedditJsonListing<RedditJsonComment>]>(endpoint);
+    return this.request<
+      [RedditJsonListing<RedditJsonPost>, RedditJsonListing<RedditJsonComment>]
+    >(endpoint);
   }
 
   /**
@@ -187,17 +200,17 @@ export class RedditPublicClient {
     query: string,
     sort: string = "relevance",
     limit: number = 25,
-    after?: string
+    after?: string,
   ): Promise<RedditJsonListing<RedditJsonPost>> {
     let endpoint = `/r/${subreddit}/search`;
     const params = new URLSearchParams();
-    
+
     params.append("q", query);
     params.append("restrict_sr", "1");
     if (sort) params.append("sort", sort);
     if (limit) params.append("limit", limit.toString());
     if (after) params.append("after", after);
-    
+
     endpoint += `?${params.toString()}`;
 
     return this.request<RedditJsonListing<RedditJsonPost>>(endpoint);
@@ -242,8 +255,8 @@ export class RedditPublicClient {
       platformId: redditComment.name,
       platform: this.platform,
       postId: redditComment.link_id.replace("t3_", ""), // Remove t3_ prefix
-      parentId: redditComment.parent_id.startsWith("t1_") 
-        ? redditComment.parent_id.replace("t1_", "") 
+      parentId: redditComment.parent_id.startsWith("t1_")
+        ? redditComment.parent_id.replace("t1_", "")
         : null,
       author: redditComment.author,
       authorId: redditComment.author,

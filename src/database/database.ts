@@ -71,13 +71,15 @@ export class DatabaseManager {
       this.db = this.connection.connect();
     }
 
-    // Initialize components
-    this.queries = new PreparedQueries(this.db);
+    // Initialize analytics (doesn't depend on migrations)
     this.analytics = new DatabaseAnalytics(this.db);
   }
 
   async initialize(): Promise<void> {
     await initializeDatabase(this.db, this.logger);
+    
+    // Initialize queries AFTER migrations are complete
+    this.queries = new PreparedQueries(this.db);
   }
 
   // ============================================================================
@@ -85,6 +87,10 @@ export class DatabaseManager {
   // ============================================================================
 
   upsertPost(post: ForumPost): any {
+    if (!this.queries) {
+      throw new Error('DatabaseManager not initialized. Call initialize() first.');
+    }
+    
     try {
       const existing = this.db
         .prepare("SELECT * FROM posts WHERE platform = ? AND id = ?")
@@ -107,7 +113,7 @@ export class DatabaseManager {
         const result = this.queries.insertPost.run(
           post.id,
           post.platform,
-          post.platformId,
+          post.platformId || post.id,  // Use platformId if available, otherwise use id
           post.title,
           post.content,
           post.author,
@@ -184,6 +190,10 @@ export class DatabaseManager {
   // ============================================================================
 
   upsertComment(comment: Comment): any {
+    if (!this.queries) {
+      throw new Error('DatabaseManager not initialized. Call initialize() first.');
+    }
+    
     try {
       const existing = this.db
         .prepare("SELECT * FROM comments WHERE platform = ? AND id = ?")
@@ -258,6 +268,10 @@ export class DatabaseManager {
   // ============================================================================
 
   upsertUser(user: User): any {
+    if (!this.queries) {
+      throw new Error('DatabaseManager not initialized. Call initialize() first.');
+    }
+    
     try {
       const existing = this.db
         .prepare("SELECT * FROM users WHERE platform = ? AND id = ?")
@@ -367,28 +381,28 @@ export class DatabaseManager {
     queryType?: string;
     queryValue?: string;
   }): number {
-    const sessionId = `${params.platform}-${Date.now()}-${Math.random()
+    const _sessionId = `${params.platform}-${Date.now()}-${Math.random()
       .toString(36)
       .substring(7)}`;
 
     const now = Date.now();
-    const queryType =
+    const _queryType =
       params.queryType ||
       (params.subreddit ? "subreddit" : params.query ? "search" : null);
     const queryValue =
       params.queryValue || params.subreddit || params.query || null;
 
     const result = this.queries.sessions.create.run(
-      params.platform,
-      queryValue, // query
-      params.subreddit || null, // subreddit
-      params.category || null, // category
+      _sessionId, // session_id
+      params.platform, // platform
+      _queryType, // query_type
+      queryValue, // query_value
       now, // started_at
       "running", // status
       0, // total_posts
       0, // total_comments
       0, // total_users
-      null // metadata
+      null, // metadata
     );
 
     this.sessionNumericId = result.lastInsertRowid as number;
@@ -420,7 +434,7 @@ export class DatabaseManager {
       totalUsers: null,
       completedAt: null,
       errorMessage: null,
-      metadata: null
+      metadata: null,
     };
 
     // Override with provided updates
@@ -664,11 +678,10 @@ export class DatabaseManager {
       errorCount: 0, // Not in current schema
     };
 
-    // Map query to queryValue for compatibility
-    if (row.query) session.queryValue = row.query;
-    if (row.subreddit) session.queryValue = row.subreddit;
-    if (row.category) session.queryType = "category";
-    
+    // Map query_value and query_type from database columns
+    if (row.query_value) session.queryValue = row.query_value;
+    if (row.query_type) session.queryType = row.query_type;
+
     if (row.total_posts !== null && row.total_posts !== undefined)
       session.totalPosts = row.total_posts;
     if (row.total_comments !== null && row.total_comments !== undefined)

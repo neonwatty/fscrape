@@ -35,7 +35,7 @@ vi.mock("chalk", () => ({
     gray: (str: string) => str,
     blue: (str: string) => str,
   },
-}))
+}));
 
 // Mock console methods to capture output
 const mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
@@ -144,7 +144,7 @@ describe("Config Command", () => {
 
       try {
         await program.parseAsync(["node", "test", "config", "--list"]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -166,7 +166,7 @@ describe("Config Command", () => {
           "--global",
           "--list",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -186,7 +186,7 @@ describe("Config Command", () => {
           customPath,
           "--list",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -201,7 +201,7 @@ describe("Config Command", () => {
 
       try {
         await program.parseAsync(["node", "test", "config", "--reset"]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -232,7 +232,7 @@ describe("Config Command", () => {
           "--get",
           "defaultDatabase",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -250,7 +250,7 @@ describe("Config Command", () => {
           "--get",
           "rateLimit.reddit",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -268,7 +268,7 @@ describe("Config Command", () => {
           "--get",
           "nonexistent",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -288,7 +288,7 @@ describe("Config Command", () => {
           "--get",
           "rateLimit",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -314,7 +314,7 @@ describe("Config Command", () => {
           "--set",
           "verbose=true",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -341,7 +341,7 @@ describe("Config Command", () => {
           "--set",
           "rateLimit.reddit=120",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -366,7 +366,7 @@ describe("Config Command", () => {
           "maxConcurrency=10",
           "defaultDatabase=new.db",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -389,7 +389,7 @@ describe("Config Command", () => {
           "--set",
           "invalid",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -412,7 +412,7 @@ describe("Config Command", () => {
           "--set",
           "verbose=false",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -435,7 +435,7 @@ describe("Config Command", () => {
           "--set",
           "maxConcurrency=15",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -458,7 +458,7 @@ describe("Config Command", () => {
           "--set",
           "defaultDatabase=my-database.db",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -490,7 +490,7 @@ describe("Config Command", () => {
 
       try {
         await program.parseAsync(["node", "test", "config", "--interactive"]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -535,7 +535,7 @@ describe("Config Command", () => {
 
       try {
         await program.parseAsync(["node", "test", "config", "--interactive"]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -553,7 +553,7 @@ describe("Config Command", () => {
 
       try {
         await program.parseAsync(["node", "test", "config", "--list"]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -574,7 +574,7 @@ describe("Config Command", () => {
 
       try {
         await program.parseAsync(["node", "test", "config"]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -594,7 +594,7 @@ describe("Config Command", () => {
 
       try {
         await program.parseAsync(["node", "test", "config", "--list"]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -617,7 +617,7 @@ describe("Config Command", () => {
           "--set",
           "verbose=true",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -632,7 +632,7 @@ describe("Config Command", () => {
 
       try {
         await program.parseAsync(["node", "test", "config", "--list"]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 
@@ -656,7 +656,7 @@ describe("Config Command", () => {
           "--global",
           "--reset",
         ]);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to mocked process.exit
       }
 

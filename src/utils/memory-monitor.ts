@@ -82,7 +82,7 @@ export class MemoryMonitor {
       });
 
       obs.observe({ entryTypes: ["gc"] });
-    } catch (error) {
+    } catch (_error) {
       this.logger.warn("GC tracking not available");
     }
   }

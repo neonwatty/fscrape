@@ -173,7 +173,7 @@ export class SystemMonitor {
           threshold,
         },
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         name: "system:disk",
         status: "warning",
@@ -270,7 +270,7 @@ export class SystemMonitor {
         free,
         usagePercent,
       };
-    } catch (error) {
+    } catch (_error) {
       // Fallback for systems that don't support statfs
       return {
         total: 0,

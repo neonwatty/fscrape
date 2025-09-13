@@ -17,8 +17,7 @@ export default defineConfig({
       'e2e/**/*',
       '**/*.e2e.{test,spec}.ts',
       'playwright-report',
-      'test-results',
-      'tests/cli/**/*.test.ts' // Temporarily exclude CLI tests
+      'test-results'
     ],
     coverage: {
       provider: 'v8',

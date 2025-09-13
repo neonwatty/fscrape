@@ -2,7 +2,7 @@
  * Error type utilities for type-safe error handling
  */
 
-import { BaseError } from '../utils/errors.js';
+import { BaseError } from "../utils/errors.js";
 
 /**
  * Union type for all possible errors in the application
@@ -15,8 +15,8 @@ export type AppError = Error | BaseError | NodeJS.ErrnoException | unknown;
 export function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return (
     error instanceof Error &&
-    'code' in error &&
-    typeof (error as any).code === 'string'
+    "code" in error &&
+    typeof (error as any).code === "string"
   );
 }
 
@@ -39,11 +39,11 @@ export function isError(error: unknown): error is Error {
  */
 export function getErrorMessage(error: unknown): string {
   if (isError(error)) return error.message;
-  if (typeof error === 'string') return error;
-  if (error && typeof error === 'object' && 'message' in error) {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
     return String(error.message);
   }
-  return 'Unknown error occurred';
+  return "Unknown error occurred";
 }
 
 /**
@@ -52,7 +52,7 @@ export function getErrorMessage(error: unknown): string {
 export function getErrorCode(error: unknown): string | undefined {
   if (isBaseError(error)) return error.code;
   if (isNodeError(error)) return error.code;
-  if (error && typeof error === 'object' && 'code' in error) {
+  if (error && typeof error === "object" && "code" in error) {
     return String((error as any).code);
   }
   return undefined;
@@ -63,7 +63,7 @@ export function getErrorCode(error: unknown): string | undefined {
  */
 export function getErrorStack(error: unknown): string | undefined {
   if (isError(error)) return error.stack;
-  if (error && typeof error === 'object' && 'stack' in error) {
+  if (error && typeof error === "object" && "stack" in error) {
     return String((error as any).stack);
   }
   return undefined;
@@ -74,22 +74,22 @@ export function getErrorStack(error: unknown): string | undefined {
  */
 export function isRetryableError(error: unknown): boolean {
   if (isBaseError(error)) return error.isRetryable;
-  
+
   // Common retryable error codes
   const code = getErrorCode(error);
   if (code) {
     const retryableCodes = [
-      'ECONNRESET',
-      'ETIMEDOUT',
-      'ENOTFOUND',
-      'ECONNREFUSED',
-      'EHOSTUNREACH',
-      'EPIPE',
-      'EAI_AGAIN'
+      "ECONNRESET",
+      "ETIMEDOUT",
+      "ENOTFOUND",
+      "ECONNREFUSED",
+      "EHOSTUNREACH",
+      "EPIPE",
+      "EAI_AGAIN",
     ];
     return retryableCodes.includes(code);
   }
-  
+
   return false;
 }
 
@@ -100,12 +100,12 @@ export function formatError(error: unknown): string {
   const message = getErrorMessage(error);
   const code = getErrorCode(error);
   const stack = getErrorStack(error);
-  
+
   let formatted = message;
   if (code) formatted = `[${code}] ${formatted}`;
-  if (stack && process.env.NODE_ENV === 'development') {
+  if (stack && process.env.NODE_ENV === "development") {
     formatted += `\n${stack}`;
   }
-  
+
   return formatted;
 }

@@ -58,6 +58,7 @@ export function createScrapeCommand(): Command {
     .option("--database <path>", "Database path (overrides config)")
     .option("--config <path>", "Configuration file path", "fscrape.config.json")
     .option("--no-save", "Don't save to database")
+    .option("--stdout", "Output scraped data to terminal (stdout)", false)
     .option("--verbose", "Verbose output", false)
     .action(async (url: string, options: any) => {
       try {
@@ -268,6 +269,11 @@ async function handleScrape(url: string, options: any): Promise<void> {
       );
 
       spinner.succeed(chalk.green(`Data exported to ${outputPath}`));
+    }
+
+    // Output to stdout if requested
+    if (options.stdout) {
+      console.log(JSON.stringify(result, null, 2));
     }
 
     // Display summary

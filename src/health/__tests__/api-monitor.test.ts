@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { ApiMonitor, ApiEndpoint } from "../api-monitor";
-import { HealthCheckConfig } from "../health-checker";
+import { ApiMonitor, ApiEndpoint } from "../api-monitor.js";
+import { HealthCheckConfig } from "../health-checker.js";
 import fetch from "node-fetch";
 
 vi.mock("node-fetch");

@@ -54,7 +54,7 @@ describe("DatabaseAnalytics", () => {
         DELETE FROM comments;
         DELETE FROM posts;
         DELETE FROM users;
-        DELETE FROM scrape_sessions;
+        DELETE FROM scraping_sessions;
         DELETE FROM rate_limit_state;
       `);
       db.close();

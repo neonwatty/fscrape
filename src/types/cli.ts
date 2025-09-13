@@ -2,7 +2,7 @@
  * CLI command option type definitions
  */
 
-import type { Platform } from './core.js';
+import type { Platform } from "./core.js";
 
 /**
  * Base options shared by all commands
@@ -22,10 +22,10 @@ export interface ScrapeCommandOptions extends BaseCommandOptions {
   includeComments?: boolean;
   includeUsers?: boolean;
   maxDepth?: number;
-  sortBy?: 'score' | 'date' | 'comments';
-  timeRange?: 'hour' | 'day' | 'week' | 'month' | 'year' | 'all';
+  sortBy?: "score" | "date" | "comments";
+  timeRange?: "hour" | "day" | "week" | "month" | "year" | "all";
   output?: string;
-  format?: 'json' | 'csv' | 'markdown' | 'html';
+  format?: "json" | "csv" | "markdown" | "html";
   save?: boolean;
 }
 
@@ -37,9 +37,9 @@ export interface ListPostsOptions extends BaseCommandOptions {
   offset?: number;
   platform?: Platform;
   author?: string;
-  sortBy?: 'created' | 'score' | 'comments';
-  sortOrder?: 'asc' | 'desc';
-  format?: 'table' | 'json' | 'csv';
+  sortBy?: "created" | "score" | "comments";
+  sortOrder?: "asc" | "desc";
+  format?: "table" | "json" | "csv";
 }
 
 /**
@@ -50,7 +50,7 @@ export interface ListCommentsOptions extends BaseCommandOptions {
   offset?: number;
   platform?: Platform;
   postId?: string;
-  format?: 'table' | 'json' | 'csv';
+  format?: "table" | "json" | "csv";
 }
 
 /**
@@ -61,9 +61,9 @@ export interface ListUsersOptions extends BaseCommandOptions {
   offset?: number;
   platform?: Platform;
   minKarma?: number;
-  sortBy?: 'created' | 'karma';
-  sortOrder?: 'asc' | 'desc';
-  format?: 'table' | 'json' | 'csv';
+  sortBy?: "created" | "karma";
+  sortOrder?: "asc" | "desc";
+  format?: "table" | "json" | "csv";
 }
 
 /**
@@ -71,7 +71,7 @@ export interface ListUsersOptions extends BaseCommandOptions {
  */
 export interface StatsCommandOptions extends BaseCommandOptions {
   platform?: Platform;
-  format?: 'table' | 'json';
+  format?: "table" | "json";
 }
 
 /**
@@ -82,7 +82,7 @@ export interface SearchCommandOptions extends BaseCommandOptions {
   in?: string;
   platform?: Platform;
   limit?: number;
-  format?: 'table' | 'json';
+  format?: "table" | "json";
 }
 
 /**
@@ -90,7 +90,7 @@ export interface SearchCommandOptions extends BaseCommandOptions {
  */
 export interface ExportCommandOptions extends BaseCommandOptions {
   platform?: Platform;
-  format?: 'json' | 'csv' | 'markdown' | 'html';
+  format?: "json" | "csv" | "markdown" | "html";
   output?: string;
   limit?: number;
   startDate?: string;
@@ -100,7 +100,7 @@ export interface ExportCommandOptions extends BaseCommandOptions {
   query?: string;
   author?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   groupBy?: string;
   aggregate?: boolean;
 }
@@ -110,7 +110,7 @@ export interface ExportCommandOptions extends BaseCommandOptions {
  */
 export interface ExportCommentsOptions extends BaseCommandOptions {
   platform?: Platform;
-  format?: 'json' | 'csv' | 'markdown';
+  format?: "json" | "csv" | "markdown";
   output?: string;
   limit?: number;
   postId?: string;
@@ -121,7 +121,7 @@ export interface ExportCommentsOptions extends BaseCommandOptions {
  */
 export interface ExportUsersOptions extends BaseCommandOptions {
   platform?: Platform;
-  format?: 'json' | 'csv' | 'markdown';
+  format?: "json" | "csv" | "markdown";
   output?: string;
   limit?: number;
   minKarma?: number;
@@ -131,7 +131,7 @@ export interface ExportUsersOptions extends BaseCommandOptions {
  * Status command options
  */
 export interface StatusCommandOptions extends BaseCommandOptions {
-  format?: 'summary' | 'table' | 'json';
+  format?: "summary" | "table" | "json";
   platform?: Platform;
   days?: number;
 }
@@ -186,27 +186,27 @@ export interface GenericCommandOptions extends BaseCommandOptions {
  * Type guard to check if options have a platform
  */
 export function hasPlatform(
-  options: BaseCommandOptions
+  options: BaseCommandOptions,
 ): options is BaseCommandOptions & { platform: Platform } {
-  return 'platform' in options && typeof options.platform === 'string';
+  return "platform" in options && typeof options.platform === "string";
 }
 
 /**
  * Type guard to check if options have a limit
  */
 export function hasLimit(
-  options: BaseCommandOptions
+  options: BaseCommandOptions,
 ): options is BaseCommandOptions & { limit: number } {
-  return 'limit' in options && typeof options.limit === 'number';
+  return "limit" in options && typeof options.limit === "number";
 }
 
 /**
  * Type guard to check if options have a format
  */
 export function hasFormat(
-  options: BaseCommandOptions
+  options: BaseCommandOptions,
 ): options is BaseCommandOptions & { format: string } {
-  return 'format' in options && typeof options.format === 'string';
+  return "format" in options && typeof options.format === "string";
 }
 
 /**
@@ -214,7 +214,7 @@ export function hasFormat(
  */
 export function normalizeOptions<T extends BaseCommandOptions>(
   options: T,
-  defaults: Partial<T>
+  defaults: Partial<T>,
 ): T {
   return { ...defaults, ...options };
 }
@@ -224,7 +224,7 @@ export function normalizeOptions<T extends BaseCommandOptions>(
  */
 export function validateRequiredOptions<T extends BaseCommandOptions>(
   options: T,
-  required: (keyof T)[]
+  required: (keyof T)[],
 ): void {
   for (const key of required) {
     if (options[key] === undefined || options[key] === null) {

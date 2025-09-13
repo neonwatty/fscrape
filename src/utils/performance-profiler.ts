@@ -86,7 +86,7 @@ export class PerformanceProfiler extends EventEmitter {
     }
   }
 
-  private handleMeasureEntry(entry: PerformanceEntry): void {
+  private handleMeasureEntry(entry: any): void {
     if (entry.duration > this.options.thresholdMs && this.options.autoLog) {
       this.logger.warn(
         `Slow operation detected: ${entry.name} (${entry.duration.toFixed(2)}ms)`,
@@ -100,7 +100,7 @@ export class PerformanceProfiler extends EventEmitter {
     });
   }
 
-  private handleResourceEntry(entry: PerformanceEntry): void {
+  private handleResourceEntry(entry: any): void {
     this.resourceTimings.push({
       name: entry.name,
       duration: entry.duration,

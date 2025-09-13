@@ -328,6 +328,51 @@ export const migrations: Migration[] = [
   },
   {
     version: 3,
+    name: "add_user_metrics_columns",
+    up: (db: Database.Database) => {
+      // Add post_count and comment_count to users table if they don't exist
+      try {
+        const tableInfo = db.prepare("PRAGMA table_info(users)").all() as any[];
+        const columnNames = tableInfo.map((col: any) => col.name);
+        
+        if (!columnNames.includes('post_count')) {
+          db.exec(`ALTER TABLE users ADD COLUMN post_count INTEGER DEFAULT 0`);
+          console.log('Added post_count column to users table');
+        }
+        
+        if (!columnNames.includes('comment_count')) {
+          db.exec(`ALTER TABLE users ADD COLUMN comment_count INTEGER DEFAULT 0`);
+          console.log('Added comment_count column to users table');
+        }
+      } catch (error) {
+        console.log('Note: user metrics columns might already exist');
+      }
+    },
+    down: (db: Database.Database) => {
+      // We don't remove columns in down migration to preserve data
+      console.log('Preserving user metrics columns');
+    },
+  },
+  {
+    version: 4,
+    name: "add_platform_id_column",
+    up: (db: Database.Database) => {
+      // Add platform_id column if it doesn't exist
+      try {
+        const tableInfo = db.prepare("PRAGMA table_info(posts)").all() as any[];
+        const columnNames = tableInfo.map((col: any) => col.name);
+        
+        if (!columnNames.includes('platform_id')) {
+          db.exec(`ALTER TABLE posts ADD COLUMN platform_id TEXT NOT NULL DEFAULT ''`);
+          console.log('Added platform_id column to posts table');
+        }
+      } catch (error) {
+        console.log('Note: platform_id column might already exist');
+      }
+    },
+  },
+  {
+    version: 5,
     name: "add_content_hash_index",
     up: (db: Database.Database) => {
       // Add content hash column and index for duplicate detection
@@ -352,7 +397,7 @@ export const migrations: Migration[] = [
           CREATE INDEX IF NOT EXISTS idx_posts_content_hash 
           ON forum_posts(content_hash);
         `);
-      } catch (error) {
+      } catch (_error) {
         // Column might already exist, continue
         console.log("Note: content_hash column might already exist");
       }

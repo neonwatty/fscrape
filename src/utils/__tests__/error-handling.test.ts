@@ -325,7 +325,7 @@ describe("ErrorHandler", () => {
             mockOperation,
             "test-circuit",
           );
-        } catch (e) {
+        } catch (_e) {
           // Expected to fail
         }
       }
@@ -348,7 +348,7 @@ describe("ErrorHandler", () => {
             mockOperation,
             "test-circuit-2",
           );
-        } catch (e) {
+        } catch (_e) {
           // Expected
         }
       }

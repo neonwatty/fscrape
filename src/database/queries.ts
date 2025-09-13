@@ -105,10 +105,10 @@ export class PreparedQueries {
 
     const upsertPost = db.prepare(`
       INSERT OR REPLACE INTO posts (
-        id, platform, title, content, author, author_id, url,
+        id, platform, platform_id, title, content, author, author_id, url,
         score, comment_count, created_at, updated_at, metadata
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
     `);
 
@@ -641,7 +641,7 @@ export class PreparedQueries {
     for (const sql of tableCreations) {
       try {
         db.exec(sql);
-      } catch (error) {
+      } catch (_error) {
         // Table might already exist with different schema, that's ok
         // The migrations will handle proper schema updates
       }
@@ -657,7 +657,7 @@ export class PreparedQueries {
     for (const sql of columnAdditions) {
       try {
         db.exec(sql);
-      } catch (error) {
+      } catch (_error) {
         // Column already exists or table doesn't exist, ignore
       }
     }

@@ -26,7 +26,7 @@ describe("PreparedQueries", () => {
       DROP TABLE IF EXISTS comments;
       DROP TABLE IF EXISTS posts;
       DROP TABLE IF EXISTS users;
-      DROP TABLE IF EXISTS scrape_sessions;
+      DROP TABLE IF EXISTS scraping_sessions;
       DROP TABLE IF EXISTS rate_limit_state;
       DROP TABLE IF EXISTS scraping_metrics;
     `);
@@ -50,7 +50,7 @@ describe("PreparedQueries", () => {
         DELETE FROM comments;
         DELETE FROM posts;
         DELETE FROM users;
-        DELETE FROM scrape_sessions;
+        DELETE FROM scraping_sessions;
         DELETE FROM rate_limit_state;
       `);
       db.close();
@@ -327,11 +327,12 @@ describe("PreparedQueries", () => {
 
   describe("Session Queries", () => {
     it("should create a session", () => {
+      const sessionId = `test-session-${Date.now()}`;
       const result = queries.sessions.create.run(
+        sessionId,       // session_id
         "reddit",        // platform
-        "typescript",    // query
-        null,            // subreddit
-        null,            // category
+        "search",        // query_type
+        "typescript",    // query_value
         Date.now(),      // started_at
         "running",       // status
         0,               // total_posts
@@ -345,11 +346,12 @@ describe("PreparedQueries", () => {
     });
 
     it("should update session progress", () => {
+      const sessionId = `test-session-${Date.now()}`;
       const createResult = queries.sessions.create.run(
+        sessionId,       // session_id
         "reddit",        // platform
-        null,            // query
-        null,            // subreddit
-        null,            // category
+        null,            // query_type
+        null,            // query_value
         Date.now(),      // started_at
         "running",       // status
         0,               // total_posts
@@ -379,13 +381,13 @@ describe("PreparedQueries", () => {
     it("should get active sessions", () => {
       // Create multiple sessions
       queries.sessions.create.run(
-        "reddit", null, null, null, Date.now(), "running", 0, 0, 0, null
+        `test-session-1-${Date.now()}`, "reddit", null, null, Date.now(), "running", 0, 0, 0, null
       );
       queries.sessions.create.run(
-        "hackernews", null, null, null, Date.now(), "completed", 2, 3, 1, null
+        `test-session-2-${Date.now()}`, "hackernews", null, null, Date.now(), "completed", 2, 3, 1, null
       );
       queries.sessions.create.run(
-        "reddit", null, null, null, Date.now(), "running", 1, 2, 0, null
+        `test-session-3-${Date.now()}`, "reddit", null, null, Date.now(), "running", 1, 2, 0, null
       );
       
       const activeSessions = queries.sessions.getActive.all() as any[];

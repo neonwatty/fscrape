@@ -238,3 +238,11 @@ async function main(): Promise<void> {
 
 // Export for testing and as module
 export { createProgram, main };
+
+// Execute main if this file is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

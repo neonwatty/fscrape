@@ -2,7 +2,7 @@
  * Database type definitions matching the SQLite schema
  */
 
-import type { Platform } from './core.js';
+// import type { Platform } from "./core.js";
 
 /**
  * Base database row with common fields
@@ -198,14 +198,12 @@ export type DBRowArray<T> = T[];
 /**
  * Type guard to check if a value is a valid database row
  */
-export function isValidDBRow<T extends BaseDBRow>(
-  value: unknown
-): value is T {
+export function isValidDBRow<T extends BaseDBRow>(value: unknown): value is T {
   return (
     value !== null &&
     value !== undefined &&
-    typeof value === 'object' &&
-    'scraped_at' in value
+    typeof value === "object" &&
+    "scraped_at" in value
   );
 }
 
@@ -227,7 +225,7 @@ export function dateToDbTimestamp(date: Date | null): number | null {
  * Parse JSON metadata from database
  */
 export function parseDBMetadata<T = unknown>(
-  metadata: string | null
+  metadata: string | null,
 ): T | null {
   if (!metadata) return null;
   try {

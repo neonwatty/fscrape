@@ -11,8 +11,7 @@ import { OutputFormatter } from "./output-formatter.js";
 import { DatabaseManager } from "../database/database.js";
 import { RedditScraper } from "../platforms/reddit/scraper.js";
 import { HackerNewsScraper } from "../platforms/hackernews/scraper.js";
-import { CsvExporter } from "../export/exporters/csv-exporter.js";
-import { JsonExporter } from "../export/exporters/json-exporter.js";
+import { ExportManager } from "../export/export-manager.js";
 // import type { ForumPost, Comment } from "../types/core.js";
 
 export interface BatchOperation {
@@ -464,30 +463,25 @@ export class BatchProcessor {
     try {
       if (operation.platform === "reddit" || operation.platform === "both") {
         const scraper = new RedditScraper({
-          rateLimit: 60,
+          clientId: 'mock',
+          clientSecret: 'mock',
+          userAgent: 'fscrape-batch',
           maxRetries: 3,
-          cacheEnabled: true,
         });
 
         for (const item of operation.items || []) {
           if (item.includes("/r/")) {
             // Keep the full /r/subreddit path for the scraper
-            const scrapeResult = await scraper.scrapeSubreddit(item, {
+            // Remove /r/ prefix if present
+            const subreddit = item.replace(/^\/r\//, '');
+            const posts = await scraper.scrapeCategory(subreddit, {
               limit: operation.options?.limit || 100,
             });
 
-            // Handle the result structure from the mock
-            const posts = scrapeResult.posts || scrapeResult;
-            const comments = scrapeResult.comments || [];
-
+            // Save posts using upsertPost
             for (const post of posts) {
-              await dbManager.savePosts([post]);
+              await dbManager.upsertPost(post);
               results.posts++;
-            }
-
-            for (const comment of comments) {
-              await dbManager.saveComments([comment]);
-              results.comments++;
             }
           }
         }
@@ -498,44 +492,27 @@ export class BatchProcessor {
         operation.platform === "both"
       ) {
         const scraper = new HackerNewsScraper({
-          rateLimit: 30,
           maxRetries: 3,
-          cacheEnabled: true,
         });
 
         // Check if it's a specific story or top stories
         if (operation.items && operation.items.length > 0) {
           for (const item of operation.items) {
-            const scrapeResult = await scraper.scrapeStory(item);
-            const post = scrapeResult.post || scrapeResult;
-            const comments = scrapeResult.comments || [];
-
+            const post = await scraper.scrapePost(item);
+            
             if (post) {
-              await dbManager.savePosts([post]);
+              await dbManager.upsertPost(post);
               results.posts++;
-            }
-
-            for (const comment of comments) {
-              await dbManager.saveComments([comment]);
-              results.comments++;
             }
           }
         } else {
-          const scrapeResult = await scraper.scrapeTopStories(
-            operation.options?.limit || 100,
-          );
-
-          const posts = scrapeResult.posts || scrapeResult;
-          const comments = scrapeResult.comments || [];
+          const posts = await scraper.scrapePosts('topstories', {
+            limit: operation.options?.limit || 100,
+          });
 
           for (const post of posts) {
-            await dbManager.savePosts([post]);
+            await dbManager.upsertPost(post);
             results.posts++;
-          }
-
-          for (const comment of comments) {
-            await dbManager.saveComments([comment]);
-            results.comments++;
           }
         }
       }
@@ -564,39 +541,40 @@ export class BatchProcessor {
       const format = operation.options?.format || "json";
       const dataType = operation.options?.data || "all";
 
-      let exporter: CsvExporter | JsonExporter;
-      if (format === "csv") {
-        exporter = new CsvExporter({ outputPath: outputDir });
-      } else {
-        exporter = new JsonExporter({ outputPath: outputDir });
-      }
+      // Create ExportManager with appropriate format
+      const exportConfig = {
+        format: format as "json" | "csv",
+        csvOptions: format === "csv" ? {} : undefined,
+        jsonOptions: format === "json" ? { pretty: true } : undefined,
+      };
+      const exporter = new ExportManager(exportConfig);
 
       const results: any = {};
 
       if (dataType === "posts" || dataType === "all") {
-        // Use the mocked method names
-        const posts = (dbManager as any).getAllPosts
-          ? await (dbManager as any).getAllPosts()
-          : (await (dbManager as any).queryPosts?.({ limit: 10000 })) || [];
-        const filePath = await exporter.exportPosts(posts);
+        const posts = await dbManager.queryPosts({ limit: 10000 });
+        const filePath = await exporter.exportData(
+          { posts, comments: [], users: [] },
+          operation.outputPath || `export-posts-${Date.now()}`
+        );
         results.posts = { count: posts.length, file: filePath };
       }
 
       if (dataType === "comments" || dataType === "all") {
-        // Use the mocked method names
-        const comments = (dbManager as any).getAllComments
-          ? await (dbManager as any).getAllComments()
-          : (await (dbManager as any).queryComments?.({ limit: 10000 })) || [];
-        const filePath = await exporter.exportComments(comments);
+        const comments = await dbManager.queryComments({ limit: 10000 });
+        const filePath = await exporter.exportData(
+          { posts: [], comments, users: [] },
+          operation.outputPath || `export-comments-${Date.now()}`
+        );
         results.comments = { count: comments.length, file: filePath };
       }
 
       if (dataType === "users" || dataType === "all") {
-        // Use the mocked method names
-        const users = (dbManager as any).getAllUsers
-          ? await (dbManager as any).getAllUsers()
-          : (await (dbManager as any).queryUsers?.({ limit: 10000 })) || [];
-        const filePath = await exporter.exportUsers(users);
+        const users = await dbManager.queryUsers({ limit: 10000 });
+        const filePath = await exporter.exportData(
+          { posts: [], comments: [], users },
+          operation.outputPath || `export-users-${Date.now()}`
+        );
         results.users = { count: users.length, file: filePath };
       }
 

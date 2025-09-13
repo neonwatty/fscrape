@@ -199,7 +199,7 @@ describe("ErrorHandler", () => {
       for (let i = 0; i < 3; i++) {
         try {
           await handler.executeWithCircuitBreaker(operation, "test_service");
-        } catch (e) {
+        } catch (_e) {
           // Expected
         }
       }
@@ -233,7 +233,7 @@ describe("ErrorHandler", () => {
       for (let i = 0; i < 2; i++) {
         try {
           await handler.executeWithCircuitBreaker(operation, "test_service");
-        } catch (e) {
+        } catch (_e) {
           // Expected failure
         }
       }
@@ -281,7 +281,7 @@ describe("ErrorHandler", () => {
       for (let i = 0; i < 2; i++) {
         try {
           await handler.executeWithCircuitBreaker(operation, "test_service");
-        } catch (e) {
+        } catch (_e) {
           // Expected
         }
       }
@@ -355,7 +355,7 @@ describe("ErrorHandler", () => {
 
       try {
         await handler.handle(operation, { name: "test_op" });
-      } catch (e) {
+      } catch (_e) {
         // Expected
       }
 
@@ -385,7 +385,7 @@ describe("ErrorHandler", () => {
 
       try {
         await handler.handle(operation, { name: "test_op" });
-      } catch (e) {
+      } catch (_e) {
         // Expected
       }
 
@@ -416,7 +416,7 @@ describe("ErrorHandler", () => {
 
       try {
         await handler.handle(operation, { name: "test_op" });
-      } catch (e) {
+      } catch (_e) {
         // Expected
       }
 
@@ -481,7 +481,7 @@ describe("ErrorHandler", () => {
       for (let i = 0; i < 3; i++) {
         try {
           await handler.handle(operation, { name: "test_service" });
-        } catch (e) {
+        } catch (_e) {
           // Expected
         }
       }
@@ -517,7 +517,7 @@ describe("ErrorHandler", () => {
       for (let i = 0; i < 2; i++) {
         try {
           await handler.handle(operation, { name: "test_service" });
-        } catch (e) {
+        } catch (_e) {
           // Expected
         }
       }
@@ -765,7 +765,7 @@ describe("ErrorHandler", () => {
       for (let i = 0; i < 5; i++) {
         try {
           await handler.executeWithCircuitBreaker(failingOp, "failing_service");
-        } catch (e) {
+        } catch (_e) {
           // Expected
         }
       }

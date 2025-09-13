@@ -3,6 +3,7 @@ import { z } from "zod";
 // Base Forum Post Schema and Type
 export const ForumPostSchema = z.object({
   id: z.string(),
+  platformId: z.string().optional(),
   title: z.string(),
   content: z.string().nullable(),
   author: z.string(),

@@ -480,7 +480,7 @@ export class DatabaseAnalytics {
         id as session_id,
         platform,
         status,
-        query as query_value,
+        query_value,
         total_posts as totalPosts,
         total_comments as totalComments,
         total_users as totalUsers,
@@ -1092,7 +1092,7 @@ export class DatabaseAnalytics {
         platformBreakdown: platformStats || [],
         lastUpdate: new Date(),
       };
-    } catch (error) {
+    } catch (_error) {
       // Return minimal health data if there's an error
       return {
         totalPosts: 0,
@@ -1146,7 +1146,7 @@ export class DatabaseAnalytics {
           avgRowSize:
             count.count > 0 ? totalSize / count.count / tables.length : 0,
         };
-      } catch (error) {
+      } catch (_error) {
         // Table might not exist or be accessible
         return {
           table: table.name,

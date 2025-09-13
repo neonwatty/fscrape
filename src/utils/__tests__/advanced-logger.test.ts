@@ -50,7 +50,7 @@ describe("AdvancedLogger", () => {
     // Clean up test log directory
     try {
       await fs.rm(testLogDir, { recursive: true, force: true });
-    } catch (error) {
+    } catch (_error) {
       // Ignore if doesn't exist
     }
   });

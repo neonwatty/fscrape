@@ -218,7 +218,7 @@ export class CacheManager<T = unknown> {
       this.logger.info(
         `Cache loaded from disk: ${data.entries.length} entries`,
       );
-    } catch (error) {
+    } catch (_error) {
       this.logger.debug("No existing cache file found");
     }
   }

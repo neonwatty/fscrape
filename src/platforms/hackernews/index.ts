@@ -64,6 +64,31 @@ export const HackerNewsPlatform: PlatformConstructor = class
     return this.scraper.scrapeUser(username);
   }
 
+  async scrape(options: any) {
+    // Default scrape implementation - scrape top stories
+    const posts = await this.scraper.scrapePosts("topstories", {
+      limit: options?.limit || 10,
+      includeComments: options?.includeComments || false,
+    });
+    
+    return {
+      posts,
+      metadata: {
+        scrapedAt: new Date(),
+        totalPosts: posts.length,
+        platform: "hackernews" as const,
+      },
+    };
+  }
+
+  async scrapeCategory(category: string, options: any) {
+    return this.scraper.scrapeCategory(category, options);
+  }
+
+  async scrapeComments(postId: string, options: any) {
+    return this.scraper.scrapeComments(postId, options);
+  }
+
   async search(query: string, options: any) {
     return this.scraper.search(query, options);
   }

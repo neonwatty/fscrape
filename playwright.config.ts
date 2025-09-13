@@ -5,10 +5,10 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  fullyParallel: false, // Run tests in sequence to avoid conflicts
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 2 : 1, // Allow 1 retry even in local development
+  workers: process.env.CI ? 1 : 3, // Limit workers to avoid resource conflicts
   reporter: 'html',
   timeout: 60000, // 60 seconds for CLI operations
   

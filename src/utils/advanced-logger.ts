@@ -164,9 +164,10 @@ function createConsoleFormat(): winston.Logform.Format {
 
       // Add metadata in readable format
       if (meta.error) {
-        output += `\n  Error: ${meta.error.message || meta.error}`;
-        if (meta.error.stack && process.env.LOG_STACK_TRACES === "true") {
-          output += `\n  Stack: ${meta.error.stack}`;
+        const error = meta.error as any;
+        output += `\n  Error: ${error.message || error}`;
+        if (error.stack && process.env.LOG_STACK_TRACES === "true") {
+          output += `\n  Stack: ${error.stack}`;
         }
       }
 

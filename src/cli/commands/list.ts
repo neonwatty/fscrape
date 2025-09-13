@@ -8,7 +8,6 @@ import chalk from "chalk";
 import { DatabaseManager } from "../../database/database.js";
 import { formatError } from "../validation.js";
 import { table } from "table";
-import type { ListPostsOptions, ListCommentsOptions, ListUsersOptions, StatsCommandOptions, SearchCommandOptions } from "../../types/cli.js";
 
 export interface ListCommandOptions {
   database?: string;

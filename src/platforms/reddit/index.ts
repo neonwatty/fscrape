@@ -25,13 +25,16 @@ export type {
 export type { RedditTokenResponse, RedditAuthState } from "./auth.js";
 
 // Import for platform constructor
-import { RedditScraper } from "./scraper.js";
+// import { RedditScraper } from "./scraper.js";
 import type { PlatformConstructor } from "../platform-factory.js";
 import type { BasePlatform, BasePlatformConfig } from "../base-platform.js";
 import type winston from "winston";
 
 // Import the public client instead of the OAuth scraper
-import { RedditPublicClient, type RedditPublicClientConfig } from "./public-client.js";
+import {
+  RedditPublicClient,
+  type RedditPublicClientConfig,
+} from "./public-client.js";
 
 /**
  * Simple Reddit platform using public JSON endpoints
@@ -46,7 +49,7 @@ export const RedditPlatform: PlatformConstructor = class
   constructor(
     _platform: string,
     config: BasePlatformConfig,
-    logger?: winston.Logger,
+    _logger?: winston.Logger,
   ) {
     // Create simple config for public client
     const publicConfig: RedditPublicClientConfig = {
@@ -81,17 +84,24 @@ export const RedditPlatform: PlatformConstructor = class
     const subreddit = options?.subreddit || "all";
     const limit = options?.limit || 25;
     const sort = options?.sortBy || "hot";
-    
+
     const listing = await this.client.getSubredditPosts(subreddit, sort, limit);
-    return listing.data.children.map(child => this.client.convertPost(child.data));
+    return listing.data.children.map((child) =>
+      this.client.convertPost(child.data),
+    );
   }
 
   async scrapeCategory(category: string, options?: any) {
     const limit = options?.limit || 25;
     const sort = options?.sortBy || "hot";
-    
+
     const listing = await this.client.getSubredditPosts(category, sort, limit);
-    return listing.data.children.map(child => this.client.convertPost(child.data));
+    console.log('DEBUG: scrapeCategory listing:', listing);
+    console.log('DEBUG: listing.data:', listing.data);
+    console.log('DEBUG: listing.data.children:', listing.data?.children);
+    return listing.data.children.map((child) =>
+      this.client.convertPost(child.data),
+    );
   }
 
   async scrapePost(postId: string) {
@@ -99,9 +109,11 @@ export const RedditPlatform: PlatformConstructor = class
     // We'll try to get it from r/all or return null
     try {
       const listing = await this.client.getSubredditPosts("all", "hot", 100);
-      const post = listing.data.children.find(child => child.data.id === postId);
+      const post = listing.data.children.find(
+        (child) => child.data.id === postId,
+      );
       return post ? this.client.convertPost(post.data) : null;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -110,11 +122,18 @@ export const RedditPlatform: PlatformConstructor = class
     const subreddit = options?.subreddit || "all";
     const sort = options?.sort || "best";
     const limit = options?.limit;
-    
+
     try {
-      const [, commentListing] = await this.client.getPostWithComments(subreddit, postId, sort, limit);
-      return commentListing.data.children.map(child => this.client.convertComment(child.data));
-    } catch (error) {
+      const [, commentListing] = await this.client.getPostWithComments(
+        subreddit,
+        postId,
+        sort,
+        limit,
+      );
+      return commentListing.data.children.map((child) =>
+        this.client.convertComment(child.data),
+      );
+    } catch (_error) {
       return [];
     }
   }
@@ -130,11 +149,13 @@ export const RedditPlatform: PlatformConstructor = class
         username: username,
         displayName: username,
         karma: userData?.data?.total_karma || 0,
-        createdAt: userData?.data?.created_utc ? new Date(userData.data.created_utc * 1000) : null,
+        createdAt: userData?.data?.created_utc
+          ? new Date(userData.data.created_utc * 1000)
+          : null,
         lastSeenAt: null,
         metadata: userData?.data || {},
       };
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -143,17 +164,30 @@ export const RedditPlatform: PlatformConstructor = class
     const subreddit = options?.subreddit || "all";
     const limit = options?.limit || 25;
     const sort = options?.sort || "relevance";
-    
-    const listing = await this.client.searchSubreddit(subreddit, query, sort, limit);
-    return listing.data.children.map(child => this.client.convertPost(child.data));
+
+    const listing = await this.client.searchSubreddit(
+      subreddit,
+      query,
+      sort,
+      limit,
+    );
+    return listing.data.children.map((child) =>
+      this.client.convertPost(child.data),
+    );
   }
 
   async getTrending(options?: any) {
     const limit = options?.limit || 25;
-    
+
     // Use "hot" from popular subreddits as trending
-    const listing = await this.client.getSubredditPosts("popular", "hot", limit);
-    return listing.data.children.map(child => this.client.convertPost(child.data));
+    const listing = await this.client.getSubredditPosts(
+      "popular",
+      "hot",
+      limit,
+    );
+    return listing.data.children.map((child) =>
+      this.client.convertPost(child.data),
+    );
   }
 
   async testConnection() {
@@ -177,10 +211,16 @@ export const RedditPlatform: PlatformConstructor = class
   async scrape(options?: any) {
     // Generic scrape method - delegate to appropriate specific method
     if (options?.subreddit) {
-      return { posts: await this.scrapeCategory(options.subreddit, options), comments: [] };
+      return {
+        posts: await this.scrapeCategory(options.subreddit, options),
+        comments: [],
+      };
     } else {
       // Default to r/popular if no specific target
-      return { posts: await this.scrapeCategory("popular", options), comments: [] };
+      return {
+        posts: await this.scrapeCategory("popular", options),
+        comments: [],
+      };
     }
   }
 } as any;
