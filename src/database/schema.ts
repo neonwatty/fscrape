@@ -3,6 +3,7 @@ export const DATABASE_SCHEMA = {
     CREATE TABLE IF NOT EXISTS posts (
       id TEXT PRIMARY KEY,
       platform TEXT NOT NULL,
+      platform_id TEXT NOT NULL DEFAULT '',
       title TEXT NOT NULL,
       content TEXT,
       author TEXT NOT NULL,
@@ -15,13 +16,13 @@ export const DATABASE_SCHEMA = {
       metadata TEXT,
       scraped_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
       engagement_rate REAL GENERATED ALWAYS AS (
-        CASE 
+        CASE
           WHEN (score + comment_count) = 0 THEN 0.0
           ELSE CAST(comment_count AS REAL) / (score + comment_count)
         END
       ) STORED,
       score_normalized REAL GENERATED ALWAYS AS (
-        CASE 
+        CASE
           WHEN score < 0 THEN 0.0
           WHEN score > 10000 THEN 1.0
           ELSE score / 10000.0

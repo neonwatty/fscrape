@@ -1,0 +1,115 @@
+{
+  "platform": "hackernews",
+  "description": "Example configuration for HackerNews scraping",
+  "settings": {
+    "userAgent": "fscrape/1.0.0 (Example HackerNews Scraper)",
+    "baseUrl": "https://hacker-news.firebaseio.com/v0",
+    "webUrl": "https://news.ycombinator.com",
+    "rateLimit": {
+      "requestsPerMinute": 30,
+      "requestsPerHour": 500,
+      "concurrentRequests": 1
+    },
+    "timeout": 30000,
+    "retries": 3,
+    "retryDelay": 2000
+  },
+  "scraping": {
+    "defaultLimit": 30,
+    "maxLimit": 500,
+    "defaultCategory": "topstories",
+    "includeMetadata": true,
+    "includeDeadPosts": false,
+    "includeDeletedPosts": false
+  },
+  "categories": {
+    "available": [
+      "topstories",
+      "newstories",
+      "beststories",
+      "askstories",
+      "showstories",
+      "jobstories"
+    ],
+    "shortcuts": {
+      "top": "topstories",
+      "new": "newstories",
+      "best": "beststories",
+      "ask": "askstories",
+      "show": "showstories",
+      "jobs": "jobstories"
+    }
+  },
+  "comments": {
+    "defaultDepth": 3,
+    "maxDepth": 10,
+    "minScore": 0,
+    "includeDeleted": false,
+    "includeDead": false,
+    "sortBy": "nested"
+  },
+  "filters": {
+    "minScore": 10,
+    "minComments": 5,
+    "maxAge": 2592000,
+    "storyTypes": ["story", "ask", "show", "job"],
+    "excludeDead": true,
+    "excludeDeleted": true,
+    "domains": {
+      "allowed": [],
+      "blocked": []
+    },
+    "keywords": {
+      "titleInclude": [],
+      "titleExclude": [],
+      "mustHaveUrl": false
+    },
+    "authors": {
+      "include": [],
+      "exclude": []
+    }
+  },
+  "export": {
+    "defaultFormat": "json",
+    "jsonPrettyPrint": true,
+    "csvDelimiter": ",",
+    "includeComments": true,
+    "includeUserKarma": false,
+    "dateFormat": "ISO8601",
+    "fields": [
+      "id",
+      "title",
+      "url",
+      "score",
+      "by",
+      "time",
+      "descendants",
+      "type"
+    ]
+  },
+  "storage": {
+    "database": {
+      "type": "sqlite",
+      "path": "./hackernews-data.db"
+    },
+    "cache": {
+      "enabled": true,
+      "ttl": 600,
+      "maxSize": 500
+    }
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "file": "./logs/hackernews-scraper.log",
+    "console": true
+  },
+  "analytics": {
+    "trackTrends": true,
+    "trendingThreshold": 100,
+    "trackAuthors": true,
+    "trackDomains": true,
+    "generateReports": true,
+    "reportInterval": "daily"
+  }
+}

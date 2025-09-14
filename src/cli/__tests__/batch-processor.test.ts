@@ -4,8 +4,7 @@ import { OutputFormatter } from "../output-formatter.js";
 import { DatabaseManager } from "../../database/database.js";
 import { RedditScraper } from "../../platforms/reddit/scraper.js";
 import { HackerNewsScraper } from "../../platforms/hackernews/scraper.js";
-import { CsvExporter } from "../../export/exporters/csv-exporter.js";
-import { JsonExporter } from "../../export/exporters/json-exporter.js";
+import { ExportManager } from "../../export/export-manager.js";
 import { promises as fs } from "fs";
 
 // Mock all external dependencies
@@ -13,8 +12,7 @@ vi.mock("../output-formatter.js");
 vi.mock("../../database/database.js");
 vi.mock("../../platforms/reddit/scraper.js");
 vi.mock("../../platforms/hackernews/scraper.js");
-vi.mock("../../export/exporters/csv-exporter.js");
-vi.mock("../../export/exporters/json-exporter.js");
+vi.mock("../../export/export-manager.js");
 vi.mock("fs", () => ({
   promises: {
     readFile: vi.fn(),
@@ -31,8 +29,7 @@ describe("BatchProcessor", () => {
   let mockDatabase: any;
   let mockRedditScraper: any;
   let mockHackerNewsScraper: any;
-  let mockCSVExporter: any;
-  let mockJSONExporter: any;
+  let mockExportManager: any;
 
   beforeEach(() => {
     // Setup mocks
@@ -54,6 +51,19 @@ describe("BatchProcessor", () => {
       initialize: vi.fn().mockResolvedValue(undefined),
       connect: vi.fn().mockResolvedValue(undefined),
       close: vi.fn().mockResolvedValue(undefined),
+      upsertPost: vi.fn().mockResolvedValue({}),
+      queryPosts: vi.fn().mockResolvedValue([
+        { id: "1", title: "Post 1", content: "Content 1", platform: "reddit" },
+        { id: "2", title: "Post 2", content: "Content 2", platform: "hackernews" },
+      ]),
+      queryComments: vi.fn().mockResolvedValue([
+        { id: "c1", postId: "1", content: "Comment 1" },
+        { id: "c2", postId: "1", content: "Comment 2" },
+      ]),
+      queryUsers: vi.fn().mockResolvedValue([
+        { id: "u1", username: "user1", karma: 100 },
+        { id: "u2", username: "user2", karma: 200 },
+      ]),
       getAllPosts: vi.fn().mockResolvedValue([
         { id: "1", title: "Post 1", content: "Content 1" },
         { id: "2", title: "Post 2", content: "Content 2" },
@@ -81,9 +91,14 @@ describe("BatchProcessor", () => {
         posts: [{ id: "r1", title: "Reddit Post" }],
         comments: [{ id: "rc1", content: "Reddit Comment" }],
       }),
+      scrapeCategory: vi.fn().mockResolvedValue([
+        { id: "r1", title: "Reddit Post 1", platform: "reddit" },
+        { id: "r2", title: "Reddit Post 2", platform: "reddit" },
+      ]),
       scrapePost: vi.fn().mockResolvedValue({
-        post: { id: "rp1", title: "Single Reddit Post" },
-        comments: [{ id: "rpc1", content: "Post Comment" }],
+        id: "rp1",
+        title: "Single Reddit Post",
+        platform: "reddit"
       }),
     };
 
@@ -92,22 +107,23 @@ describe("BatchProcessor", () => {
         post: { id: "hn1", title: "HN Story" },
         comments: [{ id: "hnc1", content: "HN Comment" }],
       }),
+      scrapePost: vi.fn().mockResolvedValue({
+        id: "hn1",
+        title: "HN Story",
+        platform: "hackernews"
+      }),
+      scrapePosts: vi.fn().mockResolvedValue([
+        { id: "hnt1", title: "Top HN Story 1", platform: "hackernews" },
+        { id: "hnt2", title: "Top HN Story 2", platform: "hackernews" },
+      ]),
       scrapeTopStories: vi.fn().mockResolvedValue({
         posts: [{ id: "hnt1", title: "Top HN Story" }],
         comments: [],
       }),
     };
 
-    mockCSVExporter = {
-      exportPosts: vi.fn().mockResolvedValue("posts.csv"),
-      exportComments: vi.fn().mockResolvedValue("comments.csv"),
-      exportUsers: vi.fn().mockResolvedValue("users.csv"),
-    };
-
-    mockJSONExporter = {
-      exportPosts: vi.fn().mockResolvedValue("posts.json"),
-      exportComments: vi.fn().mockResolvedValue("comments.json"),
-      exportUsers: vi.fn().mockResolvedValue("users.json"),
+    mockExportManager = {
+      exportData: vi.fn().mockResolvedValue("export-file.json"),
     };
 
     // Mock constructor returns
@@ -117,8 +133,7 @@ describe("BatchProcessor", () => {
     vi.mocked(HackerNewsScraper).mockImplementation(
       () => mockHackerNewsScraper,
     );
-    vi.mocked(CsvExporter).mockImplementation(() => mockCSVExporter);
-    vi.mocked(JsonExporter).mockImplementation(() => mockJSONExporter);
+    vi.mocked(ExportManager).mockImplementation(() => mockExportManager);
   });
 
   afterEach(() => {
@@ -214,8 +229,8 @@ clean old-posts
 
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
-        expect(mockRedditScraper.scrapeSubreddit).toHaveBeenCalledWith(
-          "/r/programming",
+        expect(mockRedditScraper.scrapeCategory).toHaveBeenCalledWith(
+          "programming",
           { limit: 10 },
         );
       });
@@ -237,11 +252,11 @@ clean old-posts
 
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
-        expect(mockHackerNewsScraper.scrapeStory).toHaveBeenCalledWith("12345");
+        expect(mockHackerNewsScraper.scrapePost).toHaveBeenCalledWith("12345");
       });
 
       it("should handle scrape operation failures", async () => {
-        mockRedditScraper.scrapeSubreddit.mockRejectedValue(
+        mockRedditScraper.scrapeCategory.mockRejectedValue(
           new Error("Scrape failed"),
         );
 
@@ -287,7 +302,7 @@ clean old-posts
 
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
-        expect(mockCSVExporter.exportPosts).toHaveBeenCalled();
+        expect(mockExportManager.exportData).toHaveBeenCalled();
       });
 
       it("should export comments as JSON", async () => {
@@ -310,11 +325,11 @@ clean old-posts
 
         expect(results).toHaveLength(1);
         expect(results[0].status).toBe("success");
-        expect(mockJSONExporter.exportComments).toHaveBeenCalled();
+        expect(mockExportManager.exportData).toHaveBeenCalled();
       });
 
       it("should handle export failures", async () => {
-        mockCSVExporter.exportPosts.mockRejectedValue(
+        mockExportManager.exportData.mockRejectedValue(
           new Error("Export failed"),
         );
 
@@ -453,7 +468,7 @@ clean old-posts
 
       expect(results).toHaveLength(3);
       expect(results.every((r) => r.status === "success")).toBe(true);
-      expect(mockRedditScraper.scrapeSubreddit).toHaveBeenCalledTimes(3);
+      expect(mockRedditScraper.scrapeCategory).toHaveBeenCalledTimes(3);
     });
 
     it("should respect max concurrency", async () => {
@@ -505,15 +520,15 @@ clean old-posts
 
       expect(results).toHaveLength(3);
       expect(results.every((r) => r.status === "skipped")).toBe(true);
-      expect(mockRedditScraper.scrapeSubreddit).not.toHaveBeenCalled();
-      expect(mockCSVExporter.exportPosts).not.toHaveBeenCalled();
+      expect(mockRedditScraper.scrapeCategory).not.toHaveBeenCalled();
+      expect(mockExportManager.exportData).not.toHaveBeenCalled();
       expect(mockDatabase.deletePosts).not.toHaveBeenCalled();
     });
   });
 
   describe("Continue on Error", () => {
     it("should stop on first error when continueOnError is false", async () => {
-      mockRedditScraper.scrapeSubreddit.mockRejectedValue(
+      mockRedditScraper.scrapeCategory.mockRejectedValue(
         new Error("First operation failed"),
       );
 
@@ -530,13 +545,13 @@ clean old-posts
       await expect(processor.execute()).rejects.toThrow(
         "First operation failed",
       );
-      expect(mockRedditScraper.scrapeSubreddit).toHaveBeenCalledTimes(1);
+      expect(mockRedditScraper.scrapeCategory).toHaveBeenCalledTimes(1);
     });
 
     it("should continue after error when continueOnError is true", async () => {
-      mockRedditScraper.scrapeSubreddit
+      mockRedditScraper.scrapeCategory
         .mockRejectedValueOnce(new Error("First operation failed"))
-        .mockResolvedValueOnce({ posts: [], comments: [] });
+        .mockResolvedValueOnce([]);
 
       const config: BatchConfig = {
         operations: [
@@ -553,7 +568,7 @@ clean old-posts
       expect(results).toHaveLength(2);
       expect(results[0].status).toBe("failed");
       expect(results[1].status).toBe("success");
-      expect(mockRedditScraper.scrapeSubreddit).toHaveBeenCalledTimes(2);
+      expect(mockRedditScraper.scrapeCategory).toHaveBeenCalledTimes(2);
     });
   });
 

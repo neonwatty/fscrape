@@ -118,6 +118,7 @@ describe("PreparedQueries", () => {
       const result = queries.posts.insert.run(
         "post1",        // id
         "reddit",       // platform
+        "post1",        // platform_id
         "Test Post",    // title
         "Content",      // content
         "author1",      // author
@@ -137,6 +138,7 @@ describe("PreparedQueries", () => {
       queries.posts.insert.run(
         "post2",        // id
         "reddit",       // platform
+        "post2",        // platform_id
         "Test Post 2",  // title
         "Content 2",    // content
         "author2",      // author
@@ -158,17 +160,17 @@ describe("PreparedQueries", () => {
     it("should get posts by platform", () => {
       // Insert reddit posts
       queries.posts.insert.run(
-        "r1", "reddit", "Reddit 1", null, "user1", null,
+        "r1", "reddit", "r1", "Reddit 1", null, "user1", null,
         "https://reddit.com/r1", 10, 0, Date.now(), null, null
       );
       queries.posts.insert.run(
-        "r2", "reddit", "Reddit 2", null, "user2", null,
+        "r2", "reddit", "r2", "Reddit 2", null, "user2", null,
         "https://reddit.com/r2", 20, 0, Date.now(), null, null
       );
       
       // Insert hackernews post
       queries.posts.insert.run(
-        "hn1", "hackernews", "HN 1", null, "user3", null,
+        "hn1", "hackernews", "hn1", "HN 1", null, "user3", null,
         "https://news.ycombinator.com/item?id=hn1", 30, 0, Date.now(), null, null
       );
       
@@ -180,13 +182,13 @@ describe("PreparedQueries", () => {
     it("should upsert posts correctly", () => {
       // Initial insert
       queries.posts.upsert.run(
-        "upsert1", "reddit", "Initial Title", "Initial Content", "author1", null,
+        "upsert1", "reddit", "upsert1", "Initial Title", "Initial Content", "author1", null,
         "https://reddit.com/upsert1", 100, 5, Date.now(), null, null
       );
       
       // Update with new values (INSERT OR REPLACE will update everything)
       queries.posts.upsert.run(
-        "upsert1", "reddit", "Updated Title", "Updated Content", "author1", null,
+        "upsert1", "reddit", "upsert1", "Updated Title", "Updated Content", "author1", null,
         "https://reddit.com/upsert1", 200, 10, Date.now(), null, null
       );
       
@@ -202,7 +204,7 @@ describe("PreparedQueries", () => {
     beforeEach(() => {
       // Insert a parent post for comments
       queries.posts.insert.run(
-        "parent-post", "reddit", "Parent Post", "Content", "author", null,
+        "parent-post", "reddit", "parent-post", "Parent Post", "Content", "author", null,
         "https://reddit.com/parent", 100, 0, Date.now(), null, null
       );
     });
@@ -400,15 +402,15 @@ describe("PreparedQueries", () => {
     beforeEach(() => {
       // Insert test data
       queries.posts.insert.run(
-        "p1", "reddit", "Post 1", null, "u1", null,
+        "p1", "reddit", "p1", "Post 1", null, "u1", null,
         "url1", 100, 10, Date.now(), null, null
       );
       queries.posts.insert.run(
-        "p2", "reddit", "Post 2", null, "u2", null,
+        "p2", "reddit", "p2", "Post 2", null, "u2", null,
         "url2", 50, 5, Date.now(), null, null
       );
       queries.posts.insert.run(
-        "p3", "hackernews", "Post 3", null, "u3", null,
+        "p3", "hackernews", "p3", "Post 3", null, "u3", null,
         "url3", 200, 20, Date.now(), null, null
       );
       

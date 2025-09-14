@@ -20,30 +20,31 @@ describe("DatabaseAnalytics", () => {
     dbPath = join(tempDir, "test.db");
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     db = new Database(dbPath);
-    
+
     // Drop all tables first to ensure clean state
     db.exec(`
       DROP TABLE IF EXISTS comments;
       DROP TABLE IF EXISTS posts;
       DROP TABLE IF EXISTS users;
-      DROP TABLE IF EXISTS scrape_sessions;
+      DROP TABLE IF EXISTS scraping_sessions;
       DROP TABLE IF EXISTS rate_limit_state;
       DROP TABLE IF EXISTS scraping_metrics;
     `);
-    
+
     // Create tables
     for (const [, tableSchema] of Object.entries(DATABASE_SCHEMA)) {
       db.exec(tableSchema as string);
     }
-    
+
     // Create indexes
     for (const indexSql of DATABASE_INDEXES) {
       db.exec(indexSql);
     }
-    
+
     dbManager = new DatabaseManager(db);
+    await dbManager.initialize();
     analytics = new DatabaseAnalytics(db);
   });
 
