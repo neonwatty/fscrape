@@ -11,6 +11,9 @@ export interface ChartOptions {
   showGrid?: boolean;
   colors?: boolean;
   style?: "simple" | "detailed" | "minimal";
+  showTrends?: boolean;
+  showStatistics?: boolean;
+  colorScheme?: "default" | "vibrant" | "monochrome";
 }
 
 export interface DataPoint {
@@ -34,6 +37,9 @@ export class AnalyticsVisualizer {
     showGrid: true,
     colors: false,
     style: "simple",
+    showTrends: false,
+    showStatistics: false,
+    colorScheme: "default",
   };
 
   /**
@@ -391,7 +397,7 @@ export class AnalyticsVisualizer {
   /**
    * Create a sparkline (mini chart)
    */
-  public createSparkline(data: number[]): string {
+  public createSparkline(data: number[], maxWidth?: number): string {
     if (data.length === 0) return "";
 
     const min = Math.min(...data);
@@ -400,7 +406,21 @@ export class AnalyticsVisualizer {
 
     const sparkChars = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
 
-    return data
+    // Handle width responsiveness
+    let processedData = data;
+    if (maxWidth && data.length > maxWidth) {
+      // Sample data to fit width
+      const step = Math.ceil(data.length / maxWidth);
+      processedData = [];
+      for (let i = 0; i < data.length; i += step) {
+        // Take average of window
+        const window = data.slice(i, Math.min(i + step, data.length));
+        const avg = window.reduce((sum, val) => sum + val, 0) / window.length;
+        processedData.push(avg);
+      }
+    }
+
+    return processedData
       .map((val) => {
         const normalized = (val - min) / range;
         const index = Math.floor(normalized * (sparkChars.length - 1));
@@ -859,6 +879,297 @@ export class AnalyticsVisualizer {
     }
 
     return lines.join("\n");
+  }
+
+  /**
+   * Create a trend indicator with arrows and change percentage
+   */
+  public createTrendIndicator(
+    current: number,
+    previous: number,
+    label?: string,
+    options?: ChartOptions,
+  ): string {
+    const opts = { ...this.defaultOptions, ...options };
+    const change = current - previous;
+    const changePercent = previous !== 0 ? (change / previous) * 100 : 0;
+
+    // Determine trend arrow
+    let arrow = "";
+    let trendText = "";
+    if (change > 0) {
+      arrow = opts.style === "detailed" ? "↑↑↑" : "↑";
+      trendText = "UP";
+    } else if (change < 0) {
+      arrow = opts.style === "detailed" ? "↓↓↓" : "↓";
+      trendText = "DOWN";
+    } else {
+      arrow = opts.style === "detailed" ? "→→→" : "→";
+      trendText = "STABLE";
+    }
+
+    // Build indicator string
+    const lines: string[] = [];
+    if (label) {
+      lines.push(label);
+      lines.push("─".repeat(Math.min(label.length, opts.width)));
+    }
+
+    lines.push(`Current: ${current.toFixed(2)} ${arrow} ${trendText}`);
+    lines.push(`Previous: ${previous.toFixed(2)}`);
+    lines.push(`Change: ${change >= 0 ? "+" : ""}${change.toFixed(2)} (${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(1)}%)`);
+
+    if (opts.style === "detailed") {
+      // Add visual bar
+      const barWidth = 30;
+      const absPercent = Math.abs(changePercent);
+      const filledWidth = Math.min(Math.floor((absPercent / 100) * barWidth), barWidth);
+      const bar = change >= 0
+        ? "▲".repeat(filledWidth) + "░".repeat(barWidth - filledWidth)
+        : "▼".repeat(filledWidth) + "░".repeat(barWidth - filledWidth);
+      lines.push(`[${bar}]`);
+    }
+
+    return lines.join("\n");
+  }
+
+  /**
+   * Create a statistical summary visualization
+   */
+  public createStatisticalSummary(
+    data: number[],
+    title?: string,
+    options?: ChartOptions,
+  ): string {
+    const opts = { ...this.defaultOptions, ...options };
+    const lines: string[] = [];
+
+    if (title) {
+      lines.push(this.centerText(title, opts.width));
+      lines.push("═".repeat(opts.width));
+    }
+
+    if (data.length === 0) {
+      return "No data available for statistical summary";
+    }
+
+    // Calculate statistics
+    const sorted = [...data].sort((a, b) => a - b);
+    const mean = data.reduce((sum, val) => sum + val, 0) / data.length;
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const min = sorted[0];
+    const max = sorted[sorted.length - 1];
+    const q1 = sorted[Math.floor(sorted.length * 0.25)];
+    const q3 = sorted[Math.floor(sorted.length * 0.75)];
+    const iqr = q3 - q1;
+
+    // Calculate standard deviation
+    const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
+    const stdDev = Math.sqrt(variance);
+
+    // Create visual representation
+    if (opts.style !== "minimal") {
+      // Box plot visualization
+      const boxWidth = Math.min(60, opts.width - 20);
+      const range = max - min || 1;
+
+      const minPos = 0;
+      const q1Pos = Math.floor(((q1 - min) / range) * boxWidth);
+      const medianPos = Math.floor(((median - min) / range) * boxWidth);
+      const q3Pos = Math.floor(((q3 - min) / range) * boxWidth);
+      const maxPos = boxWidth;
+
+      let boxPlot = " ".repeat(10) + "├";
+      for (let i = 0; i <= boxWidth; i++) {
+        if (i === minPos) boxPlot += "│";
+        else if (i === maxPos) boxPlot += "│";
+        else if (i >= q1Pos && i <= q3Pos) {
+          if (i === medianPos) boxPlot += "┊";
+          else boxPlot += "█";
+        } else if (i > minPos && i < q1Pos) boxPlot += "─";
+        else if (i > q3Pos && i < maxPos) boxPlot += "─";
+        else boxPlot += " ";
+      }
+      boxPlot += "┤";
+
+      lines.push("");
+      lines.push("Distribution:");
+      lines.push(boxPlot);
+      lines.push("");
+    }
+
+    // Statistics table
+    const stats = [
+      ["Count", data.length.toString()],
+      ["Mean", mean.toFixed(2)],
+      ["Median", median.toFixed(2)],
+      ["Std Dev", stdDev.toFixed(2)],
+      ["Min", min.toFixed(2)],
+      ["Q1", q1.toFixed(2)],
+      ["Q3", q3.toFixed(2)],
+      ["Max", max.toFixed(2)],
+      ["IQR", iqr.toFixed(2)],
+    ];
+
+    const maxLabelWidth = Math.max(...stats.map(s => s[0].length));
+    stats.forEach(([label, value]) => {
+      lines.push(`${this.padRight(label + ":", maxLabelWidth + 2)} ${value}`);
+    });
+
+    // Add sparkline
+    if (opts.style === "detailed") {
+      lines.push("");
+      lines.push("Trend: " + this.createSparkline(data));
+    }
+
+    return lines.join("\n");
+  }
+
+  /**
+   * Create an enhanced progress bar with labels and colors
+   */
+  public createEnhancedProgressBar(
+    value: number,
+    max: number,
+    label?: string,
+    options?: ChartOptions & {
+      showPercentage?: boolean;
+      showValue?: boolean;
+      thresholds?: { value: number; label: string }[];
+    },
+  ): string {
+    const opts = {
+      ...this.defaultOptions,
+      showPercentage: true,
+      showValue: false,
+      ...options
+    };
+
+    const percentage = Math.min(100, (value / max) * 100);
+    const width = opts.width || 40;
+    const filled = Math.floor((percentage / 100) * width);
+    const empty = width - filled;
+
+    // Determine bar character based on percentage
+    let fillChar = "█";
+    let emptyChar = "░";
+
+    if (opts.style === "detailed") {
+      if (percentage < 33) fillChar = "▓";
+      else if (percentage < 66) fillChar = "▆";
+      else fillChar = "█";
+    }
+
+    let bar = fillChar.repeat(filled) + emptyChar.repeat(empty);
+
+    // Build the complete progress bar
+    let result = "";
+
+    if (label) {
+      result += this.padRight(label, 20) + " ";
+    }
+
+    result += "[" + bar + "]";
+
+    if (opts.showPercentage) {
+      result += ` ${percentage.toFixed(1)}%`;
+    }
+
+    if (opts.showValue) {
+      result += ` (${value}/${max})`;
+    }
+
+    // Add threshold indicators
+    if (opts.thresholds && opts.thresholds.length > 0) {
+      const threshold = opts.thresholds.find(t => value >= t.value);
+      if (threshold) {
+        result += ` - ${threshold.label}`;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Create a mini dashboard with multiple visualizations
+   */
+  public createMiniDashboard(
+    data: {
+      title?: string;
+      metrics?: { label: string; value: number; change?: number }[];
+      chart?: DataPoint[];
+      distribution?: number[];
+    },
+    options?: ChartOptions,
+  ): string {
+    const opts = { ...this.defaultOptions, ...options };
+    const lines: string[] = [];
+
+    // Title
+    if (data.title) {
+      lines.push("╔" + "═".repeat(opts.width - 2) + "╗");
+      lines.push("║" + this.centerText(data.title, opts.width - 2) + "║");
+      lines.push("╠" + "═".repeat(opts.width - 2) + "╣");
+    }
+
+    // Metrics
+    if (data.metrics && data.metrics.length > 0) {
+      lines.push("║ Metrics:" + " ".repeat(opts.width - 11) + "║");
+      data.metrics.forEach(metric => {
+        let metricLine = `  ${this.padRight(metric.label + ":", 20)} ${metric.value.toFixed(2)}`;
+        if (metric.change !== undefined) {
+          const arrow = metric.change > 0 ? "↑" : metric.change < 0 ? "↓" : "→";
+          metricLine += ` ${arrow} (${metric.change >= 0 ? "+" : ""}${metric.change.toFixed(1)}%)`;
+        }
+        lines.push("║" + this.padRight(metricLine, opts.width - 2) + "║");
+      });
+    }
+
+    // Mini chart
+    if (data.chart && data.chart.length > 0) {
+      lines.push("║" + " ".repeat(opts.width - 2) + "║");
+      lines.push("║ Trend: " + this.padRight(this.createSparkline(data.chart.map(d => d.value)), opts.width - 10) + "║");
+    }
+
+    // Distribution
+    if (data.distribution && data.distribution.length > 0) {
+      const sorted = [...data.distribution].sort((a, b) => a - b);
+      const median = sorted[Math.floor(sorted.length / 2)];
+      const mean = data.distribution.reduce((sum, val) => sum + val, 0) / data.distribution.length;
+
+      lines.push("║" + " ".repeat(opts.width - 2) + "║");
+      lines.push("║ Distribution:" + " ".repeat(opts.width - 16) + "║");
+      lines.push("║  Mean: " + this.padRight(mean.toFixed(2), 10) + " Median: " + this.padRight(median.toFixed(2), 10) + " ".repeat(opts.width - 36) + "║");
+    }
+
+    // Bottom border
+    lines.push("╚" + "═".repeat(opts.width - 2) + "╝");
+
+    return lines.join("\n");
+  }
+
+  /**
+   * Create colored output for terminal (returns ANSI codes)
+   */
+  public createColoredOutput(
+    text: string,
+    value: number,
+    thresholds: { min: number; max: number; color: "red" | "yellow" | "green" }[],
+  ): string {
+    // ANSI color codes
+    const colors = {
+      red: "\x1b[31m",
+      yellow: "\x1b[33m",
+      green: "\x1b[32m",
+      reset: "\x1b[0m",
+    };
+
+    const threshold = thresholds.find(t => value >= t.min && value <= t.max);
+    if (threshold) {
+      return `${colors[threshold.color]}${text}${colors.reset}`;
+    }
+
+    return text;
   }
 
   /**
