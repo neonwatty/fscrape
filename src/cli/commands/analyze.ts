@@ -326,17 +326,32 @@ export function createAnalyzeCommand(): Command {
     )
     .option(
       "--model <model>",
-      "Forecasting model (auto, linear, seasonal, smoothing, holt-winters)",
+      "Forecasting model (auto, linear, seasonal, smoothing, holt-winters, arima)",
       "auto",
     )
-    .option("--confidence <number>", "Confidence level (0-1)", parseFloat, 0.95)
-    .option("--metric <metric>", "Metric to forecast", "engagement")
+    .option(
+      "--confidence-level <number>",
+      "Confidence level for prediction intervals (0-1)",
+      parseFloat,
+      0.95,
+    )
+    .option(
+      "--metric <metric>",
+      "Metric to forecast (engagement, posts, comments, users, score)",
+      "engagement",
+    )
     .option(
       "-f, --format <format>",
-      "Output format (json, table, chart)",
+      "Output format (json, table, chart, csv, detailed)",
       "table",
     )
     .option("--validate", "Perform cross-validation", false)
+    .option(
+      "--seasonality <period>",
+      "Seasonality period (auto, daily, weekly, monthly)",
+      "auto",
+    )
+    .option("--include-historical", "Include historical data in output", false)
     .action(async (options) => {
       await handleForecast(command.opts(), options);
     });
@@ -1299,7 +1314,7 @@ async function handleForecast(parentOpts: any, options: any): Promise<void> {
     const forecaster = new ForecastingEngine({
       model: options.model === "auto" ? undefined : options.model,
       horizon: options.horizon || 7,
-      confidence: options.confidence || 0.95,
+      confidence: options.confidenceLevel || 0.95,
     });
 
     // Get historical data
@@ -1326,16 +1341,40 @@ async function handleForecast(parentOpts: any, options: any): Promise<void> {
       validationResults = forecaster.crossValidate(values);
     }
 
+    // Include historical data if requested
+    const outputData: any = {
+      forecast: result,
+      validation: validationResults,
+    };
+
+    if (options.includeHistorical) {
+      outputData.historical = {
+        values: values.slice(-30), // Last 30 days
+        timestamps: timestamps.slice(-30),
+      };
+    }
+
     if (options.format === "json") {
-      console.log(
-        JSON.stringify(
-          {
-            forecast: result,
-            validation: validationResults,
-          },
-          null,
-          2,
-        ),
+      console.log(JSON.stringify(outputData, null, 2));
+    } else if (options.format === "csv") {
+      // CSV format
+      console.log("Date,Forecast,Lower Bound,Upper Bound,Confidence Level");
+      result.forecast.forEach((point: any) => {
+        const date = point.timestamp
+          ? format(point.timestamp, "yyyy-MM-dd")
+          : `Day +${point.index}`;
+        console.log(
+          `${date},${point.value.toFixed(2)},${point.lower.toFixed(2)},${point.upper.toFixed(2)},${(options.confidenceLevel * 100).toFixed(0)}%`,
+        );
+      });
+    } else if (options.format === "detailed") {
+      // Detailed format with all information
+      displayDetailedForecast(
+        result,
+        options,
+        validationResults,
+        values,
+        timestamps,
       );
     } else if (options.format === "chart") {
       // ASCII chart showing historical and forecast
@@ -1393,7 +1432,9 @@ async function handleForecast(parentOpts: any, options: any): Promise<void> {
       console.log(chalk.cyan("📈 Forecast Results"));
       console.log(chalk.gray(`Model: ${result.model}`));
       console.log(
-        chalk.gray(`Confidence: ${(options.confidence * 100).toFixed(0)}%`),
+        chalk.gray(
+          `Confidence: ${(options.confidenceLevel * 100).toFixed(0)}%`,
+        ),
       );
       console.log(table.toString());
 
@@ -1418,6 +1459,201 @@ async function handleForecast(parentOpts: any, options: any): Promise<void> {
   } catch (error) {
     console.error(chalk.red(formatError(error)));
     process.exit(1);
+  }
+}
+
+/**
+ * Display detailed forecast information
+ */
+function displayDetailedForecast(
+  result: any,
+  options: any,
+  validationResults: any,
+  historicalValues: number[],
+  historicalTimestamps: Date[],
+): void {
+  console.log(chalk.cyan.bold("\n═══════════════════════════════════════"));
+  console.log(chalk.cyan.bold("       📈 Detailed Forecast Report      "));
+  console.log(chalk.cyan.bold("═══════════════════════════════════════\n"));
+
+  // Model Information
+  console.log(chalk.white.bold("Model Configuration:"));
+  console.log(chalk.gray(`  • Model Type: ${result.model || "Auto-selected"}`));
+  console.log(chalk.gray(`  • Horizon: ${options.horizon} days`));
+  console.log(
+    chalk.gray(
+      `  • Confidence Level: ${(options.confidenceLevel * 100).toFixed(0)}%`,
+    ),
+  );
+  console.log(chalk.gray(`  • Metric: ${options.metric}`));
+  if (options.seasonality !== "auto") {
+    console.log(chalk.gray(`  • Seasonality: ${options.seasonality}`));
+  }
+  console.log();
+
+  // Historical Data Summary
+  if (historicalValues.length > 0) {
+    console.log(chalk.white.bold("Historical Data Summary:"));
+    const histMean =
+      historicalValues.reduce((a, b) => a + b, 0) / historicalValues.length;
+    const histMin = Math.min(...historicalValues);
+    const histMax = Math.max(...historicalValues);
+    const histStdDev = Math.sqrt(
+      historicalValues.reduce(
+        (acc, val) => acc + Math.pow(val - histMean, 2),
+        0,
+      ) / historicalValues.length,
+    );
+
+    console.log(chalk.gray(`  • Data Points: ${historicalValues.length}`));
+    console.log(chalk.gray(`  • Mean: ${histMean.toFixed(2)}`));
+    console.log(chalk.gray(`  • Min: ${histMin.toFixed(2)}`));
+    console.log(chalk.gray(`  • Max: ${histMax.toFixed(2)}`));
+    console.log(chalk.gray(`  • Std Dev: ${histStdDev.toFixed(2)}`));
+    console.log();
+  }
+
+  // Forecast Summary
+  console.log(chalk.white.bold("Forecast Summary:"));
+  const forecastValues = result.forecast.map((f: any) => f.value);
+  const forecastMean =
+    forecastValues.reduce((a: number, b: number) => a + b, 0) /
+    forecastValues.length;
+  const forecastMin = Math.min(...forecastValues);
+  const forecastMax = Math.max(...forecastValues);
+
+  console.log(chalk.gray(`  • Forecast Points: ${forecastValues.length}`));
+  console.log(chalk.gray(`  • Mean Forecast: ${forecastMean.toFixed(2)}`));
+  console.log(chalk.gray(`  • Min Forecast: ${forecastMin.toFixed(2)}`));
+  console.log(chalk.gray(`  • Max Forecast: ${forecastMax.toFixed(2)}`));
+
+  // Calculate trend
+  const firstForecast = result.forecast[0].value;
+  const lastForecast = result.forecast[result.forecast.length - 1].value;
+  const trendPercent = ((lastForecast - firstForecast) / firstForecast) * 100;
+  const trendDirection = trendPercent > 0 ? "↑" : trendPercent < 0 ? "↓" : "→";
+  const trendColor =
+    trendPercent > 0 ? chalk.green : trendPercent < 0 ? chalk.red : chalk.gray;
+
+  console.log(
+    trendColor(
+      `  • Trend: ${trendDirection} ${Math.abs(trendPercent).toFixed(1)}%`,
+    ),
+  );
+  console.log();
+
+  // Forecast Table
+  console.log(chalk.white.bold("Forecast Details:"));
+  const table = new Table({
+    head: ["Date", "Forecast", "Lower", "Upper", "Range", "Confidence"],
+    style: { head: ["cyan"] },
+    colWidths: [12, 10, 10, 10, 10, 12],
+  });
+
+  result.forecast.forEach((point: any) => {
+    const date = point.timestamp
+      ? format(point.timestamp, "MM/dd/yyyy")
+      : `Day +${point.index}`;
+    const range = point.upper - point.lower;
+
+    table.push([
+      date,
+      point.value.toFixed(2),
+      point.lower.toFixed(2),
+      point.upper.toFixed(2),
+      range.toFixed(2),
+      `${(options.confidenceLevel * 100).toFixed(0)}%`,
+    ]);
+  });
+
+  console.log(table.toString());
+
+  // Model Accuracy
+  if (result.accuracy) {
+    console.log(chalk.white.bold("\nModel Accuracy Metrics:"));
+    console.log(
+      chalk.gray(
+        `  • MAE (Mean Absolute Error): ${result.accuracy.mae.toFixed(3)}`,
+      ),
+    );
+    console.log(
+      chalk.gray(
+        `  • RMSE (Root Mean Square Error): ${result.accuracy.rmse.toFixed(3)}`,
+      ),
+    );
+    console.log(
+      chalk.gray(
+        `  • MAPE (Mean Absolute Percentage Error): ${result.accuracy.mape.toFixed(1)}%`,
+      ),
+    );
+
+    // Interpret accuracy
+    if (result.accuracy.mape < 10) {
+      console.log(chalk.green("  • Accuracy Assessment: Excellent"));
+    } else if (result.accuracy.mape < 20) {
+      console.log(chalk.green("  • Accuracy Assessment: Good"));
+    } else if (result.accuracy.mape < 30) {
+      console.log(chalk.yellow("  • Accuracy Assessment: Moderate"));
+    } else {
+      console.log(chalk.red("  • Accuracy Assessment: Poor"));
+    }
+  }
+
+  // Cross-Validation Results
+  if (validationResults && validationResults.length > 0) {
+    console.log(chalk.white.bold("\nCross-Validation Results:"));
+    const cvTable = new Table({
+      head: ["Model", "MAE", "RMSE", "MAPE"],
+      style: { head: ["cyan"] },
+    });
+
+    validationResults.forEach((vr: any) => {
+      cvTable.push([
+        vr.model,
+        vr.avgAccuracy.mae.toFixed(3),
+        vr.avgAccuracy.rmse.toFixed(3),
+        `${vr.avgAccuracy.mape.toFixed(1)}%`,
+      ]);
+    });
+
+    console.log(cvTable.toString());
+
+    // Best model
+    const bestModel = validationResults.reduce((best: any, current: any) =>
+      current.avgAccuracy.mae < best.avgAccuracy.mae ? current : best,
+    );
+    console.log(
+      chalk.green(
+        `\n  Best Model: ${bestModel.model} (MAE: ${bestModel.avgAccuracy.mae.toFixed(3)})`,
+      ),
+    );
+  }
+
+  // Recommendations
+  console.log(chalk.white.bold("\nRecommendations:"));
+  if (result.accuracy && result.accuracy.mape > 30) {
+    console.log(
+      chalk.yellow(
+        "  ⚠ Consider using more historical data for better accuracy",
+      ),
+    );
+    console.log(
+      chalk.yellow("  ⚠ Try different models or seasonality settings"),
+    );
+  }
+  if (options.horizon > 30) {
+    console.log(
+      chalk.yellow(
+        "  ⚠ Long-term forecasts (>30 days) may have reduced accuracy",
+      ),
+    );
+  }
+  if (historicalValues.length < 30) {
+    console.log(
+      chalk.yellow(
+        "  ⚠ Limited historical data may affect forecast reliability",
+      ),
+    );
   }
 }
 
