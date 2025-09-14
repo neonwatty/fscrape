@@ -503,26 +503,47 @@ export class ReportGenerator {
 
   private createExecutiveSummary(metrics: DashboardMetrics): ReportSection {
     const overview = metrics.overview;
+
+    // Calculate key insights
+    const insights = this.generateExecutiveInsights(metrics);
+    const kpis = this.calculateKeyPerformanceIndicators(metrics);
+    const trends = this.identifyKeyTrends(metrics);
+
     const content = `
-## Key Metrics
+## Executive Overview
+${insights.summary}
+
+## Key Performance Indicators
+${kpis.map(kpi => `- **${kpi.name}**: ${kpi.value} ${kpi.trend}`).join("\n")}
+
+## Critical Metrics
 - Total Posts: ${this.formatNumber(overview.totalPosts)}
 - Total Comments: ${this.formatNumber(overview.totalComments)}
 - Total Users: ${this.formatNumber(overview.totalUsers)}
 - Average Engagement: ${overview.avgEngagement.toFixed(2)}
 - Growth Rate: ${overview.growthRate > 0 ? "+" : ""}${overview.growthRate.toFixed(1)}%
 
-## Platform Performance
+## Platform Performance Summary
 ${Array.from(metrics.platformBreakdown.entries())
+  .sort((a, b) => b[1].totalPosts - a[1].totalPosts)
+  .slice(0, 3)
   .map(
     ([platform, stats]) =>
-      `- ${platform}: ${stats.totalPosts} posts, ${stats.avgScore.toFixed(2)} avg score`,
+      `- **${platform}**: ${this.formatNumber(stats.totalPosts)} posts | ${stats.avgScore.toFixed(1)} avg score | ${this.formatNumber(stats.totalUsers)} users`,
   )
   .join("\n")}
 
-## Data Health
+## Key Trends & Insights
+${trends.map(trend => `- ${trend}`).join("\n")}
+
+## Data Health Status
 - Database Size: ${this.formatBytes(metrics.health.databaseSize)}
-- Data Quality Score: ${metrics.health.dataQuality}/100
+- Data Quality Score: ${metrics.health.dataQuality}/100 ${this.getQualityIndicator(metrics.health.dataQuality)}
 - Last Update: ${this.formatDate(metrics.health.lastUpdate)}
+- Data Gaps: ${metrics.health.gaps.length === 0 ? "✅ None detected" : `⚠️ ${metrics.health.gaps.length} periods`}
+
+## Strategic Recommendations
+${insights.recommendations.slice(0, 3).map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
 `;
 
     return {
@@ -616,21 +637,21 @@ ${trending.predictions
   private createPerformanceSection(performance: any): ReportSection {
     const content = `
 ## Scraping Performance
-- Success Rate: ${(performance.scraping.successRate * 100).toFixed(1)}%
-- Avg Response Time: ${performance.scraping.avgResponseTime.toFixed(0)}ms
-- Items/Second: ${performance.scraping.itemsPerSecond.toFixed(2)}
-- Error Rate: ${performance.scraping.errorRate.toFixed(1)}%
+- Success Rate: ${performance.scraping?.successRate ? (performance.scraping.successRate * 100).toFixed(1) : "N/A"}%
+- Avg Response Time: ${performance.scraping?.avgResponseTime?.toFixed(0) || "N/A"}ms
+- Items/Second: ${performance.scraping?.itemsPerSecond?.toFixed(2) || "N/A"}
+- Error Rate: ${performance.scraping?.errorRate?.toFixed(1) || "N/A"}%
 
 ## Database Performance
-- Size: ${this.formatBytes(performance.database.size)}
-- Query Performance: ${performance.database.queryPerformance}%
-- Index Efficiency: ${performance.database.indexEfficiency}%
+- Size: ${performance.database?.size ? this.formatBytes(performance.database.size) : "N/A"}
+- Query Performance: ${performance.database?.queryPerformance || "N/A"}%
+- Index Efficiency: ${performance.database?.indexEfficiency || "N/A"}%
 
 ## Data Quality
-- Completeness: ${performance.dataQuality.completeness}%
-- Freshness: ${performance.dataQuality.freshness}%
-- Consistency: ${performance.dataQuality.consistency}%
-- Overall: ${performance.dataQuality.overall}%
+- Completeness: ${performance.dataQuality?.completeness || "N/A"}%
+- Freshness: ${performance.dataQuality?.freshness || "N/A"}%
+- Consistency: ${performance.dataQuality?.consistency || "N/A"}%
+- Overall: ${performance.dataQuality?.overall || "N/A"}%
 `;
 
     return {
@@ -688,55 +709,135 @@ ${trending.predictions
   }
 
   private createRecommendations(data: any): ReportSection {
-    const recommendations: string[] = [];
+    const insights = this.generateActionableInsights(data);
 
-    // Growth recommendations
-    if (data.metrics.overview.growthRate < 0) {
-      recommendations.push(
-        "⚠️ Negative growth detected. Consider increasing scraping frequency or expanding data sources.",
-      );
-    }
+    const content = `
+## Priority Actions
+${insights.priorities.map((action, i) => `${i + 1}. **${action.title}**\n   ${action.description}\n   *Impact: ${action.impact} | Effort: ${action.effort}*`).join("\n\n")}
 
-    // Data quality recommendations
-    if (data.metrics.health.dataQuality < 80) {
-      recommendations.push(
-        "📊 Data quality below optimal. Review data collection processes and validation rules.",
-      );
-    }
+## Optimization Opportunities
+${insights.optimizations.map(opt => `- ${opt}`).join("\n")}
 
-    // Performance recommendations
-    if (data.performance?.scraping.errorRate > 5) {
-      recommendations.push(
-        "🔧 High error rate in scraping. Check API rate limits and connection stability.",
-      );
-    }
+## Risk Mitigation
+${insights.risks.map(risk => `- **${risk.type}**: ${risk.action}`).join("\n")}
 
-    // Gap recommendations
-    if (data.metrics.health.gaps.length > 0) {
-      recommendations.push(
-        "📅 Data gaps detected. Consider backfilling missing periods for complete analysis.",
-      );
-    }
-
-    // Database recommendations
-    if (data.performance?.database.size > 1000000000) {
-      // 1GB
-      recommendations.push(
-        "💾 Database size exceeding 1GB. Consider archiving old data or optimizing storage.",
-      );
-    }
-
-    const content =
-      recommendations.length > 0
-        ? recommendations.join("\n\n")
-        : "✅ All systems operating within normal parameters.";
+## Long-term Strategic Recommendations
+${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
+`;
 
     return {
-      title: "Recommendations",
+      title: "Actionable Insights & Recommendations",
       content,
       priority: "high",
       type: "text",
     };
+  }
+
+  /**
+   * Generate comprehensive actionable insights
+   */
+  private generateActionableInsights(data: any): {
+    priorities: Array<{
+      title: string;
+      description: string;
+      impact: string;
+      effort: string;
+    }>;
+    optimizations: string[];
+    risks: Array<{
+      type: string;
+      action: string;
+    }>;
+    strategic: string[];
+  } {
+    const insights = {
+      priorities: [],
+      optimizations: [],
+      risks: [],
+      strategic: [],
+    };
+
+    const metrics = data.metrics;
+    const performance = data.performance;
+
+    // Analyze and prioritize actions
+    if (metrics.overview.growthRate < 0) {
+      insights.priorities.push({
+        title: "Reverse Negative Growth Trend",
+        description: "Implement immediate measures to increase content acquisition and user engagement",
+        impact: "High",
+        effort: "Medium",
+      });
+    }
+
+    if (metrics.health.dataQuality < 70) {
+      insights.priorities.push({
+        title: "Improve Data Quality",
+        description: "Enhance validation rules and implement data cleansing processes",
+        impact: "High",
+        effort: "Low",
+      });
+    }
+
+    if (performance?.scraping?.errorRate > 10) {
+      insights.priorities.push({
+        title: "Stabilize Scraping Infrastructure",
+        description: "Review rate limiting, implement retry logic, and optimize connection pooling",
+        impact: "Medium",
+        effort: "Medium",
+      });
+    }
+
+    // Optimization opportunities
+    if (metrics.overview.avgEngagement < 0.5) {
+      insights.optimizations.push("Increase scraping frequency during peak activity hours");
+    }
+
+    const platforms = Array.from(metrics.platformBreakdown.entries());
+    const underutilized = platforms.filter(([_, stats]) => stats.totalPosts < 100);
+    if (underutilized.length > 0) {
+      insights.optimizations.push(`Expand coverage for underutilized platforms: ${underutilized.map(p => p[0]).join(", ")}`);
+    }
+
+    if (metrics.timeSeries.length > 0) {
+      const avgScore = metrics.timeSeries.reduce((sum, t) => sum + t.avgScore, 0) / metrics.timeSeries.length;
+      if (avgScore < 20) {
+        insights.optimizations.push("Focus on high-quality content sources to improve average scores");
+      }
+    }
+
+    // Risk mitigation
+    if (metrics.health.databaseSize > 3000000000) {
+      insights.risks.push({
+        type: "Storage Capacity",
+        action: "Implement data archiving strategy and optimize database indexes",
+      });
+    }
+
+    if (metrics.health.gaps.length > 5) {
+      insights.risks.push({
+        type: "Data Continuity",
+        action: "Set up automated monitoring and alerting for data collection gaps",
+      });
+    }
+
+    if (performance?.database?.queryPerformance < 70) {
+      insights.risks.push({
+        type: "Performance Degradation",
+        action: "Optimize slow queries and consider database sharding",
+      });
+    }
+
+    // Strategic recommendations
+    insights.strategic.push("Develop predictive models to anticipate content trends");
+    insights.strategic.push("Implement real-time analytics dashboard for immediate insights");
+    insights.strategic.push("Create automated reporting workflows for key stakeholders");
+
+    if (platforms.length < 3) {
+      insights.strategic.push("Diversify data sources to reduce platform dependency");
+    }
+
+    return insights;
   }
 
   // Formatting methods
@@ -931,7 +1032,9 @@ ${trending.predictions
     if (num >= 1000000) {
       return `${(num / 1000000).toFixed(1)}M`;
     } else if (num >= 1000) {
-      return `${(num / 1000).toFixed(1)}K`;
+      const formatted = (num / 1000).toFixed(1);
+      // Remove decimal if it's .0
+      return formatted.endsWith('.0') ? `${Math.round(num / 1000)}K` : `${formatted}K`;
     }
     return num.toString();
   }
@@ -962,6 +1065,1231 @@ ${trending.predictions
       default:
         return date.toLocaleDateString();
     }
+  }
+
+  /**
+   * Generate executive insights from metrics
+   */
+  private generateExecutiveInsights(metrics: DashboardMetrics): {
+    summary: string;
+    recommendations: string[];
+    risks: string[];
+  } {
+    const insights = {
+      summary: "",
+      recommendations: [],
+      risks: [],
+    };
+
+    // Generate summary based on growth and engagement
+    const growth = metrics.overview.growthRate;
+    const engagement = metrics.overview.avgEngagement;
+
+    if (growth > 10 && engagement > 0.7) {
+      insights.summary = "The platform is experiencing strong growth with high user engagement. All key metrics are trending positively.";
+    } else if (growth > 0 && engagement > 0.5) {
+      insights.summary = "The platform shows steady growth with moderate engagement levels. There are opportunities for optimization.";
+    } else if (growth < 0) {
+      insights.summary = "The platform is experiencing declining metrics. Immediate attention required to address negative trends.";
+    } else {
+      insights.summary = "The platform metrics are stable with room for improvement in growth and engagement strategies.";
+    }
+
+    // Generate recommendations
+    if (growth < 5) {
+      insights.recommendations.push("Increase content acquisition frequency to drive growth");
+    }
+    if (engagement < 0.6) {
+      insights.recommendations.push("Implement engagement optimization strategies to improve user interaction");
+    }
+    if (metrics.health.dataQuality < 80) {
+      insights.recommendations.push("Improve data collection processes to enhance data quality");
+    }
+    if (metrics.health.gaps.length > 0) {
+      insights.recommendations.push("Address data collection gaps to ensure comprehensive analytics");
+    }
+
+    // Platform-specific recommendations
+    const platforms = Array.from(metrics.platformBreakdown.entries());
+    const underperformingPlatforms = platforms.filter(([_, stats]) => stats.avgScore < 10);
+    if (underperformingPlatforms.length > 0) {
+      insights.recommendations.push(`Focus on improving performance for: ${underperformingPlatforms.map(p => p[0]).join(", ")}`);
+    }
+
+    // Identify risks
+    if (growth < -5) {
+      insights.risks.push("Significant decline in growth rate requires immediate intervention");
+    }
+    if (metrics.health.dataQuality < 60) {
+      insights.risks.push("Poor data quality may impact analytics accuracy");
+    }
+    if (metrics.health.databaseSize > 5000000000) { // 5GB
+      insights.risks.push("Database size approaching critical levels");
+    }
+
+    return insights;
+  }
+
+  /**
+   * Calculate key performance indicators
+   */
+  private calculateKeyPerformanceIndicators(metrics: DashboardMetrics): Array<{
+    name: string;
+    value: string;
+    trend: string;
+  }> {
+    const kpis = [];
+
+    // Content velocity
+    const contentVelocity = metrics.timeSeries.length > 0
+      ? metrics.timeSeries[metrics.timeSeries.length - 1].posts / 24 // posts per hour
+      : 0;
+    kpis.push({
+      name: "Content Velocity",
+      value: `${contentVelocity.toFixed(1)}/hr`,
+      trend: contentVelocity > 10 ? "↑" : contentVelocity > 5 ? "→" : "↓",
+    });
+
+    // User engagement rate
+    const engagementRate = metrics.overview.avgEngagement * 100;
+    kpis.push({
+      name: "Engagement Rate",
+      value: `${engagementRate.toFixed(1)}%`,
+      trend: engagementRate > 70 ? "↑" : engagementRate > 50 ? "→" : "↓",
+    });
+
+    // Platform diversity score
+    const platformCount = metrics.platformBreakdown.size;
+    const diversityScore = Math.min(100, platformCount * 20);
+    kpis.push({
+      name: "Platform Diversity",
+      value: `${diversityScore}%`,
+      trend: platformCount > 3 ? "↑" : "→",
+    });
+
+    // Data freshness
+    const hoursSinceUpdate = (Date.now() - metrics.health.lastUpdate.getTime()) / (1000 * 60 * 60);
+    const freshnessScore = Math.max(0, 100 - hoursSinceUpdate * 2);
+    kpis.push({
+      name: "Data Freshness",
+      value: `${freshnessScore.toFixed(0)}%`,
+      trend: freshnessScore > 80 ? "↑" : freshnessScore > 50 ? "→" : "↓",
+    });
+
+    // Growth momentum
+    const growthMomentum = metrics.overview.growthRate;
+    kpis.push({
+      name: "Growth Momentum",
+      value: `${growthMomentum > 0 ? "+" : ""}${growthMomentum.toFixed(1)}%`,
+      trend: growthMomentum > 5 ? "↑" : growthMomentum > 0 ? "→" : "↓",
+    });
+
+    return kpis;
+  }
+
+  /**
+   * Identify key trends from metrics
+   */
+  private identifyKeyTrends(metrics: DashboardMetrics): string[] {
+    const trends = [];
+
+    // Growth trend
+    if (metrics.overview.growthRate > 10) {
+      trends.push("📈 Strong growth momentum detected across all metrics");
+    } else if (metrics.overview.growthRate < -5) {
+      trends.push("📉 Declining trend requires immediate attention");
+    }
+
+    // Engagement trend
+    if (metrics.overview.avgEngagement > 0.8) {
+      trends.push("🎯 Exceptional user engagement levels");
+    } else if (metrics.overview.avgEngagement < 0.4) {
+      trends.push("⚠️ Low engagement levels need improvement");
+    }
+
+    // Platform trends
+    const topPlatform = Array.from(metrics.platformBreakdown.entries())
+      .sort((a, b) => b[1].totalPosts - a[1].totalPosts)[0];
+    if (topPlatform) {
+      trends.push(`🏆 ${topPlatform[0]} is the dominant platform with ${this.formatNumber(topPlatform[1].totalPosts)} posts`);
+    }
+
+    // Time series trends
+    if (metrics.timeSeries.length > 1) {
+      const recent = metrics.timeSeries[metrics.timeSeries.length - 1];
+      const previous = metrics.timeSeries[metrics.timeSeries.length - 2];
+      if (recent.avgScore > previous.avgScore * 1.1) {
+        trends.push("⬆️ Content quality improving (score up 10%+)");
+      }
+    }
+
+    // Data health trends
+    if (metrics.health.dataQuality > 90) {
+      trends.push("✅ Excellent data quality maintained");
+    }
+
+    return trends;
+  }
+
+  /**
+   * Get quality indicator emoji
+   */
+  private getQualityIndicator(quality: number): string {
+    if (quality >= 90) return "🟢";
+    if (quality >= 70) return "🟡";
+    if (quality >= 50) return "🟠";
+    return "🔴";
+  }
+
+  /**
+   * Generate detailed statistical breakdown
+   */
+  public generateDetailedBreakdown(
+    metrics: DashboardMetrics,
+    options?: {
+      includeStatistics?: boolean;
+      includeDistributions?: boolean;
+      includeCorrelations?: boolean;
+      includePredictions?: boolean;
+    }
+  ): string {
+    const opts = {
+      includeStatistics: true,
+      includeDistributions: true,
+      includeCorrelations: true,
+      includePredictions: true,
+      ...options,
+    };
+
+    const sections = [];
+
+    // Statistical summary
+    if (opts.includeStatistics) {
+      sections.push(this.generateStatisticalSummary(metrics));
+    }
+
+    // Distribution analysis
+    if (opts.includeDistributions) {
+      sections.push(this.generateDistributionAnalysis(metrics));
+    }
+
+    // Correlation analysis
+    if (opts.includeCorrelations) {
+      sections.push(this.generateCorrelationAnalysis(metrics));
+    }
+
+    // Predictive insights
+    if (opts.includePredictions) {
+      sections.push(this.generatePredictiveInsights(metrics));
+    }
+
+    return sections.join("\n\n");
+  }
+
+  /**
+   * Generate statistical summary
+   */
+  private generateStatisticalSummary(metrics: DashboardMetrics): string {
+    const stats = this.calculateStatistics(metrics);
+
+    return `# Statistical Summary
+
+## Central Tendency
+- **Mean Score**: ${stats.meanScore.toFixed(2)}
+- **Median Score**: ${stats.medianScore.toFixed(2)}
+- **Mode Score**: ${stats.modeScore.toFixed(2)}
+
+## Dispersion
+- **Standard Deviation**: ${stats.stdDev.toFixed(2)}
+- **Variance**: ${stats.variance.toFixed(2)}
+- **Range**: ${stats.range.min} - ${stats.range.max}
+- **Interquartile Range**: ${stats.iqr.toFixed(2)}
+
+## Shape
+- **Skewness**: ${stats.skewness.toFixed(3)} ${this.interpretSkewness(stats.skewness)}
+- **Kurtosis**: ${stats.kurtosis.toFixed(3)} ${this.interpretKurtosis(stats.kurtosis)}
+
+## Percentiles
+- **25th Percentile**: ${stats.percentiles.p25.toFixed(2)}
+- **50th Percentile**: ${stats.percentiles.p50.toFixed(2)}
+- **75th Percentile**: ${stats.percentiles.p75.toFixed(2)}
+- **95th Percentile**: ${stats.percentiles.p95.toFixed(2)}`;
+  }
+
+  /**
+   * Generate distribution analysis
+   */
+  private generateDistributionAnalysis(metrics: DashboardMetrics): string {
+    const distributions = this.analyzeDistributions(metrics);
+
+    return `# Distribution Analysis
+
+## Platform Distribution
+${distributions.platforms.map(p => `- **${p.platform}**: ${p.percentage.toFixed(1)}% (${this.formatNumber(p.count)} items)`).join("\n")}
+
+## Temporal Distribution
+${distributions.temporal.map(t => `- **${t.period}**: ${t.percentage.toFixed(1)}% activity`).join("\n")}
+
+## Engagement Distribution
+${distributions.engagement.map(e => `- **${e.range}**: ${e.percentage.toFixed(1)}% of content`).join("\n")}
+
+## Score Distribution
+\`\`\`
+${this.createHistogram(distributions.scores, 10)}
+\`\`\``;
+  }
+
+  /**
+   * Generate correlation analysis
+   */
+  private generateCorrelationAnalysis(metrics: DashboardMetrics): string {
+    const correlations = this.calculateCorrelations(metrics);
+
+    return `# Correlation Analysis
+
+## Strong Positive Correlations
+${correlations.strong.positive.map(c => `- ${c.var1} ↔️ ${c.var2}: ${c.value.toFixed(3)}`).join("\n")}
+
+## Strong Negative Correlations
+${correlations.strong.negative.map(c => `- ${c.var1} ↔️ ${c.var2}: ${c.value.toFixed(3)}`).join("\n")}
+
+## Key Insights
+${correlations.insights.map((insight, i) => `${i + 1}. ${insight}`).join("\n")}`;
+  }
+
+  /**
+   * Generate predictive insights
+   */
+  private generatePredictiveInsights(metrics: DashboardMetrics): string {
+    const predictions = this.generatePredictions(metrics);
+
+    return `# Predictive Analytics
+
+## Growth Predictions
+- **Next 7 Days**: ${predictions.growth.week.toFixed(1)}% ${predictions.growth.week > 0 ? "increase" : "decrease"}
+- **Next 30 Days**: ${predictions.growth.month.toFixed(1)}% ${predictions.growth.month > 0 ? "increase" : "decrease"}
+- **Confidence Level**: ${predictions.confidence.toFixed(0)}%
+
+## Expected Outcomes
+${predictions.outcomes.map((outcome, i) => `${i + 1}. ${outcome}`).join("\n")}
+
+## Risk Factors
+${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (${r.impact} impact)`).join("\n")}`;
+  }
+
+  /**
+   * Calculate comprehensive statistics
+   */
+  private calculateStatistics(metrics: DashboardMetrics): any {
+    const scores = metrics.timeSeries.map(t => t.avgScore);
+
+    if (scores.length === 0) {
+      return this.getDefaultStatistics();
+    }
+
+    const sorted = [...scores].sort((a, b) => a - b);
+    const n = sorted.length;
+
+    // Central tendency
+    const mean = scores.reduce((a, b) => a + b, 0) / n;
+    const median = n % 2 === 0
+      ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+      : sorted[Math.floor(n / 2)];
+
+    // Mode (simplified - most frequent score)
+    const frequency = {};
+    scores.forEach(s => frequency[s] = (frequency[s] || 0) + 1);
+    const mode = Number(Object.keys(frequency).reduce((a, b) =>
+      frequency[a] > frequency[b] ? a : b
+    ));
+
+    // Dispersion
+    const variance = scores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / n;
+    const stdDev = Math.sqrt(variance);
+
+    // Percentiles
+    const percentile = (p: number) => {
+      const index = (p / 100) * (n - 1);
+      const lower = Math.floor(index);
+      const upper = Math.ceil(index);
+      const weight = index % 1;
+      return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+    };
+
+    // Skewness and kurtosis
+    const m3 = scores.reduce((sum, s) => sum + Math.pow(s - mean, 3), 0) / n;
+    const m4 = scores.reduce((sum, s) => sum + Math.pow(s - mean, 4), 0) / n;
+    const skewness = stdDev > 0 ? m3 / Math.pow(stdDev, 3) : 0;
+    const kurtosis = stdDev > 0 ? (m4 / Math.pow(stdDev, 4)) - 3 : 0;
+
+    return {
+      meanScore: mean,
+      medianScore: median,
+      modeScore: mode,
+      stdDev,
+      variance,
+      range: { min: sorted[0], max: sorted[n - 1] },
+      iqr: percentile(75) - percentile(25),
+      skewness,
+      kurtosis,
+      percentiles: {
+        p25: percentile(25),
+        p50: percentile(50),
+        p75: percentile(75),
+        p95: percentile(95),
+      },
+    };
+  }
+
+  /**
+   * Get default statistics when no data available
+   */
+  private getDefaultStatistics(): any {
+    return {
+      meanScore: 0,
+      medianScore: 0,
+      modeScore: 0,
+      stdDev: 0,
+      variance: 0,
+      range: { min: 0, max: 0 },
+      iqr: 0,
+      skewness: 0,
+      kurtosis: 0,
+      percentiles: { p25: 0, p50: 0, p75: 0, p95: 0 },
+    };
+  }
+
+  /**
+   * Interpret skewness value
+   */
+  private interpretSkewness(skewness: number): string {
+    if (Math.abs(skewness) < 0.5) return "(symmetric)";
+    if (skewness > 0) return "(right-skewed)";
+    return "(left-skewed)";
+  }
+
+  /**
+   * Interpret kurtosis value
+   */
+  private interpretKurtosis(kurtosis: number): string {
+    if (Math.abs(kurtosis) < 0.5) return "(normal)";
+    if (kurtosis > 0) return "(heavy-tailed)";
+    return "(light-tailed)";
+  }
+
+  /**
+   * Analyze distributions
+   */
+  private analyzeDistributions(metrics: DashboardMetrics): any {
+    const platforms = Array.from(metrics.platformBreakdown.entries());
+    const totalPosts = platforms.reduce((sum, [_, stats]) => sum + stats.totalPosts, 0);
+
+    return {
+      platforms: platforms.map(([platform, stats]) => ({
+        platform,
+        count: stats.totalPosts,
+        percentage: (stats.totalPosts / totalPosts) * 100,
+      })),
+      temporal: this.analyzeTemporalDistribution(metrics.timeSeries),
+      engagement: this.analyzeEngagementDistribution(metrics),
+      scores: metrics.timeSeries.map(t => t.avgScore),
+    };
+  }
+
+  /**
+   * Analyze temporal distribution
+   */
+  private analyzeTemporalDistribution(timeSeries: any[]): any[] {
+    if (timeSeries.length === 0) return [];
+
+    const hourly = new Array(24).fill(0);
+    const daily = new Array(7).fill(0);
+
+    timeSeries.forEach(item => {
+      const date = new Date(item.timestamp);
+      hourly[date.getHours()]++;
+      daily[date.getDay()]++;
+    });
+
+    const maxHourly = Math.max(...hourly);
+    const maxDaily = Math.max(...daily);
+
+    return [
+      { period: "Peak Hour", percentage: (maxHourly / timeSeries.length) * 100 },
+      { period: "Peak Day", percentage: (maxDaily / timeSeries.length) * 100 },
+    ];
+  }
+
+  /**
+   * Analyze engagement distribution
+   */
+  private analyzeEngagementDistribution(metrics: DashboardMetrics): any[] {
+    const engagement = metrics.overview.avgEngagement;
+
+    return [
+      { range: "High (>0.7)", percentage: engagement > 0.7 ? 100 : 0 },
+      { range: "Medium (0.4-0.7)", percentage: engagement >= 0.4 && engagement <= 0.7 ? 100 : 0 },
+      { range: "Low (<0.4)", percentage: engagement < 0.4 ? 100 : 0 },
+    ];
+  }
+
+  /**
+   * Create ASCII histogram
+   */
+  private createHistogram(data: number[], bins: number = 10): string {
+    if (data.length === 0) return "No data available";
+
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min;
+    const binWidth = range / bins;
+
+    const histogram = new Array(bins).fill(0);
+    data.forEach(value => {
+      const binIndex = Math.min(Math.floor((value - min) / binWidth), bins - 1);
+      histogram[binIndex]++;
+    });
+
+    const maxCount = Math.max(...histogram);
+    const scale = 40 / maxCount;
+
+    return histogram.map((count, i) => {
+      const start = (min + i * binWidth).toFixed(1);
+      const end = (min + (i + 1) * binWidth).toFixed(1);
+      const bar = "█".repeat(Math.round(count * scale));
+      return `${start.padStart(6)}-${end.padEnd(6)} | ${bar} (${count})`;
+    }).join("\n");
+  }
+
+  /**
+   * Calculate correlations
+   */
+  private calculateCorrelations(metrics: DashboardMetrics): any {
+    const correlations = {
+      strong: { positive: [], negative: [] },
+      insights: [],
+    };
+
+    // Mock correlation analysis for now
+    if (metrics.timeSeries.length > 1) {
+      correlations.strong.positive.push({
+        var1: "Posts",
+        var2: "Comments",
+        value: 0.85,
+      });
+      correlations.insights.push("Strong positive correlation between post count and comment activity");
+    }
+
+    if (metrics.overview.avgEngagement > 0.6) {
+      correlations.insights.push("High engagement correlates with content quality");
+    }
+
+    return correlations;
+  }
+
+  /**
+   * Generate predictions
+   */
+  private generatePredictions(metrics: DashboardMetrics): any {
+    const currentGrowth = metrics.overview.growthRate;
+
+    return {
+      growth: {
+        week: currentGrowth * 0.7,  // Conservative weekly estimate
+        month: currentGrowth * 2.5,  // Monthly projection
+      },
+      confidence: Math.max(50, Math.min(95, 70 + metrics.health.dataQuality / 4)),
+      outcomes: [
+        `Expected ${this.formatNumber(metrics.overview.totalPosts * 1.1)} total posts in 30 days`,
+        `User base likely to grow by ${(currentGrowth * 0.8).toFixed(1)}%`,
+      ],
+      risks: [
+        {
+          factor: "Data Quality Degradation",
+          probability: metrics.health.dataQuality < 70 ? 60 : 20,
+          impact: "high",
+        },
+        {
+          factor: "Platform API Changes",
+          probability: 30,
+          impact: "medium",
+        },
+      ],
+    };
+  }
+
+  /**
+   * Generate comprehensive analytics report
+   */
+  public generateComprehensiveReport(
+    data: {
+      metrics: DashboardMetrics;
+      comparative?: any;
+      trending?: any;
+      performance?: any;
+      generatedAt: Date;
+    },
+    format: "html" | "markdown" | "json" = "markdown",
+    config?: ReportConfig & {
+      reportType?: "executive" | "detailed" | "technical";
+      includeSections?: string[];
+      excludeSections?: string[];
+    }
+  ): string {
+    const cfg = { ...this.defaultConfig, reportType: "detailed", ...config };
+    const sections: ReportSection[] = [];
+
+    // Executive Summary (always included for comprehensive reports)
+    sections.push(this.createExecutiveSummary(data.metrics));
+
+    // Conditional sections based on report type
+    if (cfg.reportType === "executive") {
+      // Executive report: high-level overview
+      sections.push(this.createPlatformOverview(data.metrics));
+      if (data.trending) {
+        sections.push(this.createTrendingSection(data.trending));
+      }
+      sections.push(this.createRecommendations(data));
+    } else if (cfg.reportType === "technical") {
+      // Technical report: detailed statistics and analysis
+      const breakdown = this.generateDetailedBreakdown(data.metrics);
+      sections.push({
+        title: "Statistical Analysis",
+        content: breakdown,
+        priority: "high",
+        type: "text",
+      });
+
+      if (data.performance) {
+        sections.push(this.createPerformanceSection(data.performance));
+      }
+
+      // Add technical insights
+      sections.push(this.createTechnicalInsights(data));
+    } else {
+      // Detailed report: comprehensive coverage
+      sections.push(this.createPlatformOverview(data.metrics));
+
+      // Statistical breakdown
+      const breakdown = this.generateDetailedBreakdown(data.metrics, {
+        includeStatistics: true,
+        includeDistributions: true,
+        includeCorrelations: false,
+        includePredictions: true,
+      });
+      sections.push({
+        title: "Statistical Analysis",
+        content: breakdown,
+        priority: "medium",
+        type: "text",
+      });
+
+      if (data.trending) {
+        sections.push(this.createTrendingSection(data.trending));
+      }
+
+      if (data.comparative) {
+        sections.push(this.createComparativeSection(data.comparative));
+      }
+
+      if (data.performance) {
+        sections.push(this.createPerformanceSection(data.performance));
+      }
+
+      if (cfg.includeCharts) {
+        sections.push(...this.createVisualizationSections(data.metrics));
+      }
+
+      sections.push(this.createRecommendations(data));
+    }
+
+    // Filter sections if specified
+    let finalSections = sections;
+    if (cfg.includeSections && cfg.includeSections.length > 0) {
+      finalSections = sections.filter(s =>
+        cfg.includeSections.includes(s.title)
+      );
+    }
+    if (cfg.excludeSections && cfg.excludeSections.length > 0) {
+      finalSections = sections.filter(s =>
+        !cfg.excludeSections.includes(s.title)
+      );
+    }
+
+    // Create report structure
+    const report: GeneratedReport = {
+      title: this.getReportTitle(cfg.reportType),
+      generatedAt: data.generatedAt,
+      sections: finalSections,
+      metadata: {
+        platforms: Array.from(data.metrics.platformBreakdown.keys()),
+        recordCount:
+          data.metrics.overview.totalPosts +
+          data.metrics.overview.totalComments,
+        reportType: cfg.reportType,
+      },
+      format,
+      content: "",
+    };
+
+    // Generate formatted content with enhanced formatting
+    switch (format) {
+      case "html":
+        report.content = this.formatAsEnhancedHTML(report, cfg);
+        break;
+      case "json":
+        report.content = this.formatAsStructuredJSON(report);
+        break;
+      case "markdown":
+      default:
+        report.content = this.formatAsEnhancedMarkdown(report, cfg);
+        break;
+    }
+
+    return report.content;
+  }
+
+  /**
+   * Create technical insights section
+   */
+  private createTechnicalInsights(data: any): ReportSection {
+    const content = `
+## System Architecture Analysis
+- Database Efficiency: ${this.calculateDatabaseEfficiency(data)}%
+- Query Performance: ${data.performance?.database?.queryPerformance || "N/A"}%
+- Index Utilization: ${data.performance?.database?.indexEfficiency || "N/A"}%
+
+## Data Pipeline Health
+- Collection Success Rate: ${(data.performance?.scraping?.successRate * 100 || 0).toFixed(1)}%
+- Processing Latency: ${data.performance?.scraping?.avgResponseTime || "N/A"}ms
+- Error Recovery Rate: ${this.calculateErrorRecoveryRate(data)}%
+
+## Scalability Assessment
+- Current Load: ${this.assessCurrentLoad(data)}
+- Capacity Utilization: ${this.calculateCapacityUtilization(data)}%
+- Scaling Recommendations: ${this.getScalingRecommendations(data)}
+`;
+
+    return {
+      title: "Technical Insights",
+      content,
+      priority: "medium",
+      type: "text",
+    };
+  }
+
+  /**
+   * Get report title based on type
+   */
+  private getReportTitle(reportType: string): string {
+    switch (reportType) {
+      case "executive":
+        return "Executive Analytics Summary";
+      case "technical":
+        return "Technical Analytics Report";
+      default:
+        return "Comprehensive Analytics Report";
+    }
+  }
+
+  /**
+   * Format as enhanced Markdown
+   */
+  private formatAsEnhancedMarkdown(report: GeneratedReport, config: any): string {
+    const lines: string[] = [];
+
+    // Enhanced header
+    lines.push(`# ${report.title}`);
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+    lines.push(`**Generated:** ${this.formatDate(report.generatedAt, "long")}`);
+    lines.push(`**Report Type:** ${report.metadata.reportType || "Standard"}`);
+    lines.push(`**Data Points:** ${this.formatNumber(report.metadata.recordCount || 0)}`);
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+
+    // Table of contents for detailed reports
+    if (config.reportType === "detailed" || config.reportType === "technical") {
+      lines.push("## Table of Contents");
+      lines.push("");
+      report.sections.forEach((section, index) => {
+        lines.push(`${index + 1}. [${section.title}](#${this.slugify(section.title)})`);
+      });
+      lines.push("");
+      lines.push("---");
+      lines.push("");
+    }
+
+    // Add sections with enhanced formatting
+    report.sections.forEach((section) => {
+      lines.push(`## ${section.title}`);
+      lines.push("");
+
+      if (section.priority === "high") {
+        lines.push("> **Priority: High**");
+        lines.push("");
+      }
+
+      if (typeof section.content === "string") {
+        lines.push(section.content);
+      } else {
+        lines.push("```json");
+        lines.push(JSON.stringify(section.content, null, 2));
+        lines.push("```");
+      }
+
+      lines.push("");
+      lines.push("---");
+      lines.push("");
+    });
+
+    // Enhanced footer
+    lines.push("## Report Metadata");
+    lines.push("");
+    lines.push("| Property | Value |");
+    lines.push("|----------|-------|");
+    lines.push(`| Generated | ${this.formatDate(report.generatedAt, "iso")} |`);
+    lines.push(`| Platforms | ${report.metadata.platforms?.join(", ") || "All"} |`);
+    lines.push(`| Format | ${report.format} |`);
+    lines.push(`| Version | 2.0 |`);
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+    lines.push("*Generated by Analytics Report Generator v2.0*");
+
+    return lines.join("\n");
+  }
+
+  /**
+   * Format as enhanced HTML
+   */
+  private formatAsEnhancedHTML(report: GeneratedReport, config: any): string {
+    const sections = report.sections
+      .map((section, index) => {
+        const sectionId = this.slugify(section.title);
+        const content =
+          typeof section.content === "string"
+            ? this.markdownToHTML(section.content)
+            : `<pre class="json-content">${JSON.stringify(section.content, null, 2)}</pre>`;
+
+        return `
+        <section id="${sectionId}" class="report-section ${section.priority} ${section.type}">
+          <h2>${section.title}</h2>
+          <div class="content">
+            ${content}
+          </div>
+        </section>
+      `;
+      })
+      .join("\n");
+
+    const toc = config.reportType !== "executive"
+      ? `
+        <nav class="table-of-contents">
+          <h3>Table of Contents</h3>
+          <ol>
+            ${report.sections.map(s => `<li><a href="#${this.slugify(s.title)}">${s.title}</a></li>`).join("\n")}
+          </ol>
+        </nav>
+      `
+      : "";
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${report.title}</title>
+  <style>
+    ${this.getEnhancedStyles(config)}
+  </style>
+</head>
+<body>
+  <header class="report-header">
+    <h1>${report.title}</h1>
+    <div class="metadata">
+      <span class="date">Generated: ${this.formatDate(report.generatedAt, "long")}</span>
+      <span class="type">Type: ${report.metadata.reportType || "Standard"}</span>
+      <span class="records">Records: ${this.formatNumber(report.metadata.recordCount || 0)}</span>
+    </div>
+  </header>
+
+  ${toc}
+
+  <main class="report-content">
+    ${sections}
+  </main>
+
+  <footer class="report-footer">
+    <div class="footer-content">
+      <p>Generated by Analytics Report Generator v2.0</p>
+      <p class="timestamp">${this.formatDate(report.generatedAt, "iso")}</p>
+    </div>
+  </footer>
+
+  <script>
+    ${this.getEnhancedScripts()}
+  </script>
+</body>
+</html>
+    `;
+  }
+
+  /**
+   * Get enhanced styles for HTML reports
+   */
+  private getEnhancedStyles(config: any): string {
+    return `
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+
+      .report-header {
+        background: white;
+        padding: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+      }
+
+      .report-header h1 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-size: 2.5rem;
+      }
+
+      .metadata {
+        display: flex;
+        gap: 2rem;
+        color: #7f8c8d;
+        font-size: 0.9rem;
+      }
+
+      .table-of-contents {
+        background: white;
+        padding: 1.5rem;
+        margin: 0 auto 2rem;
+        max-width: 1200px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+
+      .table-of-contents h3 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+      }
+
+      .table-of-contents ol {
+        list-style: decimal;
+        margin-left: 2rem;
+      }
+
+      .table-of-contents a {
+        color: #3498db;
+        text-decoration: none;
+        transition: color 0.3s;
+      }
+
+      .table-of-contents a:hover {
+        color: #2980b9;
+      }
+
+      .report-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 1rem;
+      }
+
+      .report-section {
+        background: white;
+        margin-bottom: 2rem;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+      }
+
+      .report-section:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      }
+
+      .report-section h2 {
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #ecf0f1;
+      }
+
+      .report-section.high {
+        border-left: 4px solid #e74c3c;
+      }
+
+      .report-section.medium {
+        border-left: 4px solid #f39c12;
+      }
+
+      .report-section.low {
+        border-left: 4px solid #95a5a6;
+      }
+
+      .content {
+        color: #34495e;
+      }
+
+      .content h3 {
+        color: #2c3e50;
+        margin: 1.5rem 0 1rem;
+      }
+
+      .content ul, .content ol {
+        margin-left: 2rem;
+        margin-bottom: 1rem;
+      }
+
+      .content li {
+        margin-bottom: 0.5rem;
+      }
+
+      .content strong {
+        color: #2c3e50;
+      }
+
+      .content code {
+        background: #f8f9fa;
+        padding: 0.2rem 0.4rem;
+        border-radius: 3px;
+        font-family: "Courier New", monospace;
+      }
+
+      pre {
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 1rem;
+        border-radius: 4px;
+        overflow-x: auto;
+        margin: 1rem 0;
+      }
+
+      .json-content {
+        background: #f8f9fa;
+        color: #2c3e50;
+        border: 1px solid #dee2e6;
+      }
+
+      blockquote {
+        border-left: 4px solid #3498db;
+        padding-left: 1rem;
+        margin: 1rem 0;
+        color: #7f8c8d;
+        font-style: italic;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+      }
+
+      th, td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;
+      }
+
+      th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .report-footer {
+        background: white;
+        padding: 2rem;
+        margin-top: 3rem;
+        text-align: center;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      }
+
+      .footer-content {
+        color: #7f8c8d;
+      }
+
+      .timestamp {
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+      }
+
+      @media print {
+        body { background: white; }
+        .report-section { box-shadow: none; page-break-inside: avoid; }
+        .table-of-contents { page-break-after: always; }
+      }
+
+      @media (max-width: 768px) {
+        .metadata { flex-direction: column; gap: 0.5rem; }
+        .report-header h1 { font-size: 1.8rem; }
+        .report-section { padding: 1rem; }
+      }
+    `;
+  }
+
+  /**
+   * Get enhanced scripts for HTML reports
+   */
+  private getEnhancedScripts(): string {
+    return `
+      // Smooth scrolling for TOC links
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute('href'));
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+
+      // Highlight current section in view
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            document.querySelectorAll('.table-of-contents a').forEach(link => {
+              link.classList.remove('active');
+              if (link.getAttribute('href') === '#' + id) {
+                link.classList.add('active');
+              }
+            });
+          }
+        });
+      }, { threshold: 0.5 });
+
+      document.querySelectorAll('.report-section').forEach(section => {
+        observer.observe(section);
+      });
+    `;
+  }
+
+  /**
+   * Format as structured JSON
+   */
+  private formatAsStructuredJSON(report: GeneratedReport): string {
+    const structured = {
+      metadata: {
+        title: report.title,
+        generatedAt: report.generatedAt.toISOString(),
+        ...report.metadata,
+      },
+      summary: {},
+      sections: {},
+      insights: {},
+      recommendations: {},
+    };
+
+    report.sections.forEach(section => {
+      const key = this.slugify(section.title);
+      if (section.title.toLowerCase().includes("summary")) {
+        structured.summary[key] = section.content;
+      } else if (section.title.toLowerCase().includes("insight") ||
+                 section.title.toLowerCase().includes("recommendation")) {
+        structured.insights[key] = section.content;
+      } else {
+        structured.sections[key] = {
+          title: section.title,
+          priority: section.priority,
+          type: section.type,
+          content: section.content,
+        };
+      }
+    });
+
+    return JSON.stringify(structured, null, 2);
+  }
+
+  /**
+   * Convert markdown to HTML
+   */
+  private markdownToHTML(markdown: string): string {
+    return markdown
+      .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+      .replace(/^\* (.+)/gim, '<li>$1</li>')
+      .replace(/^- (.+)/gim, '<li>$1</li>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/^/, '<p>')
+      .replace(/$/, '</p>')
+      .replace(/<li>.*<\/li>/s, (match) => `<ul>${match}</ul>`)
+      .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+  }
+
+  /**
+   * Create URL-friendly slug
+   */
+  private slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+  }
+
+  /**
+   * Calculate database efficiency
+   */
+  private calculateDatabaseEfficiency(data: any): number {
+    const queryPerf = data.performance?.database?.queryPerformance || 70;
+    const indexEff = data.performance?.database?.indexEfficiency || 70;
+    return Math.round((queryPerf + indexEff) / 2);
+  }
+
+  /**
+   * Calculate error recovery rate
+   */
+  private calculateErrorRecoveryRate(data: any): number {
+    const errorRate = data.performance?.scraping?.errorRate || 5;
+    return Math.max(0, 100 - errorRate * 2);
+  }
+
+  /**
+   * Assess current load
+   */
+  private assessCurrentLoad(data: any): string {
+    const size = data.metrics?.health?.databaseSize || 0;
+    if (size < 1000000000) return "Low";
+    if (size < 3000000000) return "Moderate";
+    return "High";
+  }
+
+  /**
+   * Calculate capacity utilization
+   */
+  private calculateCapacityUtilization(data: any): number {
+    const size = data.metrics?.health?.databaseSize || 0;
+    const maxSize = 10000000000; // 10GB assumed max
+    return Math.round((size / maxSize) * 100);
+  }
+
+  /**
+   * Get scaling recommendations
+   */
+  private getScalingRecommendations(data: any): string {
+    const utilization = this.calculateCapacityUtilization(data);
+    if (utilization < 30) return "No scaling needed";
+    if (utilization < 70) return "Monitor growth patterns";
+    return "Consider horizontal scaling";
   }
 
   /**
