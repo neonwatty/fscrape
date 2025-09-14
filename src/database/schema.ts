@@ -121,6 +121,96 @@ export const DATABASE_SCHEMA = {
       PRIMARY KEY (id, platform, time_bucket)
     )
   `,
+
+  trend_metrics: `
+    CREATE TABLE IF NOT EXISTS trend_metrics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      platform TEXT NOT NULL,
+      metric_type TEXT NOT NULL,
+      metric_name TEXT NOT NULL,
+      metric_value REAL NOT NULL,
+      time_window TEXT NOT NULL,
+      calculated_at INTEGER NOT NULL,
+      metadata TEXT,
+      UNIQUE(platform, metric_type, metric_name, time_window, calculated_at)
+    )
+  `,
+
+  time_series_hourly: `
+    CREATE TABLE IF NOT EXISTS time_series_hourly (
+      platform TEXT NOT NULL,
+      hour_bucket INTEGER NOT NULL,
+      posts_count INTEGER DEFAULT 0,
+      comments_count INTEGER DEFAULT 0,
+      users_count INTEGER DEFAULT 0,
+      avg_score REAL DEFAULT 0,
+      avg_comment_count REAL DEFAULT 0,
+      total_score INTEGER DEFAULT 0,
+      max_score INTEGER DEFAULT 0,
+      min_score INTEGER DEFAULT 0,
+      engagement_rate REAL DEFAULT 0,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      PRIMARY KEY (platform, hour_bucket)
+    )
+  `,
+
+  time_series_daily: `
+    CREATE TABLE IF NOT EXISTS time_series_daily (
+      platform TEXT NOT NULL,
+      date TEXT NOT NULL,
+      posts_count INTEGER DEFAULT 0,
+      comments_count INTEGER DEFAULT 0,
+      users_count INTEGER DEFAULT 0,
+      new_users_count INTEGER DEFAULT 0,
+      avg_score REAL DEFAULT 0,
+      avg_comment_count REAL DEFAULT 0,
+      total_score INTEGER DEFAULT 0,
+      max_score INTEGER DEFAULT 0,
+      min_score INTEGER DEFAULT 0,
+      engagement_rate REAL DEFAULT 0,
+      top_post_id TEXT,
+      top_user_id TEXT,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      PRIMARY KEY (platform, date)
+    )
+  `,
+
+  keyword_trends: `
+    CREATE TABLE IF NOT EXISTS keyword_trends (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      keyword TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      date TEXT NOT NULL,
+      frequency INTEGER DEFAULT 0,
+      posts_count INTEGER DEFAULT 0,
+      comments_count INTEGER DEFAULT 0,
+      avg_score REAL DEFAULT 0,
+      trending_score REAL DEFAULT 0,
+      first_seen_at INTEGER,
+      last_seen_at INTEGER,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      UNIQUE(keyword, platform, date)
+    )
+  `,
+
+  user_influence_scores: `
+    CREATE TABLE IF NOT EXISTS user_influence_scores (
+      user_id TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      calculation_date TEXT NOT NULL,
+      post_count INTEGER DEFAULT 0,
+      comment_count INTEGER DEFAULT 0,
+      total_karma INTEGER DEFAULT 0,
+      avg_post_score REAL DEFAULT 0,
+      avg_comment_score REAL DEFAULT 0,
+      reply_count INTEGER DEFAULT 0,
+      unique_interactions INTEGER DEFAULT 0,
+      influence_score REAL DEFAULT 0,
+      percentile_rank REAL DEFAULT 0,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      PRIMARY KEY (user_id, platform, calculation_date)
+    )
+  `,
 };
 
 export const DATABASE_INDEXES = [
@@ -141,6 +231,31 @@ export const DATABASE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_sessions_platform ON scraping_sessions(platform)",
   "CREATE INDEX IF NOT EXISTS idx_sessions_status ON scraping_sessions(status)",
   "CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON scraping_sessions(started_at)",
+
+  // Trend metrics indexes
+  "CREATE INDEX IF NOT EXISTS idx_trend_metrics_platform ON trend_metrics(platform)",
+  "CREATE INDEX IF NOT EXISTS idx_trend_metrics_type ON trend_metrics(metric_type)",
+  "CREATE INDEX IF NOT EXISTS idx_trend_metrics_calculated ON trend_metrics(calculated_at DESC)",
+
+  // Time series hourly indexes
+  "CREATE INDEX IF NOT EXISTS idx_time_series_hourly_platform ON time_series_hourly(platform)",
+  "CREATE INDEX IF NOT EXISTS idx_time_series_hourly_bucket ON time_series_hourly(hour_bucket DESC)",
+
+  // Time series daily indexes
+  "CREATE INDEX IF NOT EXISTS idx_time_series_daily_platform ON time_series_daily(platform)",
+  "CREATE INDEX IF NOT EXISTS idx_time_series_daily_date ON time_series_daily(date DESC)",
+
+  // Keyword trends indexes
+  "CREATE INDEX IF NOT EXISTS idx_keyword_trends_keyword ON keyword_trends(keyword)",
+  "CREATE INDEX IF NOT EXISTS idx_keyword_trends_platform ON keyword_trends(platform)",
+  "CREATE INDEX IF NOT EXISTS idx_keyword_trends_date ON keyword_trends(date DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_keyword_trends_score ON keyword_trends(trending_score DESC)",
+
+  // User influence scores indexes
+  "CREATE INDEX IF NOT EXISTS idx_user_influence_user ON user_influence_scores(user_id)",
+  "CREATE INDEX IF NOT EXISTS idx_user_influence_platform ON user_influence_scores(platform)",
+  "CREATE INDEX IF NOT EXISTS idx_user_influence_date ON user_influence_scores(calculation_date DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_user_influence_score ON user_influence_scores(influence_score DESC)",
 ];
 
 export const DATABASE_TRIGGERS = [

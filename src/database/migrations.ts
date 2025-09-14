@@ -403,6 +403,129 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 6,
+    name: "add_trend_analysis_tables",
+    up: (db: Database.Database) => {
+      // Add trend analysis tables for advanced analytics
+      db.exec(`
+        -- Trend metrics table for storing calculated metrics
+        CREATE TABLE IF NOT EXISTS trend_metrics (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          platform TEXT NOT NULL,
+          metric_type TEXT NOT NULL,
+          metric_name TEXT NOT NULL,
+          metric_value REAL NOT NULL,
+          time_window TEXT NOT NULL,
+          calculated_at INTEGER NOT NULL,
+          metadata TEXT,
+          UNIQUE(platform, metric_type, metric_name, time_window, calculated_at)
+        );
+
+        -- Time series hourly aggregation
+        CREATE TABLE IF NOT EXISTS time_series_hourly (
+          platform TEXT NOT NULL,
+          hour_bucket INTEGER NOT NULL,
+          posts_count INTEGER DEFAULT 0,
+          comments_count INTEGER DEFAULT 0,
+          users_count INTEGER DEFAULT 0,
+          avg_score REAL DEFAULT 0,
+          avg_comment_count REAL DEFAULT 0,
+          total_score INTEGER DEFAULT 0,
+          max_score INTEGER DEFAULT 0,
+          min_score INTEGER DEFAULT 0,
+          engagement_rate REAL DEFAULT 0,
+          created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+          PRIMARY KEY (platform, hour_bucket)
+        );
+
+        -- Time series daily aggregation
+        CREATE TABLE IF NOT EXISTS time_series_daily (
+          platform TEXT NOT NULL,
+          date TEXT NOT NULL,
+          posts_count INTEGER DEFAULT 0,
+          comments_count INTEGER DEFAULT 0,
+          users_count INTEGER DEFAULT 0,
+          new_users_count INTEGER DEFAULT 0,
+          avg_score REAL DEFAULT 0,
+          avg_comment_count REAL DEFAULT 0,
+          total_score INTEGER DEFAULT 0,
+          max_score INTEGER DEFAULT 0,
+          min_score INTEGER DEFAULT 0,
+          engagement_rate REAL DEFAULT 0,
+          top_post_id TEXT,
+          top_user_id TEXT,
+          created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+          PRIMARY KEY (platform, date)
+        );
+
+        -- Keyword trends tracking
+        CREATE TABLE IF NOT EXISTS keyword_trends (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          keyword TEXT NOT NULL,
+          platform TEXT NOT NULL,
+          date TEXT NOT NULL,
+          frequency INTEGER DEFAULT 0,
+          posts_count INTEGER DEFAULT 0,
+          comments_count INTEGER DEFAULT 0,
+          avg_score REAL DEFAULT 0,
+          trending_score REAL DEFAULT 0,
+          first_seen_at INTEGER,
+          last_seen_at INTEGER,
+          created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+          UNIQUE(keyword, platform, date)
+        );
+
+        -- User influence scores
+        CREATE TABLE IF NOT EXISTS user_influence_scores (
+          user_id TEXT NOT NULL,
+          platform TEXT NOT NULL,
+          calculation_date TEXT NOT NULL,
+          post_count INTEGER DEFAULT 0,
+          comment_count INTEGER DEFAULT 0,
+          total_karma INTEGER DEFAULT 0,
+          avg_post_score REAL DEFAULT 0,
+          avg_comment_score REAL DEFAULT 0,
+          reply_count INTEGER DEFAULT 0,
+          unique_interactions INTEGER DEFAULT 0,
+          influence_score REAL DEFAULT 0,
+          percentile_rank REAL DEFAULT 0,
+          created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+          PRIMARY KEY (user_id, platform, calculation_date)
+        );
+
+        -- Create indexes for trend analysis tables
+        CREATE INDEX IF NOT EXISTS idx_trend_metrics_platform ON trend_metrics(platform);
+        CREATE INDEX IF NOT EXISTS idx_trend_metrics_type ON trend_metrics(metric_type);
+        CREATE INDEX IF NOT EXISTS idx_trend_metrics_calculated ON trend_metrics(calculated_at DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_time_series_hourly_platform ON time_series_hourly(platform);
+        CREATE INDEX IF NOT EXISTS idx_time_series_hourly_bucket ON time_series_hourly(hour_bucket DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_time_series_daily_platform ON time_series_daily(platform);
+        CREATE INDEX IF NOT EXISTS idx_time_series_daily_date ON time_series_daily(date DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_keyword_trends_keyword ON keyword_trends(keyword);
+        CREATE INDEX IF NOT EXISTS idx_keyword_trends_platform ON keyword_trends(platform);
+        CREATE INDEX IF NOT EXISTS idx_keyword_trends_date ON keyword_trends(date DESC);
+        CREATE INDEX IF NOT EXISTS idx_keyword_trends_score ON keyword_trends(trending_score DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_user_influence_user ON user_influence_scores(user_id);
+        CREATE INDEX IF NOT EXISTS idx_user_influence_platform ON user_influence_scores(platform);
+        CREATE INDEX IF NOT EXISTS idx_user_influence_date ON user_influence_scores(calculation_date DESC);
+        CREATE INDEX IF NOT EXISTS idx_user_influence_score ON user_influence_scores(influence_score DESC);
+      `);
+    },
+    down: (db: Database.Database) => {
+      db.exec(`
+        DROP TABLE IF EXISTS trend_metrics;
+        DROP TABLE IF EXISTS time_series_hourly;
+        DROP TABLE IF EXISTS time_series_daily;
+        DROP TABLE IF EXISTS keyword_trends;
+        DROP TABLE IF EXISTS user_influence_scores;
+      `);
+    },
+  },
 ];
 
 /**
