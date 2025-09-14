@@ -791,6 +791,35 @@ export class DatabaseManager {
     return rows.map((row) => this.mapRowToComment(row as any));
   }
 
+  queryUsers(options: {
+    platform?: Platform;
+    limit?: number;
+    minKarma?: number;
+  }): User[] {
+    let query = "SELECT * FROM users WHERE 1=1";
+    const params: any[] = [];
+
+    if (options.platform) {
+      query += " AND platform = ?";
+      params.push(options.platform);
+    }
+
+    if (options.minKarma !== undefined) {
+      query += " AND karma >= ?";
+      params.push(options.minKarma);
+    }
+
+    query += " ORDER BY karma DESC";
+
+    if (options.limit) {
+      query += " LIMIT ?";
+      params.push(options.limit);
+    }
+
+    const rows = this.db.prepare(query).all(...params);
+    return rows.map((row) => this.mapRowToUser(row as any));
+  }
+
   /**
    * Count items that would be deleted
    */

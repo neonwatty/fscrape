@@ -466,7 +466,6 @@ export class BatchProcessor {
           clientId: 'mock',
           clientSecret: 'mock',
           userAgent: 'fscrape-batch',
-          maxRetries: 3,
         });
 
         for (const item of operation.items || []) {
@@ -491,9 +490,7 @@ export class BatchProcessor {
         operation.platform === "hackernews" ||
         operation.platform === "both"
       ) {
-        const scraper = new HackerNewsScraper({
-          maxRetries: 3,
-        });
+        const scraper = new HackerNewsScraper({});
 
         // Check if it's a specific story or top stories
         if (operation.items && operation.items.length > 0) {
@@ -542,8 +539,10 @@ export class BatchProcessor {
       const dataType = operation.options?.data || "all";
 
       // Create ExportManager with appropriate format
-      const exportConfig = {
+      const exportConfig: any = {
         format: format as "json" | "csv",
+        outputDirectory: './',
+        defaultFormat: format as "json" | "csv",
         csvOptions: format === "csv" ? {} : undefined,
         jsonOptions: format === "json" ? { pretty: true } : undefined,
       };
@@ -555,7 +554,8 @@ export class BatchProcessor {
         const posts = await dbManager.queryPosts({ limit: 10000 });
         const filePath = await exporter.exportData(
           { posts, comments: [], users: [] },
-          operation.outputPath || `export-posts-${Date.now()}`
+          `export-posts-${Date.now()}`,
+          format as "json" | "csv"
         );
         results.posts = { count: posts.length, file: filePath };
       }
@@ -564,7 +564,8 @@ export class BatchProcessor {
         const comments = await dbManager.queryComments({ limit: 10000 });
         const filePath = await exporter.exportData(
           { posts: [], comments, users: [] },
-          operation.outputPath || `export-comments-${Date.now()}`
+          `export-comments-${Date.now()}`,
+          format as "json" | "csv"
         );
         results.comments = { count: comments.length, file: filePath };
       }
@@ -573,7 +574,8 @@ export class BatchProcessor {
         const users = await dbManager.queryUsers({ limit: 10000 });
         const filePath = await exporter.exportData(
           { posts: [], comments: [], users },
-          operation.outputPath || `export-users-${Date.now()}`
+          `export-users-${Date.now()}`,
+          format as "json" | "csv"
         );
         results.users = { count: users.length, file: filePath };
       }

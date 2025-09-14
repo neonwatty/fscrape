@@ -1,6 +1,6 @@
 {
   "platform": "reddit",
-  "userAgent": "fscrape/1.0.0 (fscrape-1757811411769)",
+  "userAgent": "fscrape/1.0.0 (fscrape-1757811657249)",
   "timeout": 30000,
   "maxConcurrent": 5,
   "followRedirects": true,
