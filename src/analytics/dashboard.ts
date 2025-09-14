@@ -1241,3 +1241,772 @@ export class AnalyticsDashboard {
     return " ".repeat(leftPad) + text + " ".repeat(rightPad);
   }
 }
+
+/**
+ * Interactive Terminal Dashboard
+ * Provides real-time analytics monitoring with keyboard navigation
+ */
+export class InteractiveDashboard {
+  private dashboard: AnalyticsDashboard;
+  private rl?: readline.Interface;
+  private currentView: "overview" | "platforms" | "trending" | "performance" | "details" = "overview";
+  private selectedPlatform?: Platform;
+  private selectedIndex = 0;
+  private refreshInterval = 5000; // 5 seconds default
+  private autoRefreshTimer?: NodeJS.Timeout;
+  private isRunning = false;
+  private lastMetrics?: DashboardMetrics;
+  private drillDownStack: Array<{ view: string; data: any }> = [];
+  private viewHistory: string[] = [];
+
+  // UI Configuration
+  private readonly colors = {
+    header: "\x1b[36m",    // Cyan
+    success: "\x1b[32m",   // Green
+    warning: "\x1b[33m",   // Yellow
+    error: "\x1b[31m",     // Red
+    info: "\x1b[34m",      // Blue
+    reset: "\x1b[0m",      // Reset
+    bold: "\x1b[1m",       // Bold
+    dim: "\x1b[2m",        // Dim
+    inverse: "\x1b[7m",    // Inverse
+  };
+
+  private readonly boxChars = {
+    topLeft: "┌",
+    topRight: "┐",
+    bottomLeft: "└",
+    bottomRight: "┘",
+    horizontal: "─",
+    vertical: "│",
+    cross: "┼",
+    tLeft: "├",
+    tRight: "┤",
+    tTop: "┬",
+    tBottom: "┴",
+  };
+
+  constructor(analytics: DatabaseAnalytics, config?: DashboardConfig) {
+    this.dashboard = new AnalyticsDashboard(analytics, config);
+  }
+
+  /**
+   * Start the interactive dashboard
+   */
+  public async start(): Promise<void> {
+    if (this.isRunning) return;
+
+    this.isRunning = true;
+    this.clearScreen();
+    this.showWelcomeScreen();
+
+    // Setup keyboard input
+    this.setupKeyboardHandlers();
+
+    // Start auto-refresh
+    this.startAutoRefresh();
+
+    // Initial render
+    await this.render();
+  }
+
+  /**
+   * Stop the interactive dashboard
+   */
+  public stop(): void {
+    this.isRunning = false;
+
+    if (this.autoRefreshTimer) {
+      clearInterval(this.autoRefreshTimer);
+      this.autoRefreshTimer = undefined;
+    }
+
+    if (this.rl) {
+      this.rl.close();
+      this.rl = undefined;
+    }
+
+    this.clearScreen();
+    console.log("Dashboard stopped.");
+  }
+
+  /**
+   * Setup keyboard event handlers
+   */
+  private setupKeyboardHandlers(): void {
+    this.rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    // Enable raw mode for single keypress handling
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true);
+    }
+
+    readline.emitKeypressEvents(process.stdin, this.rl);
+
+    process.stdin.on("keypress", async (str, key) => {
+      if (!this.isRunning) return;
+
+      // Handle special keys
+      if (key) {
+        switch (key.name) {
+          case "q":
+          case "escape":
+            this.handleQuit();
+            break;
+
+          case "up":
+            this.handleNavigateUp();
+            await this.render();
+            break;
+
+          case "down":
+            this.handleNavigateDown();
+            await this.render();
+            break;
+
+          case "left":
+            this.handleNavigateLeft();
+            await this.render();
+            break;
+
+          case "right":
+            this.handleNavigateRight();
+            await this.render();
+            break;
+
+          case "return":
+          case "enter":
+            await this.handleSelect();
+            break;
+
+          case "backspace":
+          case "b":
+            this.handleBack();
+            await this.render();
+            break;
+
+          case "r":
+            await this.handleRefresh();
+            break;
+
+          case "h":
+            this.showHelp();
+            break;
+
+          case "1":
+            this.switchView("overview");
+            await this.render();
+            break;
+
+          case "2":
+            this.switchView("platforms");
+            await this.render();
+            break;
+
+          case "3":
+            this.switchView("trending");
+            await this.render();
+            break;
+
+          case "4":
+            this.switchView("performance");
+            await this.render();
+            break;
+
+          case "5":
+            this.switchView("details");
+            await this.render();
+            break;
+
+          case "p":
+            this.toggleAutoRefresh();
+            break;
+
+          case "+":
+            this.adjustRefreshRate(1000);
+            break;
+
+          case "-":
+            this.adjustRefreshRate(-1000);
+            break;
+        }
+      }
+    });
+  }
+
+  /**
+   * Navigation handlers
+   */
+  private handleNavigateUp(): void {
+    if (this.selectedIndex > 0) {
+      this.selectedIndex--;
+    }
+  }
+
+  private handleNavigateDown(): void {
+    const maxIndex = this.getMaxSelectableIndex();
+    if (this.selectedIndex < maxIndex) {
+      this.selectedIndex++;
+    }
+  }
+
+  private handleNavigateLeft(): void {
+    const views: Array<typeof this.currentView> = ["overview", "platforms", "trending", "performance", "details"];
+    const currentIdx = views.indexOf(this.currentView);
+    if (currentIdx > 0) {
+      this.switchView(views[currentIdx - 1]);
+    }
+  }
+
+  private handleNavigateRight(): void {
+    const views: Array<typeof this.currentView> = ["overview", "platforms", "trending", "performance", "details"];
+    const currentIdx = views.indexOf(this.currentView);
+    if (currentIdx < views.length - 1) {
+      this.switchView(views[currentIdx + 1]);
+    }
+  }
+
+  /**
+   * Handle selection/drill-down
+   */
+  private async handleSelect(): Promise<void> {
+    // Store current state for back navigation
+    this.drillDownStack.push({
+      view: this.currentView,
+      data: { selectedIndex: this.selectedIndex, selectedPlatform: this.selectedPlatform },
+    });
+
+    // Perform drill-down based on current view and selection
+    switch (this.currentView) {
+      case "overview":
+        // Drill into specific metric
+        this.currentView = "details";
+        break;
+
+      case "platforms":
+        // Drill into specific platform
+        if (this.lastMetrics) {
+          const platforms = Array.from(this.lastMetrics.platformBreakdown.keys());
+          if (this.selectedIndex < platforms.length) {
+            this.selectedPlatform = platforms[this.selectedIndex];
+            this.currentView = "details";
+          }
+        }
+        break;
+
+      case "trending":
+        // Show trend details
+        this.currentView = "details";
+        break;
+    }
+
+    this.selectedIndex = 0;
+    await this.render();
+  }
+
+  /**
+   * Handle back navigation
+   */
+  private handleBack(): void {
+    if (this.drillDownStack.length > 0) {
+      const prev = this.drillDownStack.pop()!;
+      this.currentView = prev.view as any;
+      this.selectedIndex = prev.data.selectedIndex || 0;
+      this.selectedPlatform = prev.data.selectedPlatform;
+    }
+  }
+
+  /**
+   * Handle quit
+   */
+  private handleQuit(): void {
+    this.stop();
+    process.exit(0);
+  }
+
+  /**
+   * Handle manual refresh
+   */
+  private async handleRefresh(): Promise<void> {
+    this.showLoadingIndicator();
+    await this.fetchMetrics();
+    await this.render();
+  }
+
+  /**
+   * Switch view
+   */
+  private switchView(view: typeof this.currentView): void {
+    this.viewHistory.push(this.currentView);
+    this.currentView = view;
+    this.selectedIndex = 0;
+  }
+
+  /**
+   * Toggle auto-refresh
+   */
+  private toggleAutoRefresh(): void {
+    if (this.autoRefreshTimer) {
+      clearInterval(this.autoRefreshTimer);
+      this.autoRefreshTimer = undefined;
+      this.showNotification("Auto-refresh disabled");
+    } else {
+      this.startAutoRefresh();
+      this.showNotification("Auto-refresh enabled");
+    }
+  }
+
+  /**
+   * Adjust refresh rate
+   */
+  private adjustRefreshRate(delta: number): void {
+    this.refreshInterval = Math.max(1000, Math.min(60000, this.refreshInterval + delta));
+    if (this.autoRefreshTimer) {
+      this.stopAutoRefresh();
+      this.startAutoRefresh();
+    }
+    this.showNotification(`Refresh rate: ${this.refreshInterval / 1000}s`);
+  }
+
+  /**
+   * Start auto-refresh
+   */
+  private startAutoRefresh(): void {
+    this.autoRefreshTimer = setInterval(async () => {
+      if (this.isRunning) {
+        await this.fetchMetrics();
+        await this.render();
+      }
+    }, this.refreshInterval);
+  }
+
+  /**
+   * Stop auto-refresh
+   */
+  private stopAutoRefresh(): void {
+    if (this.autoRefreshTimer) {
+      clearInterval(this.autoRefreshTimer);
+      this.autoRefreshTimer = undefined;
+    }
+  }
+
+  /**
+   * Fetch latest metrics
+   */
+  private async fetchMetrics(): Promise<void> {
+    try {
+      this.lastMetrics = await this.dashboard.getMetrics();
+    } catch (error) {
+      this.showError(`Failed to fetch metrics: ${error}`);
+    }
+  }
+
+  /**
+   * Main render method
+   */
+  private async render(): Promise<void> {
+    if (!this.isRunning) return;
+
+    this.clearScreen();
+    this.renderHeader();
+    this.renderNavigation();
+
+    if (!this.lastMetrics) {
+      await this.fetchMetrics();
+    }
+
+    switch (this.currentView) {
+      case "overview":
+        this.renderOverview();
+        break;
+      case "platforms":
+        this.renderPlatforms();
+        break;
+      case "trending":
+        this.renderTrending();
+        break;
+      case "performance":
+        this.renderPerformance();
+        break;
+      case "details":
+        this.renderDetails();
+        break;
+    }
+
+    this.renderFooter();
+  }
+
+  /**
+   * Render header
+   */
+  private renderHeader(): void {
+    const width = process.stdout.columns || 80;
+    const title = "📊 Analytics Dashboard - Interactive Mode";
+
+    console.log(this.colors.header + this.boxChars.topLeft +
+                this.boxChars.horizontal.repeat(width - 2) +
+                this.boxChars.topRight);
+    console.log(this.boxChars.vertical + this.centerText(title, width - 2) + this.boxChars.vertical);
+    console.log(this.boxChars.tLeft +
+                this.boxChars.horizontal.repeat(width - 2) +
+                this.boxChars.tRight + this.colors.reset);
+  }
+
+  /**
+   * Render navigation tabs
+   */
+  private renderNavigation(): void {
+    const tabs = [
+      { key: "1", label: "Overview", view: "overview" },
+      { key: "2", label: "Platforms", view: "platforms" },
+      { key: "3", label: "Trending", view: "trending" },
+      { key: "4", label: "Performance", view: "performance" },
+      { key: "5", label: "Details", view: "details" },
+    ];
+
+    const tabStr = tabs.map(tab => {
+      const isActive = tab.view === this.currentView;
+      const color = isActive ? this.colors.inverse : "";
+      const reset = isActive ? this.colors.reset : "";
+      return `${color}[${tab.key}] ${tab.label}${reset}`;
+    }).join("  ");
+
+    console.log("\n" + tabStr + "\n");
+  }
+
+  /**
+   * Render overview view
+   */
+  private renderOverview(): void {
+    if (!this.lastMetrics) return;
+
+    const m = this.lastMetrics.overview;
+    const items = [
+      { label: "Total Posts", value: this.formatNumber(m.totalPosts), selected: this.selectedIndex === 0 },
+      { label: "Total Comments", value: this.formatNumber(m.totalComments), selected: this.selectedIndex === 1 },
+      { label: "Total Users", value: this.formatNumber(m.totalUsers), selected: this.selectedIndex === 2 },
+      { label: "Avg Engagement", value: `${(m.avgEngagement * 100).toFixed(1)}%`, selected: this.selectedIndex === 3 },
+      { label: "Growth Rate", value: `${m.growthRate > 0 ? "+" : ""}${m.growthRate.toFixed(1)}%`, selected: this.selectedIndex === 4 },
+    ];
+
+    console.log(this.colors.bold + "📈 Overview Metrics" + this.colors.reset + "\n");
+
+    items.forEach(item => {
+      const indicator = item.selected ? "▶ " : "  ";
+      const color = item.selected ? this.colors.info : "";
+      console.log(`${indicator}${color}${item.label}: ${item.value}${this.colors.reset}`);
+    });
+
+    // Show mini sparkline for time series
+    if (this.lastMetrics.timeSeries.length > 0) {
+      console.log("\n" + this.colors.dim + "Recent Activity:" + this.colors.reset);
+      const sparkline = this.createSparkline(
+        this.lastMetrics.timeSeries.slice(-20).map(t => t.avgScore)
+      );
+      console.log(sparkline);
+    }
+  }
+
+  /**
+   * Render platforms view
+   */
+  private renderPlatforms(): void {
+    if (!this.lastMetrics) return;
+
+    console.log(this.colors.bold + "🌐 Platform Breakdown" + this.colors.reset + "\n");
+
+    const platforms = Array.from(this.lastMetrics.platformBreakdown.entries());
+    platforms.forEach(([platform, stats], index) => {
+      const selected = index === this.selectedIndex;
+      const indicator = selected ? "▶ " : "  ";
+      const color = selected ? this.colors.info : "";
+
+      console.log(`${indicator}${color}${platform.toUpperCase()}${this.colors.reset}`);
+      console.log(`   Posts: ${this.formatNumber(stats.totalPosts)} | Comments: ${this.formatNumber(stats.totalComments)}`);
+      console.log(`   Avg Score: ${stats.avgScore.toFixed(1)} | Users: ${this.formatNumber(stats.totalUsers)}`);
+
+      if (selected) {
+        // Show progress bar for this platform
+        const percentage = (stats.totalPosts / this.lastMetrics.overview.totalPosts) * 100;
+        const progressBar = this.createProgressBar(percentage, 30);
+        console.log(`   Share: ${progressBar} ${percentage.toFixed(1)}%`);
+      }
+      console.log();
+    });
+  }
+
+  /**
+   * Render trending view
+   */
+  private renderTrending(): void {
+    if (!this.lastMetrics) return;
+
+    console.log(this.colors.bold + "🔥 Trending Content" + this.colors.reset + "\n");
+
+    const trending = this.lastMetrics.trending.slice(0, 10);
+    trending.forEach((post, index) => {
+      const selected = index === this.selectedIndex;
+      const indicator = selected ? "▶ " : "  ";
+      const color = selected ? this.colors.info : "";
+
+      const title = post.title.length > 60
+        ? post.title.substring(0, 57) + "..."
+        : post.title;
+
+      console.log(`${indicator}${color}${index + 1}. ${title}${this.colors.reset}`);
+
+      if (selected) {
+        console.log(`   Score: ${post.score} | Comments: ${post.commentCount} | Author: ${post.author}`);
+        console.log(`   Platform: ${post.platform} | ${this.getRelativeTime(post.createdAt)}`);
+      }
+    });
+  }
+
+  /**
+   * Render performance view
+   */
+  private renderPerformance(): void {
+    if (!this.lastMetrics) return;
+
+    console.log(this.colors.bold + "⚡ System Performance" + this.colors.reset + "\n");
+
+    const health = this.lastMetrics.health;
+    const items = [
+      {
+        label: "Database Size",
+        value: this.formatBytes(health.databaseSize),
+        status: health.databaseSize > 1000000000 ? "warning" : "success",
+        selected: this.selectedIndex === 0
+      },
+      {
+        label: "Data Quality",
+        value: `${health.dataQuality}%`,
+        status: health.dataQuality > 80 ? "success" : health.dataQuality > 60 ? "warning" : "error",
+        selected: this.selectedIndex === 1
+      },
+      {
+        label: "Last Update",
+        value: this.getRelativeTime(health.lastUpdate),
+        status: "info",
+        selected: this.selectedIndex === 2
+      },
+      {
+        label: "Data Gaps",
+        value: health.gaps.length === 0 ? "None" : `${health.gaps.length} detected`,
+        status: health.gaps.length === 0 ? "success" : "warning",
+        selected: this.selectedIndex === 3
+      },
+    ];
+
+    items.forEach(item => {
+      const indicator = item.selected ? "▶ " : "  ";
+      const statusColor = this.colors[item.status as keyof typeof this.colors] || "";
+      const selectedColor = item.selected ? this.colors.info : "";
+
+      console.log(`${indicator}${selectedColor}${item.label}: ${statusColor}${item.value}${this.colors.reset}`);
+
+      if (item.selected && item.label === "Data Quality") {
+        const progressBar = this.createProgressBar(health.dataQuality, 30);
+        console.log(`   ${progressBar}`);
+      }
+    });
+  }
+
+  /**
+   * Render details view
+   */
+  private renderDetails(): void {
+    console.log(this.colors.bold + "📋 Detailed View" + this.colors.reset + "\n");
+
+    if (this.selectedPlatform && this.lastMetrics) {
+      const stats = this.lastMetrics.platformBreakdown.get(this.selectedPlatform);
+      if (stats) {
+        console.log(`Platform: ${this.colors.info}${this.selectedPlatform.toUpperCase()}${this.colors.reset}\n`);
+        console.log(`Total Posts: ${this.formatNumber(stats.totalPosts)}`);
+        console.log(`Total Comments: ${this.formatNumber(stats.totalComments)}`);
+        console.log(`Total Users: ${this.formatNumber(stats.totalUsers)}`);
+        console.log(`Average Score: ${stats.avgScore.toFixed(2)}`);
+        console.log(`Average Comments: ${stats.avgCommentCount.toFixed(2)}`);
+
+        if (stats.mostActiveUser) {
+          console.log(`\nMost Active User: ${stats.mostActiveUser.username}`);
+          console.log(`  Posts: ${stats.mostActiveUser.posts}`);
+          console.log(`  Comments: ${stats.mostActiveUser.comments}`);
+        }
+
+        console.log(`\nLast Update: ${this.formatDate(stats.lastUpdateTime)}`);
+      }
+    } else if (this.lastMetrics) {
+      // Show general details
+      console.log("Use arrow keys to navigate and ENTER to drill down into specific metrics.\n");
+      console.log(`Total Metrics Points: ${this.lastMetrics.timeSeries.length}`);
+      console.log(`Platforms Tracked: ${this.lastMetrics.platformBreakdown.size}`);
+      console.log(`Trending Posts: ${this.lastMetrics.trending.length}`);
+    }
+  }
+
+  /**
+   * Render footer with help text
+   */
+  private renderFooter(): void {
+    const width = process.stdout.columns || 80;
+    console.log("\n" + this.colors.dim + "─".repeat(width) + this.colors.reset);
+
+    const helpText = "↑↓ Navigate | ← → Switch View | Enter: Select | B: Back | R: Refresh | H: Help | Q: Quit";
+    console.log(this.colors.dim + this.centerText(helpText, width) + this.colors.reset);
+
+    const statusText = `Auto-refresh: ${this.autoRefreshTimer ? `ON (${this.refreshInterval/1000}s)` : "OFF"} | Press P to toggle`;
+    console.log(this.colors.dim + this.centerText(statusText, width) + this.colors.reset);
+  }
+
+  /**
+   * Show help screen
+   */
+  private showHelp(): void {
+    this.clearScreen();
+    console.log(this.colors.header + "📚 Dashboard Help" + this.colors.reset + "\n");
+
+    const helpItems = [
+      { key: "↑/↓", desc: "Navigate up/down in lists" },
+      { key: "←/→", desc: "Switch between view tabs" },
+      { key: "1-5", desc: "Quick jump to specific view" },
+      { key: "Enter", desc: "Select/drill down into item" },
+      { key: "B", desc: "Go back to previous view" },
+      { key: "R", desc: "Refresh data manually" },
+      { key: "P", desc: "Toggle auto-refresh" },
+      { key: "+/-", desc: "Adjust refresh rate" },
+      { key: "H", desc: "Show this help screen" },
+      { key: "Q/Esc", desc: "Quit dashboard" },
+    ];
+
+    helpItems.forEach(item => {
+      console.log(`  ${this.colors.info}${item.key.padEnd(10)}${this.colors.reset} ${item.desc}`);
+    });
+
+    console.log("\nPress any key to return...");
+
+    // Wait for keypress then return to dashboard
+    const handler = () => {
+      process.stdin.removeListener("keypress", handler);
+      this.render();
+    };
+    process.stdin.once("keypress", handler);
+  }
+
+  /**
+   * Show welcome screen
+   */
+  private showWelcomeScreen(): void {
+    const width = process.stdout.columns || 80;
+    console.log(this.colors.header + "═".repeat(width) + this.colors.reset);
+    console.log(this.colors.bold + this.centerText("Welcome to Interactive Analytics Dashboard", width) + this.colors.reset);
+    console.log(this.colors.header + "═".repeat(width) + this.colors.reset);
+    console.log("\nLoading metrics...\n");
+  }
+
+  /**
+   * Utility methods
+   */
+  private clearScreen(): void {
+    console.clear();
+    process.stdout.write("\x1b[2J\x1b[0f");
+  }
+
+  private showLoadingIndicator(): void {
+    process.stdout.write(this.colors.dim + "Refreshing..." + this.colors.reset);
+  }
+
+  private showNotification(message: string): void {
+    const width = process.stdout.columns || 80;
+    const notification = `[${message}]`;
+    console.log("\n" + this.colors.success + this.centerText(notification, width) + this.colors.reset);
+    setTimeout(() => this.render(), 1500);
+  }
+
+  private showError(message: string): void {
+    console.log(this.colors.error + `\n❌ Error: ${message}` + this.colors.reset);
+  }
+
+  private formatNumber(num: number): string {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
+  }
+
+  private formatBytes(bytes: number): string {
+    const units = ["B", "KB", "MB", "GB"];
+    let size = bytes;
+    let unitIndex = 0;
+
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
+  }
+
+  private formatDate(date: Date): string {
+    return date.toLocaleString();
+  }
+
+  private getRelativeTime(date: Date): string {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return `${seconds}s ago`;
+  }
+
+  private createProgressBar(percentage: number, width: number): string {
+    const filled = Math.round((percentage / 100) * width);
+    const empty = width - filled;
+    return this.colors.success + "█".repeat(filled) + this.colors.dim + "░".repeat(empty) + this.colors.reset;
+  }
+
+  private createSparkline(data: number[]): string {
+    if (data.length === 0) return "";
+
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+    const chars = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
+
+    return data.map(value => {
+      const normalized = (value - min) / range;
+      const index = Math.floor(normalized * (chars.length - 1));
+      return this.colors.info + chars[index] + this.colors.reset;
+    }).join("");
+  }
+
+  private centerText(text: string, width: number): string {
+    const padding = Math.max(0, width - text.length);
+    const leftPad = Math.floor(padding / 2);
+    const rightPad = padding - leftPad;
+    return " ".repeat(leftPad) + text + " ".repeat(rightPad);
+  }
+
+  private getMaxSelectableIndex(): number {
+    switch (this.currentView) {
+      case "overview":
+        return 4;
+      case "platforms":
+        return (this.lastMetrics?.platformBreakdown.size || 1) - 1;
+      case "trending":
+        return Math.min(9, (this.lastMetrics?.trending.length || 1) - 1);
+      case "performance":
+        return 3;
+      case "details":
+        return 0;
+      default:
+        return 0;
+    }
+  }
+}
