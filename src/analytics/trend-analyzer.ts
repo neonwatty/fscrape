@@ -1,6 +1,6 @@
 import { StatisticsEngine, TimeSeriesPoint } from "./statistics.js";
 
-export { TimeSeriesPoint } from "./statistics.js";
+export type { TimeSeriesPoint } from "./statistics.js";
 
 export interface TrendResult {
   trend: "increasing" | "decreasing" | "stable" | "volatile";

@@ -1,4 +1,7 @@
-import { StatisticsEngine, TimeSeriesPoint } from "./statistics.js";
+import { StatisticsEngine } from "./statistics.js";
+import type { TimeSeriesPoint } from "./statistics.js";
+
+export type { TimeSeriesPoint } from "./statistics.js";
 
 /**
  * Forecasting model types
