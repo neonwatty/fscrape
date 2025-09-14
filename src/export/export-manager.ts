@@ -11,10 +11,14 @@ import { MarkdownExporter } from "./exporters/markdown-exporter.js";
 import type { MarkdownExportOptions } from "./exporters/markdown-exporter.js";
 import { HtmlExporter } from "./exporters/html-exporter.js";
 import type { HtmlExportOptions } from "./exporters/html-exporter.js";
+import { AnalyticsExporter } from "./exporters/analytics-exporter.js";
+import type { AnalyticsExportOptions } from "./exporters/analytics-exporter.js";
 import { DataFilter } from "./filters.js";
 import type { FilterOptions } from "./filters.js";
 import { DataTransformer } from "./transformers.js";
 import type { TransformOptions } from "./transformers.js";
+import type { GeneratedReport } from "../analytics/report-generator.js";
+import type { DashboardMetrics } from "../analytics/dashboard.js";
 
 export interface ExportConfig {
   outputDirectory: string;
@@ -32,6 +36,7 @@ export interface ExportConfig {
   jsonOptions?: JsonExportOptions;
   markdownOptions?: MarkdownExportOptions;
   htmlOptions?: HtmlExportOptions;
+  analyticsOptions?: AnalyticsExportOptions;
 }
 
 export class ExportManager {
@@ -39,6 +44,7 @@ export class ExportManager {
   private jsonExporter: JsonExporter;
   private markdownExporter: MarkdownExporter;
   private htmlExporter: HtmlExporter;
+  private analyticsExporter: AnalyticsExporter;
   private dataFilter?: DataFilter;
   private dataTransformer?: DataTransformer;
   private includeMetadata: boolean;
@@ -52,6 +58,7 @@ export class ExportManager {
     this.jsonExporter = new JsonExporter(config.jsonOptions);
     this.markdownExporter = new MarkdownExporter(config.markdownOptions);
     this.htmlExporter = new HtmlExporter(config.htmlOptions);
+    this.analyticsExporter = new AnalyticsExporter(config.analyticsOptions);
 
     // Initialize filter and transformer if options provided
     if (config.filterOptions) {
@@ -200,10 +207,32 @@ export class ExportManager {
   }
 
   /**
+   * Export analytics report with visualizations
+   */
+  async exportAnalyticsReport(
+    report: GeneratedReport,
+    outputPath: string,
+    options?: AnalyticsExportOptions,
+  ): Promise<{ files: string[]; metadata: any }> {
+    return await this.analyticsExporter.exportReport(report, outputPath, options);
+  }
+
+  /**
+   * Export dashboard metrics with visualizations
+   */
+  async exportDashboard(
+    metrics: DashboardMetrics,
+    outputPath: string,
+    options?: AnalyticsExportOptions,
+  ): Promise<{ files: string[]; metadata: any }> {
+    return await this.analyticsExporter.exportDashboard(metrics, outputPath, options);
+  }
+
+  /**
    * Get supported export formats
    */
   static getSupportedFormats(): string[] {
-    return ["json", "csv", "markdown", "md", "html"];
+    return ["json", "csv", "markdown", "md", "html", "analytics", "svg"];
   }
 
   /**

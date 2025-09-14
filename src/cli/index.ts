@@ -12,6 +12,7 @@ import { createExportCommand } from "./commands/export.js";
 import { createListCommand } from "./commands/list.js";
 import { createConfigCommand } from "./commands/config.js";
 import { createAnalyzeCommand } from "./commands/analyze.js";
+import { visualizeCommand } from "./commands/visualize.js";
 import { formatError, validateCleanOptions } from "./validation.js";
 import chalk from "chalk";
 import { readFileSync } from "fs";
@@ -65,6 +66,7 @@ function createProgram(): Command {
   program.addCommand(createListCommand());
   program.addCommand(createConfigCommand());
   program.addCommand(createAnalyzeCommand());
+  program.addCommand(visualizeCommand);
 
   // Add batch command
   program

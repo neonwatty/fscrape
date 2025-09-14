@@ -8,7 +8,7 @@
 import { CacheLayer, CacheDependency, Cacheable } from "./cache-layer.js";
 import type { DatabaseAnalytics } from "../database/analytics.js";
 import type { Platform } from "../types/core.js";
-import { StatisticalAnalyzer } from "./statistics.js";
+import { StatisticsEngine } from "./statistics.js";
 import { TrendAnalyzer } from "./trend-analyzer.js";
 import { AnomalyDetector } from "./anomaly-detector.js";
 import { ForecastingEngine } from "./forecasting.js";
@@ -21,7 +21,7 @@ import { ForecastingEngine } from "./forecasting.js";
 export class CachedAnalyticsService {
   private cache: CacheLayer;
   private analytics: DatabaseAnalytics;
-  private statsAnalyzer: StatisticalAnalyzer;
+  private statsAnalyzer: StatisticsEngine;
   private trendAnalyzer: TrendAnalyzer;
   private anomalyDetector: AnomalyDetector;
   private forecastEngine: ForecastingEngine;
@@ -35,7 +35,7 @@ export class CachedAnalyticsService {
     });
 
     // Initialize analyzers
-    this.statsAnalyzer = new StatisticalAnalyzer();
+    this.statsAnalyzer = new StatisticsEngine();
     this.trendAnalyzer = new TrendAnalyzer();
     this.anomalyDetector = new AnomalyDetector();
     this.forecastEngine = new ForecastingEngine();
