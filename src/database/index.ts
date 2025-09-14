@@ -4,6 +4,8 @@ export {
   DATABASE_SCHEMA,
   DATABASE_INDEXES,
   DATABASE_TRIGGERS,
+  MATERIALIZED_VIEWS,
+  MATERIALIZED_VIEW_INDEXES,
 } from "./schema.js";
 export {
   MigrationManager,

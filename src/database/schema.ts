@@ -1,3 +1,111 @@
+export const MATERIALIZED_VIEWS = {
+  mv_daily_aggregations: `
+    CREATE TABLE IF NOT EXISTS mv_daily_aggregations (
+      platform TEXT NOT NULL,
+      date TEXT NOT NULL,
+      posts_count INTEGER DEFAULT 0,
+      comments_count INTEGER DEFAULT 0,
+      unique_users INTEGER DEFAULT 0,
+      new_users INTEGER DEFAULT 0,
+      avg_post_score REAL DEFAULT 0,
+      median_post_score REAL DEFAULT 0,
+      avg_comment_score REAL DEFAULT 0,
+      total_engagement INTEGER DEFAULT 0,
+      avg_engagement_rate REAL DEFAULT 0,
+      top_post_id TEXT,
+      top_post_score INTEGER,
+      top_author TEXT,
+      top_author_posts INTEGER,
+      active_hours INTEGER DEFAULT 0,
+      peak_hour INTEGER,
+      peak_hour_posts INTEGER,
+      last_refreshed INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      PRIMARY KEY (platform, date)
+    )
+  `,
+
+  mv_hourly_aggregations: `
+    CREATE TABLE IF NOT EXISTS mv_hourly_aggregations (
+      platform TEXT NOT NULL,
+      hour_bucket INTEGER NOT NULL,
+      posts_count INTEGER DEFAULT 0,
+      comments_count INTEGER DEFAULT 0,
+      unique_users INTEGER DEFAULT 0,
+      avg_score REAL DEFAULT 0,
+      max_score INTEGER DEFAULT 0,
+      min_score INTEGER DEFAULT 0,
+      total_engagement INTEGER DEFAULT 0,
+      avg_response_time_minutes REAL DEFAULT 0,
+      posts_velocity REAL DEFAULT 0,
+      comments_velocity REAL DEFAULT 0,
+      last_refreshed INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      PRIMARY KEY (platform, hour_bucket)
+    )
+  `,
+
+  mv_user_engagement_scores: `
+    CREATE TABLE IF NOT EXISTS mv_user_engagement_scores (
+      user_id TEXT NOT NULL,
+      username TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      total_posts INTEGER DEFAULT 0,
+      total_comments INTEGER DEFAULT 0,
+      total_score INTEGER DEFAULT 0,
+      avg_post_score REAL DEFAULT 0,
+      avg_comment_score REAL DEFAULT 0,
+      post_engagement_rate REAL DEFAULT 0,
+      comment_engagement_rate REAL DEFAULT 0,
+      consistency_score REAL DEFAULT 0,
+      influence_score REAL DEFAULT 0,
+      activity_percentile REAL DEFAULT 0,
+      score_percentile REAL DEFAULT 0,
+      first_seen INTEGER,
+      last_seen INTEGER,
+      active_days INTEGER DEFAULT 0,
+      last_refreshed INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      PRIMARY KEY (user_id, platform)
+    )
+  `,
+
+  mv_trending_content: `
+    CREATE TABLE IF NOT EXISTS mv_trending_content (
+      post_id TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      title TEXT NOT NULL,
+      author TEXT NOT NULL,
+      url TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      comment_count INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      age_hours REAL DEFAULT 0,
+      velocity_score REAL DEFAULT 0,
+      hotness_score REAL DEFAULT 0,
+      engagement_rate REAL DEFAULT 0,
+      comment_velocity REAL DEFAULT 0,
+      rank_overall INTEGER,
+      rank_platform INTEGER,
+      rank_daily INTEGER,
+      trending_category TEXT,
+      last_refreshed INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      PRIMARY KEY (post_id, platform)
+    )
+  `,
+
+  mv_platform_comparison: `
+    CREATE TABLE IF NOT EXISTS mv_platform_comparison (
+      metric_date TEXT NOT NULL,
+      metric_name TEXT NOT NULL,
+      reddit_value REAL DEFAULT 0,
+      hackernews_value REAL DEFAULT 0,
+      reddit_rank INTEGER DEFAULT 0,
+      hackernews_rank INTEGER DEFAULT 0,
+      relative_difference REAL DEFAULT 0,
+      last_refreshed INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      PRIMARY KEY (metric_date, metric_name)
+    )
+  `
+};
+
 export const DATABASE_SCHEMA = {
   posts: `
     CREATE TABLE IF NOT EXISTS posts (
@@ -212,6 +320,35 @@ export const DATABASE_SCHEMA = {
     )
   `,
 };
+
+export const MATERIALIZED_VIEW_INDEXES = [
+  // Daily aggregations indexes
+  "CREATE INDEX IF NOT EXISTS idx_mv_daily_platform_date ON mv_daily_aggregations(platform, date DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_daily_date ON mv_daily_aggregations(date DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_daily_engagement ON mv_daily_aggregations(total_engagement DESC)",
+
+  // Hourly aggregations indexes
+  "CREATE INDEX IF NOT EXISTS idx_mv_hourly_platform_bucket ON mv_hourly_aggregations(platform, hour_bucket DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_hourly_bucket ON mv_hourly_aggregations(hour_bucket DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_hourly_velocity ON mv_hourly_aggregations(posts_velocity DESC)",
+
+  // User engagement scores indexes
+  "CREATE INDEX IF NOT EXISTS idx_mv_user_engagement_platform ON mv_user_engagement_scores(platform)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_user_engagement_influence ON mv_user_engagement_scores(influence_score DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_user_engagement_username ON mv_user_engagement_scores(username)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_user_engagement_platform_influence ON mv_user_engagement_scores(platform, influence_score DESC)",
+
+  // Trending content indexes
+  "CREATE INDEX IF NOT EXISTS idx_mv_trending_platform ON mv_trending_content(platform)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_trending_hotness ON mv_trending_content(hotness_score DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_trending_created ON mv_trending_content(created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_trending_platform_hotness ON mv_trending_content(platform, hotness_score DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_trending_rank_overall ON mv_trending_content(rank_overall) WHERE rank_overall IS NOT NULL",
+
+  // Platform comparison indexes
+  "CREATE INDEX IF NOT EXISTS idx_mv_platform_comp_date ON mv_platform_comparison(metric_date DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_mv_platform_comp_metric ON mv_platform_comparison(metric_name)"
+];
 
 export const DATABASE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_posts_platform ON posts(platform)",

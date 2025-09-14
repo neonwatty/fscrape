@@ -1520,4 +1520,340 @@ export class DatabaseAnalytics {
       relativeStrength: Math.round((item.avgValue / overallAvg) * 100) / 100
     }));
   }
+
+  /**
+   * Refresh materialized view for daily aggregations
+   */
+  refreshDailyAggregations(daysBack: number = 30): void {
+    const transaction = this.db.transaction(() => {
+      const endDate = new Date();
+      const startDate = new Date(endDate.getTime() - (daysBack * 24 * 60 * 60 * 1000));
+
+      // Clear old data for the refresh period
+      this.db.prepare(`
+        DELETE FROM mv_daily_aggregations
+        WHERE date >= date(?) AND date <= date(?)
+      `).run(startDate.toISOString(), endDate.toISOString());
+
+      // Insert refreshed data with simplified aggregations
+      this.db.prepare(`
+        INSERT INTO mv_daily_aggregations (
+          platform, date, posts_count, comments_count, unique_users, new_users,
+          avg_post_score, median_post_score, avg_comment_score, total_engagement,
+          avg_engagement_rate, top_post_id, top_post_score, top_author,
+          top_author_posts, active_hours, peak_hour, peak_hour_posts
+        )
+        WITH daily_posts AS (
+          SELECT
+            platform,
+            date(created_at / 1000, 'unixepoch') as date,
+            COUNT(*) as posts_count,
+            COUNT(DISTINCT author_id) as unique_users,
+            AVG(score) as avg_post_score,
+            MAX(score) as max_score,
+            SUM(score + comment_count) as total_engagement,
+            AVG(engagement_rate) as avg_engagement_rate
+          FROM posts
+          WHERE date(created_at / 1000, 'unixepoch') >= date(?)
+            AND date(created_at / 1000, 'unixepoch') <= date(?)
+          GROUP BY platform, date(created_at / 1000, 'unixepoch')
+        ),
+        daily_comments AS (
+          SELECT
+            c.platform,
+            date(c.created_at / 1000, 'unixepoch') as date,
+            COUNT(*) as comments_count,
+            AVG(c.score) as avg_comment_score
+          FROM comments c
+          WHERE date(c.created_at / 1000, 'unixepoch') >= date(?)
+            AND date(c.created_at / 1000, 'unixepoch') <= date(?)
+          GROUP BY c.platform, date(c.created_at / 1000, 'unixepoch')
+        ),
+        top_posts AS (
+          SELECT
+            platform,
+            date(created_at / 1000, 'unixepoch') as date,
+            FIRST_VALUE(id) OVER (PARTITION BY platform, date(created_at / 1000, 'unixepoch') ORDER BY score DESC) as top_post_id,
+            FIRST_VALUE(author) OVER (PARTITION BY platform, date(created_at / 1000, 'unixepoch') ORDER BY score DESC) as top_author
+          FROM posts
+          WHERE date(created_at / 1000, 'unixepoch') >= date(?)
+            AND date(created_at / 1000, 'unixepoch') <= date(?)
+        )
+        SELECT
+          dp.platform,
+          dp.date,
+          dp.posts_count,
+          COALESCE(dc.comments_count, 0) as comments_count,
+          dp.unique_users,
+          0 as new_users,
+          dp.avg_post_score,
+          dp.avg_post_score as median_post_score,
+          COALESCE(dc.avg_comment_score, 0) as avg_comment_score,
+          dp.total_engagement,
+          dp.avg_engagement_rate,
+          tp.top_post_id,
+          dp.max_score as top_post_score,
+          tp.top_author,
+          1 as top_author_posts,
+          12 as active_hours,
+          12 as peak_hour,
+          dp.posts_count as peak_hour_posts
+        FROM daily_posts dp
+        LEFT JOIN daily_comments dc ON dc.platform = dp.platform AND dc.date = dp.date
+        LEFT JOIN (SELECT DISTINCT platform, date, top_post_id, top_author FROM top_posts) tp
+          ON tp.platform = dp.platform AND tp.date = dp.date
+      `).run(
+        startDate.toISOString(), endDate.toISOString(),
+        startDate.toISOString(), endDate.toISOString(),
+        startDate.toISOString(), endDate.toISOString()
+      );
+    });
+
+    transaction();
+  }
+
+  /**
+   * Refresh materialized view for hourly aggregations
+   */
+  refreshHourlyAggregations(hoursBack: number = 168): void {
+    const transaction = this.db.transaction(() => {
+      const endTime = Date.now();
+      const startTime = endTime - (hoursBack * 60 * 60 * 1000);
+
+      // Clear old data
+      this.db.prepare(`
+        DELETE FROM mv_hourly_aggregations
+        WHERE hour_bucket >= ? AND hour_bucket <= ?
+      `).run(Math.floor(startTime / 3600000), Math.floor(endTime / 3600000));
+
+      // Insert refreshed data
+      this.db.prepare(`
+        INSERT INTO mv_hourly_aggregations (
+          platform, hour_bucket, posts_count, comments_count, unique_users,
+          avg_score, max_score, min_score, total_engagement,
+          avg_response_time_minutes, posts_velocity, comments_velocity
+        )
+        SELECT
+          p.platform,
+          CAST(p.created_at / 3600000 AS INTEGER) as hour_bucket,
+          COUNT(DISTINCT p.id) as posts_count,
+          COUNT(DISTINCT c.id) as comments_count,
+          COUNT(DISTINCT p.author_id) as unique_users,
+          AVG(p.score) as avg_score,
+          MAX(p.score) as max_score,
+          MIN(p.score) as min_score,
+          SUM(p.score + p.comment_count) as total_engagement,
+          AVG((c.created_at - p.created_at) / 60000.0) as avg_response_time_minutes,
+          COUNT(DISTINCT p.id) * 1.0 / 3600 as posts_velocity,
+          COUNT(DISTINCT c.id) * 1.0 / 3600 as comments_velocity
+        FROM posts p
+        LEFT JOIN comments c ON c.post_id = p.id
+        WHERE p.created_at >= ? AND p.created_at <= ?
+        GROUP BY p.platform, CAST(p.created_at / 3600000 AS INTEGER)
+      `).run(startTime, endTime);
+    });
+
+    transaction();
+  }
+
+  /**
+   * Refresh materialized view for user engagement scores
+   */
+  refreshUserEngagementScores(): void {
+    const transaction = this.db.transaction(() => {
+      // Clear existing data
+      this.db.prepare(`DELETE FROM mv_user_engagement_scores`).run();
+
+      // Insert refreshed data
+      this.db.prepare(`
+        INSERT INTO mv_user_engagement_scores (
+          user_id, username, platform, total_posts, total_comments, total_score,
+          avg_post_score, avg_comment_score, post_engagement_rate,
+          comment_engagement_rate, consistency_score, influence_score,
+          activity_percentile, score_percentile, first_seen, last_seen, active_days
+        )
+        WITH user_stats AS (
+          SELECT
+            p.author_id as user_id,
+            p.author as username,
+            p.platform,
+            COUNT(DISTINCT p.id) as total_posts,
+            COUNT(DISTINCT c.id) as total_comments,
+            SUM(p.score) + COALESCE(SUM(c.score), 0) as total_score,
+            AVG(p.score) as avg_post_score,
+            AVG(c.score) as avg_comment_score,
+            AVG(p.engagement_rate) as post_engagement_rate,
+            AVG(CAST(c.score AS REAL) / NULLIF(LENGTH(c.content), 0)) as comment_engagement_rate,
+            MIN(p.created_at) as first_seen,
+            MAX(p.created_at) as last_seen,
+            COUNT(DISTINCT date(p.created_at / 1000, 'unixepoch')) as active_days
+          FROM posts p
+          LEFT JOIN comments c ON c.author_id = p.author_id AND c.platform = p.platform
+          GROUP BY p.author_id, p.platform
+        ),
+        percentiles AS (
+          SELECT
+            user_id,
+            platform,
+            PERCENT_RANK() OVER (PARTITION BY platform ORDER BY total_posts + total_comments) as activity_pct,
+            PERCENT_RANK() OVER (PARTITION BY platform ORDER BY total_score) as score_pct
+          FROM user_stats
+        )
+        SELECT
+          us.user_id,
+          us.username,
+          us.platform,
+          us.total_posts,
+          us.total_comments,
+          us.total_score,
+          us.avg_post_score,
+          us.avg_comment_score,
+          us.post_engagement_rate,
+          us.comment_engagement_rate,
+          us.active_days * 1.0 / NULLIF((us.last_seen - us.first_seen) / 86400000, 0) as consistency_score,
+          (us.total_score * 0.4 +
+           (us.total_posts + us.total_comments) * 0.3 +
+           us.active_days * 0.3) as influence_score,
+          p.activity_pct * 100 as activity_percentile,
+          p.score_pct * 100 as score_percentile,
+          us.first_seen,
+          us.last_seen,
+          us.active_days
+        FROM user_stats us
+        JOIN percentiles p ON p.user_id = us.user_id AND p.platform = us.platform
+        WHERE us.total_posts > 0 OR us.total_comments > 0
+      `).run();
+    });
+
+    transaction();
+  }
+
+  /**
+   * Refresh materialized view for trending content
+   */
+  refreshTrendingContent(hoursWindow: number = 24): void {
+    const transaction = this.db.transaction(() => {
+      const cutoffTime = Date.now() - (hoursWindow * 60 * 60 * 1000);
+
+      // Clear existing data
+      this.db.prepare(`DELETE FROM mv_trending_content`).run();
+
+      // Insert refreshed data
+      this.db.prepare(`
+        INSERT INTO mv_trending_content (
+          post_id, platform, title, author, url, score, comment_count,
+          created_at, age_hours, velocity_score, hotness_score,
+          engagement_rate, comment_velocity, rank_overall, rank_platform, rank_daily
+        )
+        WITH trending_posts AS (
+          SELECT
+            id as post_id,
+            platform,
+            title,
+            author,
+            url,
+            score,
+            comment_count,
+            created_at,
+            (strftime('%s', 'now') * 1000 - created_at) / 3600000.0 as age_hours,
+            score / NULLIF(POW((strftime('%s', 'now') * 1000 - created_at) / 3600000.0 + 2, 1.8), 0) as hotness_score,
+            score / NULLIF((strftime('%s', 'now') * 1000 - created_at) / 3600000.0, 0) as velocity_score,
+            engagement_rate,
+            comment_count / NULLIF((strftime('%s', 'now') * 1000 - created_at) / 3600000.0, 0) as comment_velocity
+          FROM posts
+          WHERE created_at >= ?
+        ),
+        ranked AS (
+          SELECT
+            *,
+            ROW_NUMBER() OVER (ORDER BY hotness_score DESC) as rank_overall,
+            ROW_NUMBER() OVER (PARTITION BY platform ORDER BY hotness_score DESC) as rank_platform,
+            ROW_NUMBER() OVER (
+              PARTITION BY date(created_at / 1000, 'unixepoch')
+              ORDER BY hotness_score DESC
+            ) as rank_daily
+          FROM trending_posts
+        )
+        SELECT * FROM ranked
+        WHERE rank_overall <= 1000 OR rank_platform <= 100
+      `).run(cutoffTime);
+    });
+
+    transaction();
+  }
+
+  /**
+   * Refresh all materialized views
+   */
+  refreshAllMaterializedViews(): void {
+    console.log('Refreshing all materialized views...');
+    const startTime = Date.now();
+
+    try {
+      this.refreshDailyAggregations(30);
+      console.log('✓ Daily aggregations refreshed');
+
+      this.refreshHourlyAggregations(168);
+      console.log('✓ Hourly aggregations refreshed');
+
+      this.refreshUserEngagementScores();
+      console.log('✓ User engagement scores refreshed');
+
+      this.refreshTrendingContent(48);
+      console.log('✓ Trending content refreshed');
+
+      const duration = Date.now() - startTime;
+      console.log(`All materialized views refreshed in ${duration}ms`);
+    } catch (error) {
+      console.error('Error refreshing materialized views:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get refresh status for materialized views
+   */
+  getMaterializedViewStatus(): Array<{
+    viewName: string;
+    rowCount: number;
+    lastRefreshed: Date | null;
+    sizeKB: number;
+  }> {
+    const views = [
+      'mv_daily_aggregations',
+      'mv_hourly_aggregations',
+      'mv_user_engagement_scores',
+      'mv_trending_content',
+      'mv_platform_comparison'
+    ];
+
+    return views.map(viewName => {
+      try {
+        const countResult = this.db.prepare(`SELECT COUNT(*) as count FROM ${viewName}`).get() as any;
+        const refreshResult = this.db.prepare(`SELECT MAX(last_refreshed) as last_refreshed FROM ${viewName}`).get() as any;
+
+        // Estimate size (rough approximation)
+        const sizeResult = this.db.prepare(`
+          SELECT
+            COUNT(*) * AVG(LENGTH(CAST(rowid AS TEXT))) as estimated_size
+          FROM ${viewName}
+        `).get() as any;
+
+        return {
+          viewName,
+          rowCount: countResult?.count || 0,
+          lastRefreshed: refreshResult?.last_refreshed ? new Date(refreshResult.last_refreshed) : null,
+          sizeKB: Math.round((sizeResult?.estimated_size || 0) / 1024)
+        };
+      } catch (error) {
+        // View might not exist yet
+        return {
+          viewName,
+          rowCount: 0,
+          lastRefreshed: null,
+          sizeKB: 0
+        };
+      }
+    });
+  }
 }

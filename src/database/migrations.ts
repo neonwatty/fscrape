@@ -8,6 +8,8 @@ import {
   DATABASE_SCHEMA,
   DATABASE_INDEXES,
   DATABASE_TRIGGERS,
+  MATERIALIZED_VIEWS,
+  MATERIALIZED_VIEW_INDEXES,
 } from "./schema.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -523,6 +525,33 @@ export const migrations: Migration[] = [
         DROP TABLE IF EXISTS time_series_daily;
         DROP TABLE IF EXISTS keyword_trends;
         DROP TABLE IF EXISTS user_influence_scores;
+      `);
+    },
+  },
+  {
+    version: 7,
+    name: "add_materialized_views",
+    up: (db: Database.Database) => {
+      // Create materialized views for expensive analytics computations
+      for (const [viewName, viewSchema] of Object.entries(MATERIALIZED_VIEWS)) {
+        db.exec(viewSchema);
+        console.log(`Created materialized view: ${viewName}`);
+      }
+
+      // Create indexes for materialized views
+      for (const indexSql of MATERIALIZED_VIEW_INDEXES) {
+        db.exec(indexSql);
+      }
+      console.log('Created materialized view indexes');
+    },
+    down: (db: Database.Database) => {
+      // Drop materialized view tables
+      db.exec(`
+        DROP TABLE IF EXISTS mv_daily_aggregations;
+        DROP TABLE IF EXISTS mv_hourly_aggregations;
+        DROP TABLE IF EXISTS mv_user_engagement_scores;
+        DROP TABLE IF EXISTS mv_trending_content;
+        DROP TABLE IF EXISTS mv_platform_comparison;
       `);
     },
   },
