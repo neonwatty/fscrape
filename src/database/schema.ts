@@ -218,11 +218,19 @@ export const DATABASE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at)",
   "CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author)",
   "CREATE INDEX IF NOT EXISTS idx_posts_score ON posts(score)",
+  // Compound indexes for trend analysis on posts
+  "CREATE INDEX IF NOT EXISTS idx_posts_platform_created ON posts(platform, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_posts_platform_score ON posts(platform, score DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_posts_platform_created_score ON posts(platform, created_at DESC, score DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_posts_created_engagement ON posts(created_at DESC, engagement_rate DESC)",
 
   "CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id)",
   "CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_id)",
   "CREATE INDEX IF NOT EXISTS idx_comments_author ON comments(author)",
   "CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at)",
+  // Compound indexes for trend analysis on comments
+  "CREATE INDEX IF NOT EXISTS idx_comments_platform_created ON comments(platform, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_comments_post_created ON comments(post_id, created_at DESC)",
 
   "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
   "CREATE INDEX IF NOT EXISTS idx_users_platform ON users(platform)",
@@ -236,26 +244,42 @@ export const DATABASE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_trend_metrics_platform ON trend_metrics(platform)",
   "CREATE INDEX IF NOT EXISTS idx_trend_metrics_type ON trend_metrics(metric_type)",
   "CREATE INDEX IF NOT EXISTS idx_trend_metrics_calculated ON trend_metrics(calculated_at DESC)",
+  // Compound indexes for trend metrics
+  "CREATE INDEX IF NOT EXISTS idx_trend_metrics_platform_time ON trend_metrics(platform, calculated_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_trend_metrics_platform_type_time ON trend_metrics(platform, metric_type, calculated_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_trend_metrics_type_name_window ON trend_metrics(metric_type, metric_name, time_window)",
 
   // Time series hourly indexes
   "CREATE INDEX IF NOT EXISTS idx_time_series_hourly_platform ON time_series_hourly(platform)",
   "CREATE INDEX IF NOT EXISTS idx_time_series_hourly_bucket ON time_series_hourly(hour_bucket DESC)",
+  // Compound indexes for time-range + platform queries
+  "CREATE INDEX IF NOT EXISTS idx_time_series_hourly_platform_bucket ON time_series_hourly(platform, hour_bucket DESC)",
 
   // Time series daily indexes
   "CREATE INDEX IF NOT EXISTS idx_time_series_daily_platform ON time_series_daily(platform)",
   "CREATE INDEX IF NOT EXISTS idx_time_series_daily_date ON time_series_daily(date DESC)",
+  // Compound indexes for time-range + platform queries
+  "CREATE INDEX IF NOT EXISTS idx_time_series_daily_platform_date ON time_series_daily(platform, date DESC)",
 
   // Keyword trends indexes
   "CREATE INDEX IF NOT EXISTS idx_keyword_trends_keyword ON keyword_trends(keyword)",
   "CREATE INDEX IF NOT EXISTS idx_keyword_trends_platform ON keyword_trends(platform)",
   "CREATE INDEX IF NOT EXISTS idx_keyword_trends_date ON keyword_trends(date DESC)",
   "CREATE INDEX IF NOT EXISTS idx_keyword_trends_score ON keyword_trends(trending_score DESC)",
+  // Compound indexes for keyword analysis
+  "CREATE INDEX IF NOT EXISTS idx_keyword_trends_platform_date ON keyword_trends(platform, date DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_keyword_trends_keyword_platform_date ON keyword_trends(keyword, platform, date DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_keyword_trends_platform_score ON keyword_trends(platform, trending_score DESC)",
 
   // User influence scores indexes
   "CREATE INDEX IF NOT EXISTS idx_user_influence_user ON user_influence_scores(user_id)",
   "CREATE INDEX IF NOT EXISTS idx_user_influence_platform ON user_influence_scores(platform)",
   "CREATE INDEX IF NOT EXISTS idx_user_influence_date ON user_influence_scores(calculation_date DESC)",
   "CREATE INDEX IF NOT EXISTS idx_user_influence_score ON user_influence_scores(influence_score DESC)",
+  // Compound indexes for user influence queries
+  "CREATE INDEX IF NOT EXISTS idx_user_influence_platform_date ON user_influence_scores(platform, calculation_date DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_user_influence_platform_score ON user_influence_scores(platform, influence_score DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_user_influence_user_platform_date ON user_influence_scores(user_id, platform, calculation_date DESC)",
 ];
 
 export const DATABASE_TRIGGERS = [
