@@ -169,6 +169,47 @@ class AnalyticsCache {
   clear(): void {
     this.cache.clear();
   }
+
+  getStats(): {
+    size: number;
+    entries: Array<{ key: string; timestamp: number; age: number }>;
+    totalMemory: number;
+  } {
+    const now = Date.now();
+    const entries = Array.from(this.cache.entries()).map(([key, value]) => ({
+      key,
+      timestamp: value.timestamp,
+      age: now - value.timestamp,
+    }));
+
+    // Rough estimate of memory usage
+    const totalMemory = Array.from(this.cache.entries()).reduce(
+      (total, [key, value]) => {
+        const dataSize = JSON.stringify(value.data).length;
+        return total + key.length + dataSize + 16; // 16 bytes for timestamp
+      },
+      0,
+    );
+
+    return {
+      size: this.cache.size,
+      entries,
+      totalMemory,
+    };
+  }
+
+  has(key: string): boolean {
+    const entry = this.cache.get(key);
+    if (!entry) return false;
+
+    // Check if expired
+    if (Date.now() - entry.timestamp > this.ttl) {
+      this.cache.delete(key);
+      return false;
+    }
+
+    return true;
+  }
 }
 
 // Global cache instance
@@ -205,6 +246,9 @@ export function createAnalyzeCommand(): Command {
       "Directory for cache storage",
       ".cache/analytics",
     )
+    .option("--clear-cache", "Clear all cached analytics results", false)
+    .option("--cache-stats", "Display cache statistics", false)
+    .option("--no-cache", "Disable cache usage for this operation", false)
     .option("--no-color", "Disable colored output", false)
     .option("--verbose", "Show detailed debug information", false);
 
@@ -448,6 +492,54 @@ export function createAnalyzeCommand(): Command {
       await handleDashboard(command.opts(), options);
     });
 
+  // Add main command action handler for cache management
+  command.action(async (options) => {
+    // Handle cache management options
+    if (options.clearCache) {
+      analyticsCache.clear();
+      console.log(chalk.green("✓ Analytics cache cleared successfully"));
+      return;
+    }
+
+    if (options.cacheStats) {
+      const stats = analyticsCache.getStats();
+
+      console.log(chalk.bold("\n📊 Analytics Cache Statistics"));
+      console.log(chalk.gray("─".repeat(50)));
+      console.log(`${chalk.cyan("Cache entries:")} ${stats.size}`);
+      console.log(`${chalk.cyan("Total memory:")} ${(stats.totalMemory / 1024).toFixed(2)} KB`);
+      console.log(`${chalk.cyan("TTL:")} 5 minutes`);
+
+      if (stats.entries.length > 0) {
+        console.log(chalk.bold("\n📋 Cached Entries:"));
+        const table = new Table({
+          head: ["Key", "Age (seconds)", "Status"],
+          style: { head: ["cyan"] },
+        });
+
+        stats.entries.forEach((entry) => {
+          const ageSeconds = Math.floor(entry.age / 1000);
+          const status = ageSeconds < 300 ? chalk.green("Active") : chalk.yellow("Expiring");
+          table.push([
+            entry.key.substring(0, 50) + (entry.key.length > 50 ? "..." : ""),
+            ageSeconds,
+            status,
+          ]);
+        });
+
+        console.log(table.toString());
+      } else {
+        console.log(chalk.gray("\nNo entries in cache"));
+      }
+      return;
+    }
+
+    // If no subcommand is provided, show help
+    if (!process.argv.slice(3).some(arg => !arg.startsWith('-'))) {
+      command.outputHelp();
+    }
+  });
+
   return command;
 }
 
@@ -464,8 +556,8 @@ async function handleStatistics(parentOpts: any, options: any): Promise<void> {
       outputFormat: options.format || parentOpts.outputFormat || "table",
     };
 
-    // Check cache if enabled
-    const cacheKey = parentOpts.cache
+    // Check cache if enabled (and not explicitly disabled with --no-cache)
+    const cacheKey = parentOpts.cache && !parentOpts.noCache
       ? getCacheKey("statistics", mergedOptions)
       : null;
     if (cacheKey) {
@@ -605,8 +697,8 @@ async function handleTrends(parentOpts: any, options: any): Promise<void> {
       confidence: options.confidence || 0.95,
     };
 
-    // Check cache if enabled
-    const cacheKey = parentOpts.cache
+    // Check cache if enabled (and not explicitly disabled with --no-cache)
+    const cacheKey = parentOpts.cache && !parentOpts.noCache
       ? getCacheKey("trends", mergedOptions)
       : null;
     if (cacheKey) {
@@ -1678,8 +1770,8 @@ async function handleCompare(parentOpts: any, options: any): Promise<void> {
       options.comparePeriod,
     );
 
-    // Get cache if enabled
-    const useCache = parentOpts.cache !== false;
+    // Get cache if enabled (and not explicitly disabled with --no-cache)
+    const useCache = parentOpts.cache !== false && !parentOpts.noCache;
     const cacheKey = useCache
       ? `compare_${options.comparisonType}_${JSON.stringify(basePeriod)}_${JSON.stringify(comparePeriod)}_${options.metrics.join(",")}`
       : null;
