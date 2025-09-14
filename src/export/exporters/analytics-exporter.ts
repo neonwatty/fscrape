@@ -3,10 +3,17 @@
  * Exports analytics data with rich visualizations
  */
 
-import type { GeneratedReport, ReportSection } from "../../analytics/report-generator.js";
+import type {
+  GeneratedReport,
+  ReportSection,
+} from "../../analytics/report-generator.js";
 import type { DashboardMetrics } from "../../analytics/dashboard.js";
 import { AnalyticsVisualizer } from "../../analytics/visualizer.js";
-import type { DataPoint, MultiSeriesData, ChartOptions } from "../../analytics/visualizer.js";
+import type {
+  DataPoint,
+  MultiSeriesData,
+  ChartOptions,
+} from "../../analytics/visualizer.js";
 import fs from "fs/promises";
 import path from "path";
 
@@ -124,11 +131,18 @@ export class AnalyticsExporter {
     await fs.mkdir(dir, { recursive: true });
 
     // Generate dashboard visualizations
-    const dashboardContent = await this.generateDashboardVisualization(metrics, opts);
+    const dashboardContent = await this.generateDashboardVisualization(
+      metrics,
+      opts,
+    );
 
     // Save based on format
     if (opts.format === "html") {
-      const htmlContent = this.wrapInHtml(dashboardContent, "Analytics Dashboard", opts);
+      const htmlContent = this.wrapInHtml(
+        dashboardContent,
+        "Analytics Dashboard",
+        opts,
+      );
       await fs.writeFile(outputPath, htmlContent);
     } else {
       await fs.writeFile(outputPath, dashboardContent);
@@ -164,9 +178,9 @@ export class AnalyticsExporter {
     const lines: string[] = [];
 
     // Header
-    lines.push("=" .repeat(80));
+    lines.push("=".repeat(80));
     lines.push(this.centerText(report.title, 80));
-    lines.push("=" .repeat(80));
+    lines.push("=".repeat(80));
     lines.push("");
     lines.push(`Generated: ${report.generatedAt.toLocaleString()}`);
     lines.push("");
@@ -178,7 +192,10 @@ export class AnalyticsExporter {
       lines.push("-".repeat(60));
 
       if (section.type === "chart" && options.includeVisualizations) {
-        const chart = this.generateChartFromSection(section, options.chartOptions);
+        const chart = this.generateChartFromSection(
+          section,
+          options.chartOptions,
+        );
         lines.push(chart);
       } else if (section.type === "table") {
         const table = this.formatTableSection(section);
@@ -195,13 +212,17 @@ export class AnalyticsExporter {
       lines.push("-".repeat(80));
       lines.push("Metadata:");
       if (report.metadata.dataRange) {
-        lines.push(`  Data Range: ${report.metadata.dataRange.start.toLocaleDateString()} - ${report.metadata.dataRange.end.toLocaleDateString()}`);
+        lines.push(
+          `  Data Range: ${report.metadata.dataRange.start.toLocaleDateString()} - ${report.metadata.dataRange.end.toLocaleDateString()}`,
+        );
       }
       if (report.metadata.platforms) {
         lines.push(`  Platforms: ${report.metadata.platforms.join(", ")}`);
       }
       if (report.metadata.recordCount) {
-        lines.push(`  Records: ${report.metadata.recordCount.toLocaleString()}`);
+        lines.push(
+          `  Records: ${report.metadata.recordCount.toLocaleString()}`,
+        );
       }
     }
 
@@ -224,7 +245,10 @@ export class AnalyticsExporter {
       sectionHtml += `<h2>${section.title}</h2>`;
 
       if (section.type === "chart" && options.includeVisualizations) {
-        const chart = this.generateChartFromSection(section, options.chartOptions);
+        const chart = this.generateChartFromSection(
+          section,
+          options.chartOptions,
+        );
         sectionHtml += `<pre class="chart">${this.escapeHtml(chart)}</pre>`;
       } else if (section.type === "table") {
         sectionHtml += this.formatHtmlTable(section);
@@ -309,7 +333,10 @@ export class AnalyticsExporter {
       };
 
       if (section.type === "chart" && options.includeVisualizations) {
-        exportSection.visualization = this.generateChartFromSection(section, options.chartOptions);
+        exportSection.visualization = this.generateChartFromSection(
+          section,
+          options.chartOptions,
+        );
       }
 
       if (options.includeRawData || section.type !== "chart") {
@@ -339,21 +366,36 @@ export class AnalyticsExporter {
 
     // Overview metrics
     lines.push("┌" + "─".repeat(58) + "┬" + "─".repeat(59) + "┐");
-    lines.push("│" + this.centerText("OVERVIEW", 58) + "│" + this.centerText("GROWTH", 59) + "│");
+    lines.push(
+      "│" +
+        this.centerText("OVERVIEW", 58) +
+        "│" +
+        this.centerText("GROWTH", 59) +
+        "│",
+    );
     lines.push("├" + "─".repeat(58) + "┼" + "─".repeat(59) + "┤");
 
     const overview = metrics.overview;
     lines.push(
-      "│ Total Posts:     " + this.padRight(overview.totalPosts.toLocaleString(), 39) +
-      "│ Growth Rate:     " + this.padRight((overview.growthRate * 100).toFixed(2) + "%", 40) + "│"
+      "│ Total Posts:     " +
+        this.padRight(overview.totalPosts.toLocaleString(), 39) +
+        "│ Growth Rate:     " +
+        this.padRight((overview.growthRate * 100).toFixed(2) + "%", 40) +
+        "│",
     );
     lines.push(
-      "│ Total Comments:  " + this.padRight(overview.totalComments.toLocaleString(), 39) +
-      "│ Avg Engagement:  " + this.padRight(overview.avgEngagement.toFixed(2), 40) + "│"
+      "│ Total Comments:  " +
+        this.padRight(overview.totalComments.toLocaleString(), 39) +
+        "│ Avg Engagement:  " +
+        this.padRight(overview.avgEngagement.toFixed(2), 40) +
+        "│",
     );
     lines.push(
-      "│ Total Users:     " + this.padRight(overview.totalUsers.toLocaleString(), 39) +
-      "│" + " ".repeat(59) + "│"
+      "│ Total Users:     " +
+        this.padRight(overview.totalUsers.toLocaleString(), 39) +
+        "│" +
+        " ".repeat(59) +
+        "│",
     );
     lines.push("└" + "─".repeat(58) + "┴" + "─".repeat(59) + "┘");
     lines.push("");
@@ -370,11 +412,10 @@ export class AnalyticsExporter {
         });
       });
 
-      const chart = this.visualizer.createBarChart(
-        platformData,
-        undefined,
-        { ...options.chartOptions, height: 15 }
-      );
+      const chart = this.visualizer.createBarChart(platformData, undefined, {
+        ...options.chartOptions,
+        height: 15,
+      });
       lines.push(chart);
       lines.push("");
     }
@@ -382,16 +423,15 @@ export class AnalyticsExporter {
     // Time series trend
     if (metrics.timeSeries && metrics.timeSeries.length > 0) {
       lines.push("Activity Trend:");
-      const trendData: DataPoint[] = metrics.timeSeries.map(ts => ({
+      const trendData: DataPoint[] = metrics.timeSeries.map((ts) => ({
         date: ts.date,
         value: ts.postCount + ts.commentCount,
       }));
 
-      const trendChart = this.visualizer.createLineChart(
-        trendData,
-        undefined,
-        { ...options.chartOptions, height: 15 }
-      );
+      const trendChart = this.visualizer.createLineChart(trendData, undefined, {
+        ...options.chartOptions,
+        height: 15,
+      });
       lines.push(trendChart);
       lines.push("");
     }
@@ -401,8 +441,14 @@ export class AnalyticsExporter {
       lines.push("Top Trending Posts:");
       lines.push("─".repeat(118));
       metrics.trending.slice(0, 5).forEach((post, i) => {
-        const bar = this.visualizer.createProgressBar(post.score, metrics.trending[0].score, 40);
-        lines.push(`${i + 1}. ${this.padRight(post.title.substring(0, 60), 62)} ${bar}`);
+        const bar = this.visualizer.createProgressBar(
+          post.score,
+          metrics.trending[0].score,
+          40,
+        );
+        lines.push(
+          `${i + 1}. ${this.padRight(post.title.substring(0, 60), 62)} ${bar}`,
+        );
       });
       lines.push("");
     }
@@ -410,8 +456,12 @@ export class AnalyticsExporter {
     // Health metrics
     if (metrics.health) {
       lines.push("System Health:");
-      lines.push(`Database Size: ${(metrics.health.databaseSize / (1024 * 1024)).toFixed(2)} MB`);
-      lines.push(`Data Quality: ${this.visualizer.createProgressBar(metrics.health.dataQuality, 100, 30)}`);
+      lines.push(
+        `Database Size: ${(metrics.health.databaseSize / (1024 * 1024)).toFixed(2)} MB`,
+      );
+      lines.push(
+        `Data Quality: ${this.visualizer.createProgressBar(metrics.health.dataQuality, 100, 30)}`,
+      );
       lines.push(`Last Update: ${metrics.health.lastUpdate.toLocaleString()}`);
     }
 
@@ -421,7 +471,10 @@ export class AnalyticsExporter {
   /**
    * Generate chart from section data
    */
-  private generateChartFromSection(section: ReportSection, options?: ChartOptions): string {
+  private generateChartFromSection(
+    section: ReportSection,
+    options?: ChartOptions,
+  ): string {
     if (!section.content || typeof section.content !== "object") {
       return "No chart data available";
     }
@@ -433,10 +486,18 @@ export class AnalyticsExporter {
       if (data.length > 0) {
         if ("value" in data[0] && ("date" in data[0] || "label" in data[0])) {
           // Line chart data
-          return this.visualizer.createLineChart(data as DataPoint[], section.title, options);
+          return this.visualizer.createLineChart(
+            data as DataPoint[],
+            section.title,
+            options,
+          );
         } else if ("label" in data[0] && Object.keys(data[0]).length > 1) {
           // Bar chart data
-          return this.visualizer.createBarChart(data as MultiSeriesData[], section.title, options);
+          return this.visualizer.createBarChart(
+            data as MultiSeriesData[],
+            section.title,
+            options,
+          );
         }
       }
     }
@@ -447,7 +508,10 @@ export class AnalyticsExporter {
   /**
    * Generate SVG chart
    */
-  private generateSvgChart(section: ReportSection, _options?: ChartOptions): string {
+  private generateSvgChart(
+    section: ReportSection,
+    _options?: ChartOptions,
+  ): string {
     // Simplified SVG generation - in a real implementation, this would create proper SVG charts
     const width = 800;
     const height = 400;
@@ -455,10 +519,10 @@ export class AnalyticsExporter {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
   <rect width="${width}" height="${height}" fill="#f0f0f0"/>
-  <text x="${width/2}" y="30" text-anchor="middle" font-size="20" font-weight="bold">
+  <text x="${width / 2}" y="30" text-anchor="middle" font-size="20" font-weight="bold">
     ${section.title}
   </text>
-  <text x="${width/2}" y="${height/2}" text-anchor="middle" font-size="14">
+  <text x="${width / 2}" y="${height / 2}" text-anchor="middle" font-size="14">
     [Chart visualization would be rendered here]
   </text>
 </svg>`;
@@ -489,21 +553,21 @@ export class AnalyticsExporter {
     const headers = Object.keys(data[0]);
 
     let html = '<table class="data-table">';
-    html += '<thead><tr>';
-    headers.forEach(h => {
+    html += "<thead><tr>";
+    headers.forEach((h) => {
       html += `<th>${this.escapeHtml(h)}</th>`;
     });
-    html += '</tr></thead>';
+    html += "</tr></thead>";
 
-    html += '<tbody>';
-    data.forEach(row => {
-      html += '<tr>';
-      headers.forEach(h => {
+    html += "<tbody>";
+    data.forEach((row) => {
+      html += "<tr>";
+      headers.forEach((h) => {
         html += `<td>${this.escapeHtml(String(row[h] || ""))}</td>`;
       });
-      html += '</tr>';
+      html += "</tr>";
     });
-    html += '</tbody></table>';
+    html += "</tbody></table>";
 
     return html;
   }
@@ -584,7 +648,9 @@ export class AnalyticsExporter {
     `;
 
     if (theme === "dark") {
-      return baseStyles + `
+      return (
+        baseStyles +
+        `
         body {
           background: #1a1a1a;
           color: #e0e0e0;
@@ -597,7 +663,8 @@ export class AnalyticsExporter {
           background: #333;
           color: #0f0;
         }
-      `;
+      `
+      );
     }
 
     return baseStyles;

@@ -165,7 +165,10 @@ export class TerminalVisualizer {
   constructor(options?: TerminalChartOptions) {
     // Validate color scheme before merging options
     const validatedOptions = { ...options };
-    if (validatedOptions?.colorScheme && !this.colorPalettes[validatedOptions.colorScheme]) {
+    if (
+      validatedOptions?.colorScheme &&
+      !this.colorPalettes[validatedOptions.colorScheme]
+    ) {
       validatedOptions.colorScheme = "default";
     }
 
@@ -217,7 +220,7 @@ export class TerminalVisualizer {
    */
   public format(text: string, formats: string[]): string {
     if (!this.defaultOptions.useColors) return text;
-    let result = text;
+    const result = text;
     let codes = "";
 
     for (const fmt of formats) {
@@ -238,14 +241,25 @@ export class TerminalVisualizer {
    */
   public formatHeader(title: string, width?: number): string {
     const w = width || this.defaultOptions.width;
-    const chars = this.defaultOptions.useUnicode ? this.unicodeChars : this.asciiChars;
+    const chars = this.defaultOptions.useUnicode
+      ? this.unicodeChars
+      : this.asciiChars;
     const padding = Math.max(0, w - title.length - 2);
     const leftPad = Math.floor(padding / 2);
     const rightPad = padding - leftPad;
 
-    const top = chars.boxTopLeft + chars.boxHorizontal.repeat(w - 2) + chars.boxTopRight;
-    const middle = chars.boxVertical + " ".repeat(leftPad) + title + " ".repeat(rightPad) + chars.boxVertical;
-    const bottom = chars.boxBottomLeft + chars.boxHorizontal.repeat(w - 2) + chars.boxBottomRight;
+    const top =
+      chars.boxTopLeft + chars.boxHorizontal.repeat(w - 2) + chars.boxTopRight;
+    const middle =
+      chars.boxVertical +
+      " ".repeat(leftPad) +
+      title +
+      " ".repeat(rightPad) +
+      chars.boxVertical;
+    const bottom =
+      chars.boxBottomLeft +
+      chars.boxHorizontal.repeat(w - 2) +
+      chars.boxBottomRight;
 
     return [top, middle, bottom].join("\n");
   }
@@ -254,7 +268,9 @@ export class TerminalVisualizer {
    * Format a section header
    */
   public formatSection(title: string): string {
-    const chars = this.defaultOptions.useUnicode ? this.unicodeChars : this.asciiChars;
+    const chars = this.defaultOptions.useUnicode
+      ? this.unicodeChars
+      : this.asciiChars;
     const colors = this.getColorPalette(this.defaultOptions.colorScheme);
     const separator = chars.boxHorizontal.repeat(3);
     return this.defaultOptions.useColors
@@ -267,25 +283,30 @@ export class TerminalVisualizer {
    */
   public formatTable(
     data: string[][],
-    options?: { headers?: boolean; borders?: boolean }
+    options?: { headers?: boolean; borders?: boolean },
   ): string {
     if (!data || data.length === 0) return "";
 
-    const chars = this.defaultOptions.useUnicode ? this.unicodeChars : this.asciiChars;
+    const chars = this.defaultOptions.useUnicode
+      ? this.unicodeChars
+      : this.asciiChars;
     const colors = this.getColorPalette(this.defaultOptions.colorScheme);
 
     // Calculate column widths
     const columnWidths = data[0].map((_, colIndex) =>
-      Math.max(...data.map(row => String(row[colIndex] || "").length))
+      Math.max(...data.map((row) => String(row[colIndex] || "").length)),
     );
 
     const lines: string[] = [];
 
     // Top border
     if (options?.borders) {
-      const border = chars.boxTopLeft + columnWidths.map(w =>
-        chars.boxHorizontal.repeat(w + 2)
-      ).join(chars.boxTeeDown) + chars.boxTopRight;
+      const border =
+        chars.boxTopLeft +
+        columnWidths
+          .map((w) => chars.boxHorizontal.repeat(w + 2))
+          .join(chars.boxTeeDown) +
+        chars.boxTopRight;
       lines.push(border);
     }
 
@@ -293,32 +314,46 @@ export class TerminalVisualizer {
     data.forEach((row, rowIndex) => {
       const cells = row.map((cell, colIndex) => {
         const content = String(cell || "").padEnd(columnWidths[colIndex]);
-        if (options?.headers && rowIndex === 0 && this.defaultOptions.useColors) {
+        if (
+          options?.headers &&
+          rowIndex === 0 &&
+          this.defaultOptions.useColors
+        ) {
           return colors.primary.bold(content);
         }
         return content;
       });
 
       const rowStr = options?.borders
-        ? chars.boxVertical + " " + cells.join(" " + chars.boxVertical + " ") + " " + chars.boxVertical
+        ? chars.boxVertical +
+          " " +
+          cells.join(" " + chars.boxVertical + " ") +
+          " " +
+          chars.boxVertical
         : cells.join("  ");
 
       lines.push(rowStr);
 
       // Header separator
       if (options?.headers && rowIndex === 0 && options?.borders) {
-        const separator = chars.boxTeeRight + columnWidths.map(w =>
-          chars.boxHorizontal.repeat(w + 2)
-        ).join(chars.boxCross) + chars.boxTeeLeft;
+        const separator =
+          chars.boxTeeRight +
+          columnWidths
+            .map((w) => chars.boxHorizontal.repeat(w + 2))
+            .join(chars.boxCross) +
+          chars.boxTeeLeft;
         lines.push(separator);
       }
     });
 
     // Bottom border
     if (options?.borders) {
-      const border = chars.boxBottomLeft + columnWidths.map(w =>
-        chars.boxHorizontal.repeat(w + 2)
-      ).join(chars.boxTeeUp) + chars.boxBottomRight;
+      const border =
+        chars.boxBottomLeft +
+        columnWidths
+          .map((w) => chars.boxHorizontal.repeat(w + 2))
+          .join(chars.boxTeeUp) +
+        chars.boxBottomRight;
       lines.push(border);
     }
 
@@ -331,13 +366,15 @@ export class TerminalVisualizer {
   public formatProgressBar(
     progress: number,
     width?: number,
-    options?: { showPercentage?: boolean; label?: string }
+    options?: { showPercentage?: boolean; label?: string },
   ): string {
     const percentage = Math.min(100, Math.max(0, progress * 100));
     const w = width || 30;
     const filled = Math.floor((percentage / 100) * w);
     const empty = w - filled;
-    const chars = this.defaultOptions.useUnicode ? this.unicodeChars : this.asciiChars;
+    const chars = this.defaultOptions.useUnicode
+      ? this.unicodeChars
+      : this.asciiChars;
     const colors = this.getColorPalette(this.defaultOptions.colorScheme);
 
     let bar = options?.label ? options.label + ": " : "";
@@ -373,38 +410,39 @@ export class TerminalVisualizer {
   public createTable(
     data: any[],
     columns: string[],
-    options?: { maxWidth?: number; headers?: Record<string, string> }
+    options?: { maxWidth?: number; headers?: Record<string, string> },
   ): string {
     if (!data || data.length === 0) return "No data";
 
     // Map column names to display headers if provided
     const displayColumns = options?.headers
-      ? columns.map(col => options.headers![col] || col)
+      ? columns.map((col) => options.headers![col] || col)
       : columns;
 
     // Clean data - replace special chars and handle null/undefined
-    const cleanData = data.map(row => columns.map(col => {
-      const value = row[col];
-      if (value === null || value === undefined) return "N/A";
-      // Remove newlines and tabs
-      return String(value).replace(/[\n\t]/g, " ");
-    }));
+    const cleanData = data.map((row) =>
+      columns.map((col) => {
+        const value = row[col];
+        if (value === null || value === undefined) return "N/A";
+        // Remove newlines and tabs
+        return String(value).replace(/[\n\t]/g, " ");
+      }),
+    );
 
     // Apply max width truncation if specified
-    const maxCellWidth = options?.maxWidth ? Math.floor(options.maxWidth / columns.length) - 3 : 50;
-    const truncatedData = cleanData.map(row =>
-      row.map(cell => {
+    const maxCellWidth = options?.maxWidth
+      ? Math.floor(options.maxWidth / columns.length) - 3
+      : 50;
+    const truncatedData = cleanData.map((row) =>
+      row.map((cell) => {
         if (cell.length > maxCellWidth) {
           return cell.substring(0, maxCellWidth - 3) + "...";
         }
         return cell;
-      })
+      }),
     );
 
-    const tableData: string[][] = [
-      displayColumns,
-      ...truncatedData
-    ];
+    const tableData: string[][] = [displayColumns, ...truncatedData];
 
     return this.formatTable(tableData, { headers: true, borders: true });
   }
@@ -414,7 +452,10 @@ export class TerminalVisualizer {
    */
   public createBarChart(
     data: Array<{ label: string; value: number }>,
-    options?: TerminalChartOptions & { horizontal?: boolean; showValues?: boolean }
+    options?: TerminalChartOptions & {
+      horizontal?: boolean;
+      showValues?: boolean;
+    },
   ): string {
     const opts = { ...this.defaultOptions, ...options };
     const colors = this.getColorPalette(opts.colorScheme);
@@ -422,29 +463,31 @@ export class TerminalVisualizer {
 
     if (data.length === 0) return "No data";
 
-    const maxValue = Math.max(...data.map(d => d.value));
-    const maxLabelLength = Math.max(...data.map(d => d.label.length));
+    const maxValue = Math.max(...data.map((d) => d.value));
+    const maxLabelLength = Math.max(...data.map((d) => d.label.length));
     const barWidth = opts.width - maxLabelLength - 10;
 
-    return data.map(item => {
-      const percentage = maxValue > 0 ? Math.abs(item.value) / maxValue : 0;
-      const barLength = Math.max(0, Math.floor(percentage * barWidth));
-      const label = item.label.padEnd(maxLabelLength);
+    return data
+      .map((item) => {
+        const percentage = maxValue > 0 ? Math.abs(item.value) / maxValue : 0;
+        const barLength = Math.max(0, Math.floor(percentage * barWidth));
+        const label = item.label.padEnd(maxLabelLength);
 
-      let bar = label + " ";
+        let bar = label + " ";
 
-      if (opts.useColors) {
-        bar += colors.primary(chars.barFull.repeat(barLength));
-      } else {
-        bar += chars.barFull.repeat(barLength);
-      }
+        if (opts.useColors) {
+          bar += colors.primary(chars.barFull.repeat(barLength));
+        } else {
+          bar += chars.barFull.repeat(barLength);
+        }
 
-      if (options?.showValues) {
-        bar += " " + item.value;
-      }
+        if (options?.showValues) {
+          bar += " " + item.value;
+        }
 
-      return bar;
-    }).join("\n");
+        return bar;
+      })
+      .join("\n");
   }
 
   /**
@@ -452,9 +495,12 @@ export class TerminalVisualizer {
    */
   public createTreeView(
     node: any,
-    options?: { expanded?: boolean; maxDepth?: number }
+    options?: { expanded?: boolean; maxDepth?: number },
   ): string {
-    return this.createTree(node, 0, "", true, { ...this.defaultOptions, maxDepth: options?.maxDepth });
+    return this.createTree(node, 0, "", true, {
+      ...this.defaultOptions,
+      maxDepth: options?.maxDepth,
+    });
   }
 
   /**
@@ -470,7 +516,9 @@ export class TerminalVisualizer {
     const min = Math.min(...data);
     const max = Math.max(...data);
     const range = max - min || 1;
-    const chars = opts.useUnicode ? this.unicodeChars.sparkBars : [".", "-", "=", "#"];
+    const chars = opts.useUnicode
+      ? this.unicodeChars.sparkBars
+      : [".", "-", "=", "#"];
     const colors = this.getColorPalette(opts.colorScheme);
 
     return data
@@ -524,7 +572,11 @@ export class TerminalVisualizer {
       bar += colors.muted(chars.progressEmpty.repeat(empty));
       bar += colors.muted("]");
     } else {
-      bar += "[" + chars.progressFull.repeat(filled) + chars.progressEmpty.repeat(empty) + "]";
+      bar +=
+        "[" +
+        chars.progressFull.repeat(filled) +
+        chars.progressEmpty.repeat(empty) +
+        "]";
     }
 
     // Percentage
@@ -592,7 +644,7 @@ export class TerminalVisualizer {
     // Column headers
     if (options?.colLabels) {
       let header = "        ";
-      options.colLabels.forEach(label => {
+      options.colLabels.forEach((label) => {
         header += this.padCenter(label.substring(0, 8), 10);
       });
       lines.push(colors.info(header));
@@ -608,13 +660,15 @@ export class TerminalVisualizer {
 
       // Row label
       if (options?.rowLabels) {
-        line += colors.info(this.padRight(options.rowLabels[rowIndex]?.substring(0, 6) || "", 8));
+        line += colors.info(
+          this.padRight(options.rowLabels[rowIndex]?.substring(0, 6) || "", 8),
+        );
       } else {
         line += "        ";
       }
 
       // Heat cells
-      row.forEach(val => {
+      row.forEach((val) => {
         const normalized = (val - min) / range;
         const charIndex = Math.floor(normalized * (heatChars.length - 1));
         const char = heatChars[charIndex];
@@ -661,34 +715,52 @@ export class TerminalVisualizer {
     const lines: string[] = [];
 
     // Dashboard header
-    const headerLine = chars.boxTopLeft + chars.boxHorizontal.repeat(opts.width - 2) + chars.boxTopRight;
+    const headerLine =
+      chars.boxTopLeft +
+      chars.boxHorizontal.repeat(opts.width - 2) +
+      chars.boxTopRight;
     lines.push(colors.primary(headerLine));
 
     // Process sections
     sections.forEach((section, index) => {
       if (section.style === "box") {
         // Boxed section
-        const titleLine = chars.boxVertical + " " +
+        const titleLine =
+          chars.boxVertical +
+          " " +
           colors.accent(this.padCenter(section.title, opts.width - 4)) +
-          " " + chars.boxVertical;
+          " " +
+          chars.boxVertical;
         lines.push(colors.primary(titleLine));
 
         // Separator
         if (index === 0) {
-          const sepLine = chars.boxTeeRight + chars.boxHorizontal.repeat(opts.width - 2) + chars.boxTeeLeft;
+          const sepLine =
+            chars.boxTeeRight +
+            chars.boxHorizontal.repeat(opts.width - 2) +
+            chars.boxTeeLeft;
           lines.push(colors.primary(sepLine));
         }
 
         // Content
         const contentLines = section.content.split("\n");
-        contentLines.forEach(line => {
+        contentLines.forEach((line) => {
           const paddedLine = this.padRight(line, opts.width - 4);
-          lines.push(colors.primary(chars.boxVertical) + " " + paddedLine + " " + colors.primary(chars.boxVertical));
+          lines.push(
+            colors.primary(chars.boxVertical) +
+              " " +
+              paddedLine +
+              " " +
+              colors.primary(chars.boxVertical),
+          );
         });
 
         // Section separator or bottom
         if (index < sections.length - 1) {
-          const sepLine = chars.boxTeeRight + chars.boxHorizontal.repeat(opts.width - 2) + chars.boxTeeLeft;
+          const sepLine =
+            chars.boxTeeRight +
+            chars.boxHorizontal.repeat(opts.width - 2) +
+            chars.boxTeeLeft;
           lines.push(colors.primary(sepLine));
         }
       } else {
@@ -701,7 +773,10 @@ export class TerminalVisualizer {
     });
 
     // Dashboard footer
-    const footerLine = chars.boxBottomLeft + chars.boxHorizontal.repeat(opts.width - 2) + chars.boxBottomRight;
+    const footerLine =
+      chars.boxBottomLeft +
+      chars.boxHorizontal.repeat(opts.width - 2) +
+      chars.boxBottomRight;
     lines.push(colors.primary(footerLine));
 
     return lines.join("\n");
@@ -766,7 +841,10 @@ export class TerminalVisualizer {
 
         if (typeof value === "object" && value !== null) {
           // Check max depth before recursing
-          if (options?.maxDepth !== undefined && indent + 1 >= options.maxDepth) {
+          if (
+            options?.maxDepth !== undefined &&
+            indent + 1 >= options.maxDepth
+          ) {
             lines.push(prefix + extension + chars.empty + "...");
           } else {
             const subTree = this.createTree(
@@ -776,7 +854,7 @@ export class TerminalVisualizer {
               isLastItem,
               options,
             );
-            lines.push(...subTree.split("\n").filter(l => l));
+            lines.push(...subTree.split("\n").filter((l) => l));
           }
         } else {
           const valueStr = String(value);
@@ -810,7 +888,7 @@ export class TerminalVisualizer {
       lines.push("");
     }
 
-    const maxValue = Math.max(...data.flatMap(d => [d.value1, d.value2]));
+    const maxValue = Math.max(...data.flatMap((d) => [d.value1, d.value2]));
     const barWidth = Math.floor((opts.width - 30) / 2);
     const chars = opts.useUnicode ? this.unicodeChars : this.asciiChars;
 
@@ -822,7 +900,7 @@ export class TerminalVisualizer {
     }
 
     // Bars
-    data.forEach(item => {
+    data.forEach((item) => {
       const label = this.padRight(item.label.substring(0, 20), 20);
       const bar1Length = Math.floor((item.value1 / maxValue) * barWidth);
       const bar2Length = Math.floor((item.value2 / maxValue) * barWidth);
@@ -847,10 +925,15 @@ export class TerminalVisualizer {
    * Helper methods
    */
   private getColorPalette(scheme?: string): ColorPalette {
-    return this.colorPalettes[scheme || "default"] || this.colorPalettes.default;
+    return (
+      this.colorPalettes[scheme || "default"] || this.colorPalettes.default
+    );
   }
 
-  private createTitle(title: string, options: Required<TerminalChartOptions>): string {
+  private createTitle(
+    title: string,
+    options: Required<TerminalChartOptions>,
+  ): string {
     const colors = this.getColorPalette(options.colorScheme);
     const chars = options.useUnicode ? this.unicodeChars : this.asciiChars;
 
@@ -898,19 +981,27 @@ export class TerminalVisualizer {
   public createBox(
     content: string,
     title?: string,
-    options?: { padding?: number; width?: number; align?: string; maxWidth?: number }
+    options?: {
+      padding?: number;
+      width?: number;
+      align?: string;
+      maxWidth?: number;
+    },
   ): string {
-    const chars = this.defaultOptions.useUnicode ? this.unicodeChars : this.asciiChars;
-    const width = options?.width || options?.maxWidth || this.defaultOptions.width;
+    const chars = this.defaultOptions.useUnicode
+      ? this.unicodeChars
+      : this.asciiChars;
+    const width =
+      options?.width || options?.maxWidth || this.defaultOptions.width;
     const padding = options?.padding || 1;
     const align = options?.align || "left";
 
     const lines = content.split("\n");
     const maxLineLength = Math.min(
-      Math.max(...lines.map(l => l.length)),
-      width - (padding * 2) - 2
+      Math.max(...lines.map((l) => l.length)),
+      width - padding * 2 - 2,
     );
-    const boxWidth = maxLineLength + (padding * 2) + 2;
+    const boxWidth = maxLineLength + padding * 2 + 2;
 
     const result: string[] = [];
 
@@ -921,16 +1012,18 @@ export class TerminalVisualizer {
       const rightPad = titlePadding - leftPad;
       result.push(
         chars.boxTopLeft +
-        chars.boxHorizontal.repeat(leftPad) +
-        " " + title + " " +
-        chars.boxHorizontal.repeat(rightPad) +
-        chars.boxTopRight
+          chars.boxHorizontal.repeat(leftPad) +
+          " " +
+          title +
+          " " +
+          chars.boxHorizontal.repeat(rightPad) +
+          chars.boxTopRight,
       );
     } else {
       result.push(
         chars.boxTopLeft +
-        chars.boxHorizontal.repeat(boxWidth - 2) +
-        chars.boxTopRight
+          chars.boxHorizontal.repeat(boxWidth - 2) +
+          chars.boxTopRight,
       );
     }
 
@@ -938,15 +1031,13 @@ export class TerminalVisualizer {
     if (padding > 1) {
       for (let i = 1; i < padding; i++) {
         result.push(
-          chars.boxVertical +
-          " ".repeat(boxWidth - 2) +
-          chars.boxVertical
+          chars.boxVertical + " ".repeat(boxWidth - 2) + chars.boxVertical,
         );
       }
     }
 
     // Content lines
-    lines.forEach(line => {
+    lines.forEach((line) => {
       const truncated = line.substring(0, maxLineLength);
       let paddedLine = truncated;
 
@@ -961,10 +1052,10 @@ export class TerminalVisualizer {
 
       result.push(
         chars.boxVertical +
-        " ".repeat(padding) +
-        paddedLine +
-        " ".repeat(padding) +
-        chars.boxVertical
+          " ".repeat(padding) +
+          paddedLine +
+          " ".repeat(padding) +
+          chars.boxVertical,
       );
     });
 
@@ -972,9 +1063,7 @@ export class TerminalVisualizer {
     if (padding > 1) {
       for (let i = 1; i < padding; i++) {
         result.push(
-          chars.boxVertical +
-          " ".repeat(boxWidth - 2) +
-          chars.boxVertical
+          chars.boxVertical + " ".repeat(boxWidth - 2) + chars.boxVertical,
         );
       }
     }
@@ -982,8 +1071,8 @@ export class TerminalVisualizer {
     // Bottom border
     result.push(
       chars.boxBottomLeft +
-      chars.boxHorizontal.repeat(boxWidth - 2) +
-      chars.boxBottomRight
+        chars.boxHorizontal.repeat(boxWidth - 2) +
+        chars.boxBottomRight,
     );
 
     return result.join("\n");
@@ -995,7 +1084,7 @@ export class TerminalVisualizer {
   public createDiff(
     before: string[],
     after: string[],
-    options?: { useColors?: boolean }
+    options?: { useColors?: boolean },
   ): string {
     if (before.length === 0 && after.length === 0) return "No changes";
     if (JSON.stringify(before) === JSON.stringify(after)) return "No changes";
@@ -1016,8 +1105,12 @@ export class TerminalVisualizer {
         // Modified line
         const removedLine = `- ${before[i]}`;
         const addedLine = `+ ${after[i]}`;
-        lines.push(options?.useColors ? `\x1b[31m${removedLine}\x1b[0m` : removedLine);
-        lines.push(options?.useColors ? `\x1b[32m${addedLine}\x1b[0m` : addedLine);
+        lines.push(
+          options?.useColors ? `\x1b[31m${removedLine}\x1b[0m` : removedLine,
+        );
+        lines.push(
+          options?.useColors ? `\x1b[32m${addedLine}\x1b[0m` : addedLine,
+        );
       }
     }
 

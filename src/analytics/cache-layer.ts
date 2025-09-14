@@ -23,11 +23,11 @@ interface CacheEntry<T> {
  * Cache configuration options
  */
 export interface CacheConfig {
-  defaultTTL?: number;           // Default TTL in milliseconds (5 minutes)
-  maxSize?: number;              // Maximum cache size in bytes (100MB)
-  maxEntries?: number;           // Maximum number of entries (1000)
-  cleanupInterval?: number;      // Cleanup interval in milliseconds (60 seconds)
-  enableMetrics?: boolean;       // Enable cache metrics collection
+  defaultTTL?: number; // Default TTL in milliseconds (5 minutes)
+  maxSize?: number; // Maximum cache size in bytes (100MB)
+  maxEntries?: number; // Maximum number of entries (1000)
+  cleanupInterval?: number; // Cleanup interval in milliseconds (60 seconds)
+  enableMetrics?: boolean; // Enable cache metrics collection
   compressionThreshold?: number; // Size threshold for compression (1KB)
 }
 
@@ -49,11 +49,11 @@ export interface CacheStats {
  * Dependency types for cache invalidation
  */
 export enum CacheDependency {
-  DATA = "data",           // Raw data changes
-  TIME_RANGE = "time",     // Time range changes
-  PLATFORM = "platform",   // Platform filter changes
-  CONFIG = "config",       // Configuration changes
-  USER = "user",          // User-specific data
+  DATA = "data", // Raw data changes
+  TIME_RANGE = "time", // Time range changes
+  PLATFORM = "platform", // Platform filter changes
+  CONFIG = "config", // Configuration changes
+  USER = "user", // User-specific data
 }
 
 /**
@@ -74,10 +74,10 @@ export class CacheLayer {
 
     // Initialize configuration with defaults
     this.config = {
-      defaultTTL: config.defaultTTL ?? 5 * 60 * 1000,        // 5 minutes
-      maxSize: config.maxSize ?? 100 * 1024 * 1024,         // 100MB
+      defaultTTL: config.defaultTTL ?? 5 * 60 * 1000, // 5 minutes
+      maxSize: config.maxSize ?? 100 * 1024 * 1024, // 100MB
       maxEntries: config.maxEntries ?? 1000,
-      cleanupInterval: config.cleanupInterval ?? 60 * 1000,  // 1 minute
+      cleanupInterval: config.cleanupInterval ?? 60 * 1000, // 1 minute
       enableMetrics: config.enableMetrics ?? true,
       compressionThreshold: config.compressionThreshold ?? 1024, // 1KB
     };
@@ -152,7 +152,7 @@ export class CacheLayer {
     options: {
       ttl?: number;
       dependencies?: string[];
-    } = {}
+    } = {},
   ): void {
     const ttl = options.ttl ?? this.config.defaultTTL;
     const dependencies = new Set(options.dependencies ?? []);
@@ -180,7 +180,7 @@ export class CacheLayer {
     };
 
     // Update dependency map
-    dependencies.forEach(dep => {
+    dependencies.forEach((dep) => {
       if (!this.dependencyMap.has(dep)) {
         this.dependencyMap.set(dep, new Set());
       }
@@ -204,7 +204,7 @@ export class CacheLayer {
     if (!entry) return false;
 
     // Remove from dependency map
-    entry.dependencies.forEach(dep => {
+    entry.dependencies.forEach((dep) => {
       const keys = this.dependencyMap.get(dep);
       if (keys) {
         keys.delete(key);
@@ -229,7 +229,7 @@ export class CacheLayer {
     if (!keys) return 0;
 
     let invalidated = 0;
-    keys.forEach(key => {
+    keys.forEach((key) => {
       if (this.delete(key)) {
         invalidated++;
       }
@@ -252,7 +252,7 @@ export class CacheLayer {
       }
     });
 
-    keysToDelete.forEach(key => this.delete(key));
+    keysToDelete.forEach((key) => this.delete(key));
     this.stats.evictions += keysToDelete.length;
 
     return keysToDelete.length;
@@ -316,16 +316,18 @@ export class CacheLayer {
       compute: () => Promise<any>;
       ttl?: number;
       dependencies?: string[];
-    }>
+    }>,
   ): Promise<void> {
-    const promises = computations.map(async ({ key, compute, ttl, dependencies }) => {
-      try {
-        const data = await compute();
-        this.set(key, data, { ttl, dependencies });
-      } catch (error) {
-        console.error(`Failed to warm up cache for key ${key}:`, error);
-      }
-    });
+    const promises = computations.map(
+      async ({ key, compute, ttl, dependencies }) => {
+        try {
+          const data = await compute();
+          this.set(key, data, { ttl, dependencies });
+        } catch (error) {
+          console.error(`Failed to warm up cache for key ${key}:`, error);
+        }
+      },
+    );
 
     await Promise.all(promises);
   }
@@ -340,7 +342,7 @@ export class CacheLayer {
       ttl?: number;
       dependencies?: string[];
       keyGenerator?: (...args: Parameters<T>) => string;
-    } = {}
+    } = {},
   ): T {
     const namespace = options.namespace ?? fn.name ?? "memoized";
 
@@ -360,7 +362,7 @@ export class CacheLayer {
 
       // Handle async functions
       if (result instanceof Promise) {
-        return result.then(data => {
+        return result.then((data) => {
           this.set(key, data, {
             ttl: options.ttl,
             dependencies: options.dependencies,
@@ -411,7 +413,7 @@ export class CacheLayer {
       }
     });
 
-    keysToDelete.forEach(key => this.delete(key));
+    keysToDelete.forEach((key) => this.delete(key));
 
     if (keysToDelete.length > 0) {
       this.stats.evictions += keysToDelete.length;
@@ -453,13 +455,12 @@ export class CacheLayer {
   }
 
   private evictBySize(requiredSize: number): void {
-    const entries = Array.from(this.cache.entries())
-      .sort((a, b) => {
-        // Sort by access frequency and age
-        const scoreA = a[1].hits / (Date.now() - a[1].timestamp);
-        const scoreB = b[1].hits / (Date.now() - b[1].timestamp);
-        return scoreA - scoreB;
-      });
+    const entries = Array.from(this.cache.entries()).sort((a, b) => {
+      // Sort by access frequency and age
+      const scoreA = a[1].hits / (Date.now() - a[1].timestamp);
+      const scoreB = b[1].hits / (Date.now() - b[1].timestamp);
+      return scoreA - scoreB;
+    });
 
     let freedSize = 0;
     for (const [key, entry] of entries) {
@@ -478,7 +479,7 @@ export class CacheLayer {
 
   private sortObject(obj: any): any {
     if (obj === null || typeof obj !== "object") return obj;
-    if (Array.isArray(obj)) return obj.map(item => this.sortObject(item));
+    if (Array.isArray(obj)) return obj.map((item) => this.sortObject(item));
 
     return Object.keys(obj)
       .sort()
@@ -494,30 +495,31 @@ export class CacheLayer {
   }
 
   private updateAvgEntrySize(): void {
-    this.stats.avgEntrySize = this.stats.entries > 0
-      ? this.stats.size / this.stats.entries
-      : 0;
+    this.stats.avgEntrySize =
+      this.stats.entries > 0 ? this.stats.size / this.stats.entries : 0;
   }
 }
 
 // Export singleton instance for global cache
 export const globalCache = new CacheLayer({
-  defaultTTL: 5 * 60 * 1000,    // 5 minutes
-  maxSize: 100 * 1024 * 1024,   // 100MB
+  defaultTTL: 5 * 60 * 1000, // 5 minutes
+  maxSize: 100 * 1024 * 1024, // 100MB
   maxEntries: 1000,
   enableMetrics: true,
 });
 
 // Export cache decorator
-export function Cacheable(options: {
-  ttl?: number;
-  namespace?: string;
-  dependencies?: string[];
-} = {}) {
+export function Cacheable(
+  options: {
+    ttl?: number;
+    namespace?: string;
+    dependencies?: string[];
+  } = {},
+) {
   return function <T>(
     target: any,
     propertyKey: string,
-    descriptor: TypedPropertyDescriptor<T>
+    descriptor: TypedPropertyDescriptor<T>,
   ): TypedPropertyDescriptor<T> | void {
     // Handle both method and property descriptors
     if (!descriptor) {
@@ -526,45 +528,48 @@ export function Cacheable(options: {
 
     // Handle getter/setter vs regular method
     const originalMethod = descriptor.value || descriptor.get;
-    if (!originalMethod || typeof originalMethod !== 'function') {
-      console.warn(`@Cacheable decorator: Cannot apply to non-method property: ${propertyKey}`);
+    if (!originalMethod || typeof originalMethod !== "function") {
+      console.warn(
+        `@Cacheable decorator: Cannot apply to non-method property: ${propertyKey}`,
+      );
       return descriptor;
     }
 
-    const namespace = options.namespace ?? `${target.constructor.name}.${propertyKey}`;
+    const namespace =
+      options.namespace ?? `${target.constructor.name}.${propertyKey}`;
 
     // For regular methods
     if (descriptor.value) {
       descriptor.value = function (this: any, ...args: any[]): any {
-      const key = globalCache.generateKey(namespace, args);
+        const key = globalCache.generateKey(namespace, args);
 
-      // Check cache
-      const cached = globalCache.get(key);
-      if (cached !== null) {
-        return cached;
-      }
+        // Check cache
+        const cached = globalCache.get(key);
+        if (cached !== null) {
+          return cached;
+        }
 
-      // Execute original method
-      const result = originalMethod.apply(this, args);
+        // Execute original method
+        const result = originalMethod.apply(this, args);
 
-      // Handle async methods
-      if (result instanceof Promise) {
-        return result.then((data: any) => {
-          globalCache.set(key, data, {
-            ttl: options.ttl,
-            dependencies: options.dependencies,
+        // Handle async methods
+        if (result instanceof Promise) {
+          return result.then((data: any) => {
+            globalCache.set(key, data, {
+              ttl: options.ttl,
+              dependencies: options.dependencies,
+            });
+            return data;
           });
-          return data;
+        }
+
+        // Cache sync result
+        globalCache.set(key, result, {
+          ttl: options.ttl,
+          dependencies: options.dependencies,
         });
-      }
 
-      // Cache sync result
-      globalCache.set(key, result, {
-        ttl: options.ttl,
-        dependencies: options.dependencies,
-      });
-
-      return result;
+        return result;
       } as any;
     }
     // For getters

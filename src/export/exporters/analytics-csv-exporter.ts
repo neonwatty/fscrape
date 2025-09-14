@@ -148,12 +148,18 @@ export class AnalyticsCsvExporter {
 
     if (this.options.includeConfidenceIntervals) {
       headers.push(
-        { id: "scoreCI_lower", title: `Score CI Lower (${this.options.confidenceLevel * 100}%)` },
-        { id: "scoreCI_upper", title: `Score CI Upper (${this.options.confidenceLevel * 100}%)` },
+        {
+          id: "scoreCI_lower",
+          title: `Score CI Lower (${this.options.confidenceLevel * 100}%)`,
+        },
+        {
+          id: "scoreCI_upper",
+          title: `Score CI Upper (${this.options.confidenceLevel * 100}%)`,
+        },
       );
     }
 
-    const records = stats.map(stat => {
+    const records = stats.map((stat) => {
       const record: any = {
         platform: stat.platform,
         totalPosts: stat.totalPosts,
@@ -166,20 +172,22 @@ export class AnalyticsCsvExporter {
       };
 
       if (this.options.includeStatistics) {
-        const scores = [stat.avgPostScore, stat.avgCommentScore].filter(s => s != null);
+        const scores = [stat.avgPostScore, stat.avgCommentScore].filter(
+          (s) => s != null,
+        );
         if (scores.length > 0) {
           const stdDev = StatisticsEngine.calculateStandardDeviation(scores);
           record.scoreStdDev = this.formatNumber(stdDev);
           record.scoreVariance = this.formatNumber(stdDev * stdDev);
           record.engagementRate = this.formatNumber(
-            stat.avgCommentCount / stat.totalPosts * 100,
+            (stat.avgCommentCount / stat.totalPosts) * 100,
           );
         }
       }
 
       if (this.options.includeConfidenceIntervals) {
         const ci = this.calculateConfidenceInterval(
-          [stat.avgPostScore, stat.avgCommentScore].filter(s => s != null),
+          [stat.avgPostScore, stat.avgCommentScore].filter((s) => s != null),
         );
         record.scoreCI_lower = this.formatNumber(ci.lower);
         record.scoreCI_upper = this.formatNumber(ci.upper);
@@ -204,8 +212,8 @@ export class AnalyticsCsvExporter {
     outputPath: string,
   ): Promise<void> {
     // Calculate statistics for the entire dataset
-    const allScores = posts.map(p => p.score);
-    const allComments = posts.map(p => p.commentCount);
+    const allScores = posts.map((p) => p.score);
+    const allComments = posts.map((p) => p.commentCount);
     const scoreSummary = StatisticsEngine.getSummary(allScores);
     const commentSummary = StatisticsEngine.getSummary(allComments);
 
@@ -265,25 +273,35 @@ export class AnalyticsCsvExporter {
       }
 
       if (this.options.includeZScores) {
-        const scoreZ = (post.score - scoreSummary.mean) / scoreSummary.standardDeviation;
-        const commentZ = (post.commentCount - commentSummary.mean) / commentSummary.standardDeviation;
+        const scoreZ =
+          (post.score - scoreSummary.mean) / scoreSummary.standardDeviation;
+        const commentZ =
+          (post.commentCount - commentSummary.mean) /
+          commentSummary.standardDeviation;
 
         record.scoreZScore = this.formatNumber(scoreZ);
         record.commentZScore = this.formatNumber(commentZ);
-        record.isOutlier = Math.abs(scoreZ) > 2.5 || Math.abs(commentZ) > 2.5 ? "Yes" : "No";
+        record.isOutlier =
+          Math.abs(scoreZ) > 2.5 || Math.abs(commentZ) > 2.5 ? "Yes" : "No";
       }
 
       if (this.options.includeStatistics) {
-        record.relativeScore = this.formatNumber((post.score / scoreSummary.mean) * 100);
+        record.relativeScore = this.formatNumber(
+          (post.score / scoreSummary.mean) * 100,
+        );
         record.engagementRatio = this.formatNumber(
           post.commentCount > 0 ? post.score / post.commentCount : 0,
         );
 
         // Significance indicator based on z-score
-        const zScore = (post.score - scoreSummary.mean) / scoreSummary.standardDeviation;
-        if (Math.abs(zScore) > 2.576) record.significanceIndicator = "***"; // p < 0.01
-        else if (Math.abs(zScore) > 1.96) record.significanceIndicator = "**"; // p < 0.05
-        else if (Math.abs(zScore) > 1.645) record.significanceIndicator = "*"; // p < 0.10
+        const zScore =
+          (post.score - scoreSummary.mean) / scoreSummary.standardDeviation;
+        if (Math.abs(zScore) > 2.576)
+          record.significanceIndicator = "***"; // p < 0.01
+        else if (Math.abs(zScore) > 1.96)
+          record.significanceIndicator = "**"; // p < 0.05
+        else if (Math.abs(zScore) > 1.645)
+          record.significanceIndicator = "*"; // p < 0.10
         else record.significanceIndicator = "";
       }
 
@@ -306,8 +324,8 @@ export class AnalyticsCsvExporter {
     outputPath: string,
   ): Promise<void> {
     // Calculate statistics for the dataset
-    const allKarma = users.map(u => u.totalKarma);
-    const allPostScores = users.map(u => u.avgPostScore);
+    const allKarma = users.map((u) => u.totalKarma);
+    const allPostScores = users.map((u) => u.avgPostScore);
     const karmaSummary = StatisticsEngine.getSummary(allKarma);
 
     const headers = [
@@ -345,7 +363,7 @@ export class AnalyticsCsvExporter {
       );
     }
 
-    const records = users.map(user => {
+    const records = users.map((user) => {
       const record: any = {
         username: user.username,
         platform: user.platform,
@@ -360,7 +378,8 @@ export class AnalyticsCsvExporter {
 
       if (this.options.includeStatistics) {
         const daysActive = Math.ceil(
-          (user.lastSeen.getTime() - user.firstSeen.getTime()) / (1000 * 60 * 60 * 24),
+          (user.lastSeen.getTime() - user.firstSeen.getTime()) /
+            (1000 * 60 * 60 * 24),
         );
         record.activityScore = this.formatNumber(
           (user.postCount + user.commentCount) / Math.max(1, daysActive),
@@ -369,7 +388,9 @@ export class AnalyticsCsvExporter {
           (user.avgPostScore + user.avgCommentScore) / 2,
         );
         record.daysActive = daysActive;
-        record.postsPerDay = this.formatNumber(user.postCount / Math.max(1, daysActive));
+        record.postsPerDay = this.formatNumber(
+          user.postCount / Math.max(1, daysActive),
+        );
       }
 
       if (this.options.includePercentiles) {
@@ -377,14 +398,16 @@ export class AnalyticsCsvExporter {
           this.calculatePercentile(user.totalKarma, allKarma),
         );
         const activityScore = user.postCount + user.commentCount;
-        const allActivity = users.map(u => u.postCount + u.commentCount);
+        const allActivity = users.map((u) => u.postCount + u.commentCount);
         record.activityPercentile = this.formatNumber(
           this.calculatePercentile(activityScore, allActivity),
         );
       }
 
       if (this.options.includeZScores) {
-        const karmaZ = (user.totalKarma - karmaSummary.mean) / karmaSummary.standardDeviation;
+        const karmaZ =
+          (user.totalKarma - karmaSummary.mean) /
+          karmaSummary.standardDeviation;
         record.karmaZScore = this.formatNumber(karmaZ);
         record.isTopUser = karmaZ > 2 ? "Yes" : "No";
       }
@@ -417,9 +440,18 @@ export class AnalyticsCsvExporter {
 
     if (this.options.includeMovingAverages) {
       headers.push(
-        { id: "postsMA", title: `Posts MA(${this.options.movingAverageWindow})` },
-        { id: "commentsMA", title: `Comments MA(${this.options.movingAverageWindow})` },
-        { id: "scoreMA", title: `Score MA(${this.options.movingAverageWindow})` },
+        {
+          id: "postsMA",
+          title: `Posts MA(${this.options.movingAverageWindow})`,
+        },
+        {
+          id: "commentsMA",
+          title: `Comments MA(${this.options.movingAverageWindow})`,
+        },
+        {
+          id: "scoreMA",
+          title: `Score MA(${this.options.movingAverageWindow})`,
+        },
       );
     }
 
@@ -433,9 +465,9 @@ export class AnalyticsCsvExporter {
       );
     }
 
-    const postValues = timeSeries.map(ts => ts.posts);
-    const commentValues = timeSeries.map(ts => ts.comments);
-    const scoreValues = timeSeries.map(ts => ts.avgScore);
+    const postValues = timeSeries.map((ts) => ts.posts);
+    const commentValues = timeSeries.map((ts) => ts.comments);
+    const scoreValues = timeSeries.map((ts) => ts.avgScore);
 
     const records = timeSeries.map((point, index) => {
       const record: any = {
@@ -448,13 +480,25 @@ export class AnalyticsCsvExporter {
 
       if (this.options.includeMovingAverages) {
         record.postsMA = this.formatNumber(
-          this.calculateMovingAverage(postValues, index, this.options.movingAverageWindow),
+          this.calculateMovingAverage(
+            postValues,
+            index,
+            this.options.movingAverageWindow,
+          ),
         );
         record.commentsMA = this.formatNumber(
-          this.calculateMovingAverage(commentValues, index, this.options.movingAverageWindow),
+          this.calculateMovingAverage(
+            commentValues,
+            index,
+            this.options.movingAverageWindow,
+          ),
         );
         record.scoreMA = this.formatNumber(
-          this.calculateMovingAverage(scoreValues, index, this.options.movingAverageWindow),
+          this.calculateMovingAverage(
+            scoreValues,
+            index,
+            this.options.movingAverageWindow,
+          ),
         );
       }
 
@@ -464,7 +508,8 @@ export class AnalyticsCsvExporter {
 
         record.dayOfWeek = dayNames[date.getDay()];
         record.hourOfDay = date.getHours();
-        record.isWeekend = date.getDay() === 0 || date.getDay() === 6 ? "Yes" : "No";
+        record.isWeekend =
+          date.getDay() === 0 || date.getDay() === 6 ? "Yes" : "No";
 
         // Calculate volatility
         if (index > 0) {
@@ -480,7 +525,8 @@ export class AnalyticsCsvExporter {
         if (index >= 2) {
           const recent = scoreValues.slice(Math.max(0, index - 2), index + 1);
           const slope = this.calculateSimpleSlope(recent);
-          record.trend = slope > 0.01 ? "Up" : slope < -0.01 ? "Down" : "Stable";
+          record.trend =
+            slope > 0.01 ? "Up" : slope < -0.01 ? "Down" : "Stable";
         } else {
           record.trend = "N/A";
         }
@@ -564,7 +610,9 @@ export class AnalyticsCsvExporter {
         confidence_upper: this.formatNumber(ci.upper),
       });
 
-      const comments = data.trendingPosts.map((p: TrendingPost) => p.commentCount);
+      const comments = data.trendingPosts.map(
+        (p: TrendingPost) => p.commentCount,
+      );
       const commentSummary = StatisticsEngine.getSummary(comments);
       const commentCi = this.calculateConfidenceInterval(comments);
 
@@ -581,7 +629,10 @@ export class AnalyticsCsvExporter {
       });
 
       // Correlation
-      const correlation = StatisticsEngine.calculateCorrelation(scores, comments);
+      const correlation = StatisticsEngine.calculateCorrelation(
+        scores,
+        comments,
+      );
       summaryRows.push({
         metric: "Score-Comment Correlation",
         value: this.formatNumber(correlation),
@@ -622,8 +673,14 @@ export class AnalyticsCsvExporter {
       { id: "stdDev", title: "Std Dev" },
       { id: "min", title: "Min" },
       { id: "max", title: "Max" },
-      { id: "confidence_lower", title: `CI Lower (${this.options.confidenceLevel * 100}%)` },
-      { id: "confidence_upper", title: `CI Upper (${this.options.confidenceLevel * 100}%)` },
+      {
+        id: "confidence_lower",
+        title: `CI Lower (${this.options.confidenceLevel * 100}%)`,
+      },
+      {
+        id: "confidence_upper",
+        title: `CI Upper (${this.options.confidenceLevel * 100}%)`,
+      },
     ];
 
     const csvWriter = createObjectCsvWriter({
@@ -637,9 +694,10 @@ export class AnalyticsCsvExporter {
   /**
    * Calculate confidence interval
    */
-  private calculateConfidenceInterval(
-    values: number[],
-  ): { lower: number; upper: number } {
+  private calculateConfidenceInterval(values: number[]): {
+    lower: number;
+    upper: number;
+  } {
     if (values.length === 0) return { lower: 0, upper: 0 };
 
     const mean = StatisticsEngine.calculateMean(values);
@@ -647,7 +705,7 @@ export class AnalyticsCsvExporter {
     const n = values.length;
 
     const zScores: Record<number, number> = {
-      0.90: 1.645,
+      0.9: 1.645,
       0.95: 1.96,
       0.99: 2.576,
     };
@@ -666,7 +724,7 @@ export class AnalyticsCsvExporter {
    */
   private calculatePercentile(value: number, dataset: number[]): number {
     const sorted = [...dataset].sort((a, b) => a - b);
-    const index = sorted.findIndex(v => v >= value);
+    const index = sorted.findIndex((v) => v >= value);
     return index === -1 ? 100 : (index / sorted.length) * 100;
   }
 

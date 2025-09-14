@@ -124,83 +124,95 @@ vi.mock("../../../database/database.js", () => {
 
 // Mock analytics engines
 vi.mock("../../../analytics/statistics.js", () => ({
-  StatisticsEngine: Object.assign(vi.fn().mockImplementation(() => ({
-    calculate: vi.fn().mockReturnValue({
-      totalArticles: 100,
-      avgScore: 150,
-      avgComments: 62.5,
-      platformBreakdown: { reddit: 50, hackernews: 50 },
-    }),
-    formatOutput: vi.fn().mockReturnValue("Statistics Output"),
-  })), {
-    getSummary: vi.fn().mockReturnValue({
-      count: 3,
-      mean: 150,
-      median: 150,
-      standardDeviation: 50,
-      min: 100,
-      max: 200,
-      quartiles: { q1: 125, q3: 175 },
-      skewness: 0,
-      kurtosis: 0,
-    }),
-  }),
+  StatisticsEngine: Object.assign(
+    vi.fn().mockImplementation(() => ({
+      calculate: vi.fn().mockReturnValue({
+        totalArticles: 100,
+        avgScore: 150,
+        avgComments: 62.5,
+        platformBreakdown: { reddit: 50, hackernews: 50 },
+      }),
+      formatOutput: vi.fn().mockReturnValue("Statistics Output"),
+    })),
+    {
+      getSummary: vi.fn().mockReturnValue({
+        count: 3,
+        mean: 150,
+        median: 150,
+        standardDeviation: 50,
+        min: 100,
+        max: 200,
+        quartiles: { q1: 125, q3: 175 },
+        skewness: 0,
+        kurtosis: 0,
+      }),
+    },
+  ),
 }));
 
 vi.mock("../../../analytics/trend-analyzer.js", () => ({
-  TrendAnalyzer: Object.assign(vi.fn().mockImplementation(() => ({
-    analyze: vi.fn().mockReturnValue({
-      trend: "increasing",
-      confidence: 0.85,
-      predictions: [],
-    }),
-    formatOutput: vi.fn().mockReturnValue("Trends Output"),
-  })), {
-    analyzeTrend: vi.fn().mockReturnValue({
-      trend: "increasing",
-      confidence: 0.85,
-      changePercent: 15,
-      seasonality: "weekly",
-    }),
-  }),
+  TrendAnalyzer: Object.assign(
+    vi.fn().mockImplementation(() => ({
+      analyze: vi.fn().mockReturnValue({
+        trend: "increasing",
+        confidence: 0.85,
+        predictions: [],
+      }),
+      formatOutput: vi.fn().mockReturnValue("Trends Output"),
+    })),
+    {
+      analyzeTrend: vi.fn().mockReturnValue({
+        trend: "increasing",
+        confidence: 0.85,
+        changePercent: 15,
+        seasonality: "weekly",
+      }),
+    },
+  ),
 }));
 
 vi.mock("../../../analytics/anomaly-detector.js", () => ({
-  AnomalyDetector: Object.assign(vi.fn().mockImplementation(() => ({
-    detect: vi.fn().mockReturnValue({
-      anomalies: [{ date: "2024-01-15", value: 1000, zScore: 3.5 }],
-      threshold: 3,
-    }),
-    formatOutput: vi.fn().mockReturnValue("Anomalies Output"),
-  })), {
-    detectAnomalies: vi.fn().mockReturnValue({
-      anomalies: [{ date: "2024-01-15", value: 1000, score: 3.5 }],
-      method: "zscore",
-      threshold: 2.5,
-    }),
-  }),
+  AnomalyDetector: Object.assign(
+    vi.fn().mockImplementation(() => ({
+      detect: vi.fn().mockReturnValue({
+        anomalies: [{ date: "2024-01-15", value: 1000, zScore: 3.5 }],
+        threshold: 3,
+      }),
+      formatOutput: vi.fn().mockReturnValue("Anomalies Output"),
+    })),
+    {
+      detectAnomalies: vi.fn().mockReturnValue({
+        anomalies: [{ date: "2024-01-15", value: 1000, score: 3.5 }],
+        method: "zscore",
+        threshold: 2.5,
+      }),
+    },
+  ),
 }));
 
 vi.mock("../../../analytics/forecasting.js", () => ({
-  ForecastingEngine: Object.assign(vi.fn().mockImplementation(() => ({
-    predict: vi.fn().mockReturnValue({
-      predictions: [
-        { date: "2024-02-01", value: 250, confidence: 0.8 },
-        { date: "2024-02-02", value: 260, confidence: 0.75 },
-      ],
-      model: "arima",
-    }),
-    formatOutput: vi.fn().mockReturnValue("Forecast Output"),
-  })), {
-    forecast: vi.fn().mockReturnValue({
-      forecast: [
-        { date: "2024-02-01", value: 250, lower: 200, upper: 300 },
-        { date: "2024-02-02", value: 260, lower: 210, upper: 310 },
-      ],
-      model: "auto",
-      accuracy: { rmse: 10, mae: 8 },
-    }),
-  }),
+  ForecastingEngine: Object.assign(
+    vi.fn().mockImplementation(() => ({
+      predict: vi.fn().mockReturnValue({
+        predictions: [
+          { date: "2024-02-01", value: 250, confidence: 0.8 },
+          { date: "2024-02-02", value: 260, confidence: 0.75 },
+        ],
+        model: "arima",
+      }),
+      formatOutput: vi.fn().mockReturnValue("Forecast Output"),
+    })),
+    {
+      forecast: vi.fn().mockReturnValue({
+        forecast: [
+          { date: "2024-02-01", value: 250, lower: 200, upper: 300 },
+          { date: "2024-02-02", value: 260, lower: 210, upper: 310 },
+        ],
+        model: "auto",
+        accuracy: { rmse: 10, mae: 8 },
+      }),
+    },
+  ),
 }));
 
 vi.mock("../../../analytics/report-generator.js", () => ({
@@ -236,9 +248,11 @@ describe("Analyze Command Integration Tests", () => {
     // Set up console spies
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    processExitSpy = vi.spyOn(process, "exit").mockImplementation((code?: number) => {
-      throw new Error(`process.exit called with code ${code}`);
-    }) as Mock;
+    processExitSpy = vi
+      .spyOn(process, "exit")
+      .mockImplementation((code?: number) => {
+        throw new Error(`process.exit called with code ${code}`);
+      }) as Mock;
 
     // Create a fresh program for each test
     program = new Command();
@@ -259,7 +273,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
       const output = consoleLogSpy.mock.calls.join("\n");
       expect(output).toBeTruthy();
@@ -278,7 +292,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -295,7 +309,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -312,7 +326,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
       const output = consoleLogSpy.mock.calls.join("");
       // Should contain JSON structure
@@ -334,7 +348,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
   });
@@ -350,7 +364,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -371,7 +385,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -392,7 +406,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
   });
@@ -408,7 +422,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -429,7 +443,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -450,7 +464,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
   });
@@ -466,7 +480,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -487,7 +501,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -508,7 +522,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
   });
@@ -524,7 +538,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -548,7 +562,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -569,7 +583,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -590,7 +604,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
   });
@@ -606,7 +620,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -626,7 +640,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
   });
@@ -645,7 +659,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -662,7 +676,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -680,7 +694,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -692,13 +706,16 @@ describe("Analyze Command Integration Tests", () => {
 
       // The cache is in-memory, not file-based, so rmSync won't be called
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Analytics cache cleared successfully")
+        expect.stringContaining("Analytics cache cleared successfully"),
       );
     });
 
     it("should handle cache-stats option", async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readdirSync).mockReturnValue(["cache1.json", "cache2.json"] as any);
+      vi.mocked(fs.readdirSync).mockReturnValue([
+        "cache1.json",
+        "cache2.json",
+      ] as any);
       vi.mocked(fs.statSync).mockReturnValue({
         size: 1024,
         mtime: new Date(),
@@ -707,7 +724,7 @@ describe("Analyze Command Integration Tests", () => {
       await program.parseAsync(["node", "test", "analyze", "--cache-stats"]);
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Analytics Cache Statistics")
+        expect.stringContaining("Analytics Cache Statistics"),
       );
     });
 
@@ -723,7 +740,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
   });
@@ -738,7 +755,7 @@ describe("Analyze Command Integration Tests", () => {
           "statistics",
           "--days",
           "-5",
-        ])
+        ]),
       ).rejects.toThrow("must be a positive integer");
     });
 
@@ -751,7 +768,7 @@ describe("Analyze Command Integration Tests", () => {
           "anomalies",
           "--threshold",
           "invalid",
-        ])
+        ]),
       ).rejects.toThrow();
     });
 
@@ -770,7 +787,7 @@ describe("Analyze Command Integration Tests", () => {
       }
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Unsupported time range format: invalid"
+        "Unsupported time range format: invalid",
       );
     });
 
@@ -781,11 +798,11 @@ describe("Analyze Command Integration Tests", () => {
       });
 
       await expect(
-        program.parseAsync(["node", "test", "analyze", "statistics"])
+        program.parseAsync(["node", "test", "analyze", "statistics"]),
       ).rejects.toThrow();
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Database connection failed")
+        expect.stringContaining("Database connection failed"),
       );
     });
   });
@@ -804,7 +821,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
       const output = consoleLogSpy.mock.calls.join("\n");
       // Table output should contain formatting characters
@@ -824,7 +841,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
       const output = consoleLogSpy.mock.calls.join("");
       expect(output).toContain("{");
@@ -844,7 +861,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
   });
@@ -863,7 +880,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -880,7 +897,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
   });
@@ -892,7 +909,7 @@ describe("Analyze Command Integration Tests", () => {
         JSON.stringify({
           timestamp: Date.now(),
           data: { totalArticles: 100, avgScore: 150 },
-        })
+        }),
       );
 
       await program.parseAsync([
@@ -906,7 +923,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
 
@@ -924,7 +941,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
   });
@@ -940,7 +957,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
 
       // Clear mocks for next command
@@ -960,7 +977,7 @@ describe("Analyze Command Integration Tests", () => {
       // Should have logged something (either success or error)
       expect(
         consoleLogSpy.mock.calls.length > 0 ||
-        consoleErrorSpy.mock.calls.length > 0
+          consoleErrorSpy.mock.calls.length > 0,
       ).toBe(true);
     });
   });

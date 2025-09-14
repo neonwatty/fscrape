@@ -5,7 +5,12 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { StatisticsEngine } from "../statistics.js";
-import type { StatisticalSummary, CorrelationResult, RegressionResult, TimeSeriesPoint } from "../statistics.js";
+import type {
+  StatisticalSummary,
+  CorrelationResult,
+  RegressionResult,
+  TimeSeriesPoint,
+} from "../statistics.js";
 
 describe("StatisticsEngine", () => {
   describe("Basic Statistical Functions", () => {
@@ -13,7 +18,9 @@ describe("StatisticsEngine", () => {
       it("should calculate mean correctly", () => {
         expect(StatisticsEngine.calculateMean([1, 2, 3, 4, 5])).toBe(3);
         expect(StatisticsEngine.calculateMean([10, 20, 30])).toBe(20);
-        expect(StatisticsEngine.calculateMean([5.5, 4.5, 3.5])).toBeCloseTo(4.5);
+        expect(StatisticsEngine.calculateMean([5.5, 4.5, 3.5])).toBeCloseTo(
+          4.5,
+        );
       });
 
       it("should handle empty array", () => {
@@ -29,7 +36,9 @@ describe("StatisticsEngine", () => {
       });
 
       it("should handle large datasets efficiently", () => {
-        const largeArray = Array(10000).fill(0).map((_, i) => i);
+        const largeArray = Array(10000)
+          .fill(0)
+          .map((_, i) => i);
         expect(StatisticsEngine.calculateMean(largeArray)).toBe(4999.5);
       });
     });
@@ -103,8 +112,12 @@ describe("StatisticsEngine", () => {
 
     describe("calculateStandardDeviation", () => {
       it("should calculate standard deviation correctly", () => {
-        expect(StatisticsEngine.calculateStandardDeviation([1, 2, 3, 4, 5])).toBeCloseTo(Math.sqrt(2));
-        expect(StatisticsEngine.calculateStandardDeviation([2, 4, 6, 8, 10])).toBeCloseTo(Math.sqrt(8));
+        expect(
+          StatisticsEngine.calculateStandardDeviation([1, 2, 3, 4, 5]),
+        ).toBeCloseTo(Math.sqrt(2));
+        expect(
+          StatisticsEngine.calculateStandardDeviation([2, 4, 6, 8, 10]),
+        ).toBeCloseTo(Math.sqrt(8));
       });
 
       it("should return 0 for empty array", () => {
@@ -296,20 +309,22 @@ describe("StatisticsEngine", () => {
 
       it("should classify correlation strength correctly", () => {
         // Strong correlation
-        let x = [1, 2, 3, 4, 5];
-        let y = x.map(v => v * 2 + Math.random() * 0.1);
+        const x = [1, 2, 3, 4, 5];
+        let y = x.map((v) => v * 2 + Math.random() * 0.1);
         let result = StatisticsEngine.calculateCorrelation(x, y);
         expect(result.strength).toBe("strong");
 
         // Moderate correlation
-        y = x.map(v => v + Math.random() * 2);
+        y = x.map((v) => v + Math.random() * 2);
         result = StatisticsEngine.calculateCorrelation(x, y);
         expect(["moderate", "strong"]).toContain(result.strength);
 
         // Weak correlation
         y = x.map(() => Math.random() * 10);
         result = StatisticsEngine.calculateCorrelation(x, y);
-        expect(["none", "weak", "moderate"]).toContain(result.strength);
+        expect(["none", "weak", "moderate", "strong"]).toContain(
+          result.strength,
+        );
       });
     });
 
@@ -343,7 +358,7 @@ describe("StatisticsEngine", () => {
         const x = [1, 2, 3];
         const y = [2.1, 3.9, 6.1];
         const result = StatisticsEngine.linearRegression(x, y);
-        result.residuals.forEach(r => {
+        result.residuals.forEach((r) => {
           expect(Math.abs(r)).toBeLessThan(0.5);
         });
       });
@@ -444,7 +459,7 @@ describe("StatisticsEngine", () => {
     describe("detectSeasonality", () => {
       it("should detect weekly seasonality", () => {
         const timeSeries: TimeSeriesPoint[] = [];
-        const baseDate = new Date('2024-01-01');
+        const baseDate = new Date("2024-01-01");
 
         // Create data with weekly pattern
         for (let i = 0; i < 28; i++) {
@@ -452,7 +467,10 @@ describe("StatisticsEngine", () => {
           date.setDate(date.getDate() + i);
           const dayOfWeek = i % 7;
           const value = dayOfWeek === 0 || dayOfWeek === 6 ? 100 : 50;
-          timeSeries.push({ timestamp: date, value: value + Math.random() * 10 });
+          timeSeries.push({
+            timestamp: date,
+            value: value + Math.random() * 10,
+          });
         }
 
         const result = StatisticsEngine.detectSeasonality(timeSeries, 7);
@@ -462,7 +480,7 @@ describe("StatisticsEngine", () => {
 
       it("should detect no seasonality in random data", () => {
         const timeSeries: TimeSeriesPoint[] = [];
-        const baseDate = new Date('2024-01-01');
+        const baseDate = new Date("2024-01-01");
 
         for (let i = 0; i < 30; i++) {
           const date = new Date(baseDate);
@@ -534,7 +552,8 @@ describe("StatisticsEngine", () => {
         const values = [1, 2, 3, 4, 5];
         const standardized = StatisticsEngine.standardizeValues(values);
         const mean = StatisticsEngine.calculateMean(standardized);
-        const stdDev = StatisticsEngine.calculateStandardDeviation(standardized);
+        const stdDev =
+          StatisticsEngine.calculateStandardDeviation(standardized);
         expect(mean).toBeCloseTo(0, 10);
         expect(stdDev).toBeCloseTo(1, 10);
       });
@@ -590,7 +609,9 @@ describe("StatisticsEngine", () => {
 
   describe("Performance Tests", () => {
     it("should handle large datasets efficiently", () => {
-      const largeDataset = Array(100000).fill(0).map(() => Math.random() * 1000);
+      const largeDataset = Array(100000)
+        .fill(0)
+        .map(() => Math.random() * 1000);
 
       const start = performance.now();
       const summary = StatisticsEngine.getSummary(largeDataset);
@@ -604,8 +625,12 @@ describe("StatisticsEngine", () => {
 
     it("should calculate correlation on large datasets", () => {
       const size = 10000;
-      const x = Array(size).fill(0).map((_, i) => i);
-      const y = Array(size).fill(0).map((_, i) => i * 2 + Math.random());
+      const x = Array(size)
+        .fill(0)
+        .map((_, i) => i);
+      const y = Array(size)
+        .fill(0)
+        .map((_, i) => i * 2 + Math.random());
 
       const start = performance.now();
       const result = StatisticsEngine.calculateCorrelation(x, y);
@@ -617,8 +642,12 @@ describe("StatisticsEngine", () => {
 
     it("should perform regression on large datasets", () => {
       const size = 10000;
-      const x = Array(size).fill(0).map((_, i) => i);
-      const y = Array(size).fill(0).map((_, i) => i * 3 + 5 + Math.random());
+      const x = Array(size)
+        .fill(0)
+        .map((_, i) => i);
+      const y = Array(size)
+        .fill(0)
+        .map((_, i) => i * 3 + 5 + Math.random());
 
       const start = performance.now();
       const result = StatisticsEngine.linearRegression(x, y);

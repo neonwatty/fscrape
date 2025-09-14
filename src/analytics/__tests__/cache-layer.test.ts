@@ -3,7 +3,12 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { CacheLayer, CacheDependency, CacheConfig, Cacheable } from "../cache-layer.js";
+import {
+  CacheLayer,
+  CacheDependency,
+  CacheConfig,
+  Cacheable,
+} from "../cache-layer.js";
 
 describe("CacheLayer", () => {
   let cache: CacheLayer;
@@ -70,7 +75,7 @@ describe("CacheLayer", () => {
       expect(cache.get(key)).toBe("value");
 
       // Wait for expiration
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Should be expired
       expect(cache.get(key)).toBeNull();
@@ -84,7 +89,7 @@ describe("CacheLayer", () => {
       expect(cache.get(key)).toBe("value");
 
       // Wait for expiration
-      await new Promise(resolve => setTimeout(resolve, 1100));
+      await new Promise((resolve) => setTimeout(resolve, 1100));
 
       // Should be expired
       expect(cache.get(key)).toBeNull();
@@ -95,7 +100,7 @@ describe("CacheLayer", () => {
       cache.set("key2", "value2", { ttl: 2000 });
 
       // Wait for cleanup interval
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
       // key1 should be cleaned up, key2 should remain
       expect(cache.get("key1")).toBeNull();
@@ -118,8 +123,12 @@ describe("CacheLayer", () => {
     });
 
     it("should handle multiple dependencies correctly", () => {
-      cache.set("key1", "value1", { dependencies: ["data", "platform:reddit"] });
-      cache.set("key2", "value2", { dependencies: ["data", "platform:hackernews"] });
+      cache.set("key1", "value1", {
+        dependencies: ["data", "platform:reddit"],
+      });
+      cache.set("key2", "value2", {
+        dependencies: ["data", "platform:hackernews"],
+      });
 
       cache.invalidateByDependency("platform:reddit");
 
@@ -248,7 +257,7 @@ describe("CacheLayer", () => {
       cache.set("key2", "value2");
 
       // Wait for key1 to expire and cleanup to run
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
       // Stats should show eviction from automatic cleanup
       const stats = cache.getStats();
@@ -348,7 +357,7 @@ describe("CacheLayer", () => {
       let callCount = 0;
       const asyncFunction = async (x: number) => {
         callCount++;
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         return x * 2;
       };
 
@@ -381,7 +390,7 @@ describe("CacheLayer", () => {
       expect(callCount).toBe(1); // Cached
 
       // Wait for TTL to expire
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       memoized(5);
       expect(callCount).toBe(2); // Re-executed after expiration
@@ -438,7 +447,9 @@ describe("CacheLayer", () => {
     });
 
     it("should handle warmup errors gracefully", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       const warmupTasks = [
         {
@@ -459,7 +470,7 @@ describe("CacheLayer", () => {
       expect(cache.get("failure")).toBeNull();
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining("Failed to warm up cache for key failure"),
-        expect.any(Error)
+        expect.any(Error),
       );
 
       consoleSpy.mockRestore();

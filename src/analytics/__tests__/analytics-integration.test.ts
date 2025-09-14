@@ -31,7 +31,11 @@ describe("Analytics Integration Tests", () => {
     tempDir = await mkdtemp(join(tmpdir(), "fscrape-test-"));
     const dbPath = join(tempDir, "test.db");
 
-    db = new DatabaseManager({ path: dbPath });
+    db = new DatabaseManager({
+      path: dbPath,
+      type: "sqlite",
+      connectionPoolSize: 10
+    });
     await db.initialize();
 
     analytics = db.getAnalytics();
@@ -81,11 +85,11 @@ describe("Analytics Integration Tests", () => {
           trending: {
             rising: trendingPosts,
             declining: [],
-            predictions: []
+            predictions: [],
           },
           generatedAt: new Date(),
         },
-        "markdown"
+        "markdown",
       );
 
       expect(report).toContain("Executive Summary");
@@ -101,10 +105,10 @@ describe("Analytics Integration Tests", () => {
         "reddit",
         new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         new Date(),
-        "daily"
+        "daily",
       );
 
-      const values = timeSeries.map(d => d.posts);
+      const values = timeSeries.map((d) => d.posts);
       const trends = trendAnalyzer.analyzeTrend(values);
 
       expect(trends).toHaveProperty("trend");
@@ -119,10 +123,10 @@ describe("Analytics Integration Tests", () => {
         "reddit",
         new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         new Date(),
-        "daily"
+        "daily",
       );
 
-      const scores = timeSeries.map(d => d.avgScore);
+      const scores = timeSeries.map((d) => d.avgScore);
       const anomalies = detector.detect(scores);
 
       expect(anomalies).toHaveProperty("anomalies");
@@ -132,16 +136,16 @@ describe("Analytics Integration Tests", () => {
     });
 
     it("should generate forecasts", async () => {
-      const forecaster = new ForecastingEngine();
+      const forecaster = new ForecastingEngine({ horizon: 7 });
       const timeSeries = analytics.getTimeSeriesData(
         "reddit",
         new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         new Date(),
-        "daily"
+        "daily",
       );
 
-      const values = timeSeries.map(d => d.posts);
-      const forecast = forecaster.forecast(values, 7);
+      const values = timeSeries.map((d) => d.posts);
+      const forecast = forecaster.forecast(values);
 
       expect(forecast).toHaveProperty("forecast");
       if (forecast.forecast.length === 0) {
@@ -161,10 +165,10 @@ describe("Analytics Integration Tests", () => {
         "reddit",
         new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         new Date(),
-        "daily"
+        "daily",
       );
 
-      const scores = timeSeries.map(d => d.avgScore);
+      const scores = timeSeries.map((d) => d.avgScore);
       const summary = StatisticsEngine.getSummary(scores);
 
       expect(summary).toHaveProperty("mean");
@@ -182,17 +186,20 @@ describe("Analytics Integration Tests", () => {
         "reddit",
         new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         new Date(),
-        "daily"
+        "daily",
       );
 
-      const posts = timeSeries.map(d => d.posts);
-      const comments = timeSeries.map(d => d.comments);
+      const posts = timeSeries.map((d) => d.posts);
+      const comments = timeSeries.map((d) => d.comments);
 
-      const correlationResult = StatisticsEngine.calculateCorrelation(posts, comments);
+      const correlationResult = StatisticsEngine.calculateCorrelation(
+        posts,
+        comments,
+      );
 
-      if (correlationResult && correlationResult.coefficient !== undefined) {
-        expect(correlationResult.coefficient).toBeGreaterThanOrEqual(-1);
-        expect(correlationResult.coefficient).toBeLessThanOrEqual(1);
+      if (correlationResult && correlationResult.correlation !== undefined) {
+        expect(correlationResult.correlation).toBeGreaterThanOrEqual(-1);
+        expect(correlationResult.correlation).toBeLessThanOrEqual(1);
       } else {
         // Handle case where correlation cannot be calculated (e.g., constant values)
         expect(correlationResult).toBeDefined();
@@ -201,22 +208,28 @@ describe("Analytics Integration Tests", () => {
 
     it("should perform statistical tests", () => {
       const sample1 = Array.from({ length: 30 }, () => Math.random() * 100);
-      const sample2 = Array.from({ length: 30 }, () => Math.random() * 100 + 10);
+      const sample2 = Array.from(
+        { length: 30 },
+        () => Math.random() * 100 + 10,
+      );
 
       // Use calculateCorrelation for statistical testing as there's no tTest method
-      const correlation = StatisticsEngine.calculateCorrelation(sample1, sample2);
+      const correlation = StatisticsEngine.calculateCorrelation(
+        sample1,
+        sample2,
+      );
 
       expect(correlation).toBeDefined();
       // The correlation result structure may vary, check if it's valid
       if (correlation) {
-        expect(typeof correlation).toBe('object');
+        expect(typeof correlation).toBe("object");
       }
     });
   });
 
   describe("Caching Integration", () => {
     it("should cache analytics queries", () => {
-      const cacheLayer = new CacheLayer({ ttl: 60000 });
+      const cacheLayer = new CacheLayer({ defaultTTL: 60000 });
       const cachedAnalytics = new CachedAnalytics(analytics);
 
       // First call - should hit database
@@ -255,7 +268,7 @@ describe("Analytics Integration Tests", () => {
       }
 
       expect(metrics).toHaveLength(3);
-      metrics.forEach(m => {
+      metrics.forEach((m) => {
         expect(m).toHaveProperty("overview");
         expect(m).toHaveProperty("platformBreakdown");
       });
@@ -277,10 +290,8 @@ describe("Analytics Integration Tests", () => {
         commentCount: 5,
         createdAt: new Date(),
         updatedAt: new Date(),
-        contentHtml: "<p>Test content</p>",
-        contentText: "Test content",
-        tags: [],
-        metadata: {}
+        content: "Test content",
+        metadata: {},
       };
 
       await db.bulkUpsertPosts([newPost]);
@@ -288,7 +299,9 @@ describe("Analytics Integration Tests", () => {
       const updatedMetrics = await dashboard.getMetrics();
       // Note: Due to caching, the metrics might not immediately reflect the change
       // This would require cache invalidation which is not implemented
-      expect(updatedMetrics.overview.totalPosts).toBeGreaterThanOrEqual(initialPosts);
+      expect(updatedMetrics.overview.totalPosts).toBeGreaterThanOrEqual(
+        initialPosts,
+      );
     });
   });
 
@@ -300,7 +313,7 @@ describe("Analytics Integration Tests", () => {
       expect(comparison.platforms.size).toBeGreaterThanOrEqual(2);
 
       expect(comparison).toHaveProperty("comparison");
-      comparison.comparison.forEach(c => {
+      comparison.comparison.forEach((c) => {
         expect(c).toHaveProperty("metric");
         expect(c).toHaveProperty("winner");
       });
@@ -316,7 +329,8 @@ describe("Analytics Integration Tests", () => {
       if (redditStats && hnStats) {
         const total = {
           posts: (redditStats.totalPosts || 0) + (hnStats.totalPosts || 0),
-          comments: (redditStats.totalComments || 0) + (hnStats.totalComments || 0),
+          comments:
+            (redditStats.totalComments || 0) + (hnStats.totalComments || 0),
           users: (redditStats.totalUsers || 0) + (hnStats.totalUsers || 0),
         };
 
@@ -329,7 +343,7 @@ describe("Analytics Integration Tests", () => {
 
   describe("Performance Analysis", () => {
     it("should analyze scraping performance", () => {
-      const performance = analytics.getScrapingPerformance(7);
+      const performance = analytics.getScrapingPerformance("test-session-1");
 
       if (performance) {
         expect(performance).toHaveProperty("avgResponseTime");
@@ -363,10 +377,10 @@ describe("Analytics Integration Tests", () => {
     });
 
     it("should identify data gaps", () => {
-      const gaps = analytics.getDataGaps("reddit", 30);
+      const gaps = analytics.getDataGaps(30);
 
       expect(Array.isArray(gaps)).toBe(true);
-      gaps.forEach(gap => {
+      gaps.forEach((gap) => {
         expect(gap).toHaveProperty("startDate");
         expect(gap).toHaveProperty("endDate");
         expect(gap).toHaveProperty("gapDays");
@@ -392,7 +406,10 @@ describe("Analytics Integration Tests", () => {
         generatedAt: new Date(),
       };
 
-      const markdownReport = reportGenerator.generateDashboardReport(data, "markdown");
+      const markdownReport = reportGenerator.generateDashboardReport(
+        data,
+        "markdown",
+      );
       const htmlReport = reportGenerator.generateDashboardReport(data, "html");
       const jsonReport = reportGenerator.generateDashboardReport(data, "json");
 
@@ -407,7 +424,7 @@ describe("Analytics Integration Tests", () => {
       // or use report generator instead
       const report = reportGenerator.generateDashboardReport(
         { metrics, generatedAt: new Date() },
-        "markdown"
+        "markdown",
       );
       expect(report).toBeDefined();
     });
@@ -417,7 +434,11 @@ describe("Analytics Integration Tests", () => {
     it("should handle missing data gracefully", async () => {
       // Create a new empty database using DatabaseManager
       const tempPath = join(tempDir, "empty-test.db");
-      const emptyDb = new DatabaseManager({ path: tempPath });
+      const emptyDb = new DatabaseManager({
+        path: tempPath,
+        type: "sqlite",
+        connectionPoolSize: 10
+      });
       await emptyDb.initialize();
 
       const emptyAnalytics = emptyDb.getAnalytics();
@@ -444,7 +465,11 @@ describe("Analytics Integration Tests", () => {
       expect(isNaN(emptyStats.mean)).toBe(false);
 
       // Invalid data
-      const invalidStats = StatisticsEngine.getSummary([NaN, Infinity, -Infinity]);
+      const invalidStats = StatisticsEngine.getSummary([
+        NaN,
+        Infinity,
+        -Infinity,
+      ]);
       expect(invalidStats).toHaveProperty("mean");
     });
   });
@@ -461,21 +486,21 @@ async function seedTestData(db: DatabaseManager): Promise<void> {
       username: "alice",
       karma: 1000,
       createdAt: new Date(),
-      platform: "reddit"
+      platform: "reddit",
     },
     {
       id: "bob",
       username: "bob",
       karma: 500,
       createdAt: new Date(),
-      platform: "reddit"
+      platform: "reddit",
     },
     {
       id: "charlie",
       username: "charlie",
       karma: 2000,
       createdAt: new Date(),
-      platform: "hackernews"
+      platform: "hackernews",
     },
   ];
 
@@ -502,10 +527,8 @@ async function seedTestData(db: DatabaseManager): Promise<void> {
       commentCount: Math.floor(Math.random() * 100),
       createdAt: createdAt,
       updatedAt: createdAt,
-      contentHtml: `<p>Test content for post ${i}</p>`,
-      contentText: `Test content for post ${i}`,
-      tags: [`tag${i % 5}`],
-      metadata: {}
+      content: `Test content for post ${i}`,
+      metadata: {},
     });
 
     // Add some comments
@@ -522,7 +545,6 @@ async function seedTestData(db: DatabaseManager): Promise<void> {
         updatedAt: createdAt,
         depth: 0,
         platform: platform as Platform,
-        metadata: {}
       });
     }
   }

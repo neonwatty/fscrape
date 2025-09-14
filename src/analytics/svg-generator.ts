@@ -85,7 +85,9 @@ export class SvgGenerator {
     }
 
     // Validate data
-    const validData = data.filter(d => d && typeof d.y === 'number' && isFinite(d.y));
+    const validData = data.filter(
+      (d) => d && typeof d.y === "number" && isFinite(d.y),
+    );
     if (validData.length === 0) {
       return this.renderSvg(opts.width, opts.height, [
         this.createText(opts.width / 2, opts.height / 2, "Invalid data", {
@@ -98,8 +100,10 @@ export class SvgGenerator {
     data = validData;
 
     // Calculate scales
-    const xValues = data.map(d => d.x instanceof Date ? d.x.getTime() : d.x);
-    const yValues = data.map(d => d.y);
+    const xValues = data.map((d) =>
+      d.x instanceof Date ? d.x.getTime() : d.x,
+    );
+    const yValues = data.map((d) => d.y);
     const xMin = Math.min(...xValues);
     const xMax = Math.max(...xValues);
     const yMin = Math.min(0, ...yValues);
@@ -138,18 +142,24 @@ export class SvgGenerator {
 
     // Grid
     if (opts.showGrid) {
-      chartGroup.children!.push(this.generateGrid(chartWidth, chartHeight, opts));
+      chartGroup.children!.push(
+        this.generateGrid(chartWidth, chartHeight, opts),
+      );
     }
 
     // Axes
-    chartGroup.children!.push(this.generateAxes(chartWidth, chartHeight, xMin, xMax, yMin, yMax, opts));
+    chartGroup.children!.push(
+      this.generateAxes(chartWidth, chartHeight, xMin, xMax, yMin, yMax, opts),
+    );
 
     // Line path
-    const pathData = data.map((d, i) => {
-      const x = xScale(d.x instanceof Date ? d.x.getTime() : d.x);
-      const y = yScale(d.y);
-      return `${i === 0 ? "M" : "L"} ${x} ${y}`;
-    }).join(" ");
+    const pathData = data
+      .map((d, i) => {
+        const x = xScale(d.x instanceof Date ? d.x.getTime() : d.x);
+        const y = yScale(d.y);
+        return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+      })
+      .join(" ");
 
     chartGroup.children!.push({
       tag: "path",
@@ -162,7 +172,7 @@ export class SvgGenerator {
     });
 
     // Data points
-    data.forEach(d => {
+    data.forEach((d) => {
       const x = xScale(d.x instanceof Date ? d.x.getTime() : d.x);
       const y = yScale(d.y);
 
@@ -247,21 +257,25 @@ export class SvgGenerator {
     if (data[0].value !== undefined) {
       // Simple format: { label: "A", value: 10 }
       series = ["value"];
-      maxValue = Math.max(...data.map(d => d.value || 0));
+      maxValue = Math.max(...data.map((d) => d.value || 0));
       getValues = (d) => ({ value: d.value });
     } else if (data[0].values) {
       // Complex format: { label: "A", values: { s1: 10, s2: 20 } }
       series = Object.keys(data[0].values);
-      maxValue = Math.max(...data.flatMap(d => Object.values(d.values as Record<string, number>)));
+      maxValue = Math.max(
+        ...data.flatMap((d) =>
+          Object.values(d.values as Record<string, number>),
+        ),
+      );
       getValues = (d) => d.values;
     } else {
       // Multi-series format: { label: "Jan", reddit: 100, hackernews: 80 }
       const excludeKeys = ["label"];
-      series = Object.keys(data[0]).filter(k => !excludeKeys.includes(k));
-      maxValue = Math.max(...data.flatMap(d => series.map(s => d[s] || 0)));
+      series = Object.keys(data[0]).filter((k) => !excludeKeys.includes(k));
+      maxValue = Math.max(...data.flatMap((d) => series.map((s) => d[s] || 0)));
       getValues = (d) => {
         const vals: Record<string, number> = {};
-        series.forEach(s => {
+        series.forEach((s) => {
           vals[s] = d[s] || 0;
         });
         return vals;
@@ -271,7 +285,8 @@ export class SvgGenerator {
     // Calculate bar dimensions
     const barGroupWidth = chartWidth / data.length;
     const barWidth = barGroupWidth / (series.length + 1);
-    const yScale = (val: number) => chartHeight - (val / maxValue) * chartHeight;
+    const yScale = (val: number) =>
+      chartHeight - (val / maxValue) * chartHeight;
 
     // Build SVG elements
     const elements: SvgElement[] = [];
@@ -297,7 +312,9 @@ export class SvgGenerator {
 
     // Grid
     if (opts.showGrid) {
-      chartGroup.children!.push(this.generateGrid(chartWidth, chartHeight, opts));
+      chartGroup.children!.push(
+        this.generateGrid(chartWidth, chartHeight, opts),
+      );
     }
 
     // Bars
@@ -305,7 +322,8 @@ export class SvgGenerator {
       const values = getValues(item);
       series.forEach((s, seriesIndex) => {
         const value = values[s] || 0;
-        const x = itemIndex * barGroupWidth + seriesIndex * barWidth + barWidth / 2;
+        const x =
+          itemIndex * barGroupWidth + seriesIndex * barWidth + barWidth / 2;
         const y = yScale(value);
         const height = chartHeight - y;
 
@@ -322,8 +340,9 @@ export class SvgGenerator {
       });
 
       // X-axis labels
-      const label = item.label || '';
-      const truncatedLabel = label.length > 10 ? label.substring(0, 10) + '...' : label;
+      const label = item.label || "";
+      const truncatedLabel =
+        label.length > 10 ? label.substring(0, 10) + "..." : label;
       chartGroup.children!.push({
         tag: "text",
         attributes: {
@@ -338,7 +357,9 @@ export class SvgGenerator {
     });
 
     // Y-axis
-    chartGroup.children!.push(this.generateYAxis(chartHeight, 0, maxValue, opts));
+    chartGroup.children!.push(
+      this.generateYAxis(chartHeight, 0, maxValue, opts),
+    );
 
     elements.push(chartGroup);
 
@@ -436,18 +457,19 @@ export class SvgGenerator {
       const largeArcFlag = angle > Math.PI ? 1 : 0;
 
       // Handle single slice (full circle)
-      const pathData = data.length === 1
-        ? [
-            `M ${centerX} ${centerY - radius}`,
-            `A ${radius} ${radius} 0 1 1 ${centerX - 0.01} ${centerY - radius}`,
-            "Z",
-          ].join(" ")
-        : [
-            `M ${centerX} ${centerY}`,
-            `L ${x1} ${y1}`,
-            `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-            "Z",
-          ].join(" ");
+      const pathData =
+        data.length === 1
+          ? [
+              `M ${centerX} ${centerY - radius}`,
+              `A ${radius} ${radius} 0 1 1 ${centerX - 0.01} ${centerY - radius}`,
+              "Z",
+            ].join(" ")
+          : [
+              `M ${centerX} ${centerY}`,
+              `L ${x1} ${y1}`,
+              `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+              "Z",
+            ].join(" ");
 
       elements.push({
         tag: "path",
@@ -527,7 +549,9 @@ export class SvgGenerator {
             "font-size": 12,
             fill: opts.customColors.text!,
           },
-          children: [`${item.label}: ${item.value} (${((item.value / total) * 100).toFixed(0)}%)`],
+          children: [
+            `${item.label}: ${item.value} (${((item.value / total) * 100).toFixed(0)}%)`,
+          ],
         });
       });
     }
@@ -538,7 +562,11 @@ export class SvgGenerator {
   /**
    * Generate grid lines
    */
-  private generateGrid(width: number, height: number, options: Required<SvgChartOptions>): SvgElement {
+  private generateGrid(
+    width: number,
+    height: number,
+    options: Required<SvgChartOptions>,
+  ): SvgElement {
     const group: SvgElement = {
       tag: "g",
       attributes: { class: "grid" },
@@ -650,7 +678,12 @@ export class SvgGenerator {
   /**
    * Generate Y-axis
    */
-  private generateYAxis(height: number, min: number, max: number, options: Required<SvgChartOptions>): SvgElement {
+  private generateYAxis(
+    height: number,
+    min: number,
+    max: number,
+    options: Required<SvgChartOptions>,
+  ): SvgElement {
     const group: SvgElement = {
       tag: "g",
       attributes: { class: "y-axis" },
@@ -694,7 +727,10 @@ export class SvgGenerator {
   /**
    * Generate legend
    */
-  private generateLegend(series: string[], options: Required<SvgChartOptions>): SvgElement {
+  private generateLegend(
+    series: string[],
+    options: Required<SvgChartOptions>,
+  ): SvgElement {
     const group: SvgElement = {
       tag: "g",
       attributes: {
@@ -774,7 +810,11 @@ export class SvgGenerator {
   /**
    * Render SVG elements to string
    */
-  private renderSvg(width: number, height: number, elements: SvgElement[]): string {
+  private renderSvg(
+    width: number,
+    height: number,
+    elements: SvgElement[],
+  ): string {
     const svgAttrs: Record<string, string | number> = {
       width,
       height,
@@ -792,7 +832,7 @@ export class SvgGenerator {
       .join(" ");
 
     const svg = `<svg ${attrsStr}>
-${elements.map(el => this.renderElement(el, 1)).join("\n")}
+${elements.map((el) => this.renderElement(el, 1)).join("\n")}
 </svg>`;
 
     return svg;
@@ -812,7 +852,7 @@ ${elements.map(el => this.renderElement(el, 1)).join("\n")}
     }
 
     const children = element.children
-      .map(child => {
+      .map((child) => {
         if (typeof child === "string") {
           return `${indentStr}  ${child}`;
         }
@@ -867,15 +907,16 @@ ${indentStr}</${element.tag}>`;
       ]);
     }
 
-    const xValues = data.map(d => d.x);
-    const yValues = data.map(d => d.y);
+    const xValues = data.map((d) => d.x);
+    const yValues = data.map((d) => d.y);
     const xMin = Math.min(...xValues);
     const xMax = Math.max(...xValues);
     const yMin = Math.min(...yValues);
     const yMax = Math.max(...yValues);
 
     const xScale = (val: number) => ((val - xMin) / (xMax - xMin)) * chartWidth;
-    const yScale = (val: number) => chartHeight - ((val - yMin) / (yMax - yMin)) * chartHeight;
+    const yScale = (val: number) =>
+      chartHeight - ((val - yMin) / (yMax - yMin)) * chartHeight;
 
     const elements: SvgElement[] = [];
 
@@ -900,11 +941,15 @@ ${indentStr}</${element.tag}>`;
 
     // Grid
     if (opts.showGrid) {
-      chartGroup.children!.push(this.generateGrid(chartWidth, chartHeight, opts));
+      chartGroup.children!.push(
+        this.generateGrid(chartWidth, chartHeight, opts),
+      );
     }
 
     // Axes
-    chartGroup.children!.push(this.generateAxes(chartWidth, chartHeight, xMin, xMax, yMin, yMax, opts));
+    chartGroup.children!.push(
+      this.generateAxes(chartWidth, chartHeight, xMin, xMax, yMin, yMax, opts),
+    );
 
     // Data points
     data.forEach((d, i) => {
@@ -948,12 +993,14 @@ ${indentStr}</${element.tag}>`;
         children: [title],
       });
 
-      elements.push(this.createText(opts.width / 2, 25, title, {
-        "text-anchor": "middle",
-        "font-size": 18,
-        "font-weight": "bold",
-        fill: opts.customColors.text!,
-      }));
+      elements.push(
+        this.createText(opts.width / 2, 25, title, {
+          "text-anchor": "middle",
+          "font-size": 18,
+          "font-weight": "bold",
+          fill: opts.customColors.text!,
+        }),
+      );
     }
 
     return this.renderSvg(opts.width, opts.height, elements);
@@ -981,13 +1028,13 @@ ${indentStr}</${element.tag}>`;
       ]);
     }
 
-    const xLabels = [...new Set(data.map(d => d.x))];
-    const yLabels = [...new Set(data.map(d => d.y))];
+    const xLabels = [...new Set(data.map((d) => d.x))];
+    const yLabels = [...new Set(data.map((d) => d.y))];
     const cellWidth = chartWidth / xLabels.length;
     const cellHeight = chartHeight / yLabels.length;
 
-    const maxValue = Math.max(...data.map(d => d.value));
-    const minValue = Math.min(...data.map(d => d.value));
+    const maxValue = Math.max(...data.map((d) => d.value));
+    const minValue = Math.min(...data.map((d) => d.value));
 
     const getColor = (value: number) => {
       const intensity = (value - minValue) / (maxValue - minValue);
@@ -1018,7 +1065,7 @@ ${indentStr}</${element.tag}>`;
     };
 
     // Cells
-    data.forEach(d => {
+    data.forEach((d) => {
       const xIndex = xLabels.indexOf(d.x);
       const yIndex = yLabels.indexOf(d.y);
 
@@ -1038,30 +1085,29 @@ ${indentStr}</${element.tag}>`;
 
     // X labels
     xLabels.forEach((label, i) => {
-      chartGroup.children!.push(this.createText(
-        i * cellWidth + cellWidth / 2,
-        chartHeight + 20,
-        label,
-        {
-          "text-anchor": "middle",
-          "font-size": 12,
-          fill: opts.customColors.text!,
-        },
-      ));
+      chartGroup.children!.push(
+        this.createText(
+          i * cellWidth + cellWidth / 2,
+          chartHeight + 20,
+          label,
+          {
+            "text-anchor": "middle",
+            "font-size": 12,
+            fill: opts.customColors.text!,
+          },
+        ),
+      );
     });
 
     // Y labels
     yLabels.forEach((label, i) => {
-      chartGroup.children!.push(this.createText(
-        -10,
-        i * cellHeight + cellHeight / 2,
-        label,
-        {
+      chartGroup.children!.push(
+        this.createText(-10, i * cellHeight + cellHeight / 2, label, {
           "text-anchor": "end",
           "font-size": 12,
           fill: opts.customColors.text!,
-        },
-      ));
+        }),
+      );
     });
 
     elements.push(chartGroup);
@@ -1075,12 +1121,14 @@ ${indentStr}</${element.tag}>`;
         children: [title],
       });
 
-      elements.push(this.createText(opts.width / 2, 25, title, {
-        "text-anchor": "middle",
-        "font-size": 18,
-        "font-weight": "bold",
-        fill: opts.customColors.text!,
-      }));
+      elements.push(
+        this.createText(opts.width / 2, 25, title, {
+          "text-anchor": "middle",
+          "font-size": 18,
+          "font-weight": "bold",
+          fill: opts.customColors.text!,
+        }),
+      );
     }
 
     return this.renderSvg(opts.width, opts.height, elements);

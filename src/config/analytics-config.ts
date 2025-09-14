@@ -27,13 +27,13 @@ export interface AnalyticsConfig {
     minDataPoints: number;
     confidenceThreshold: number; // 0-1
     seasonalityDetection: boolean;
-    changePointSensitivity: 'low' | 'medium' | 'high';
+    changePointSensitivity: "low" | "medium" | "high";
   };
 
   // Anomaly detection settings
   anomalies: {
     enabled: boolean;
-    methods: ('statistical' | 'iqr' | 'zscore' | 'isolation')[];
+    methods: ("statistical" | "iqr" | "zscore" | "isolation")[];
     sensitivity: number; // 0-1
     minSampleSize: number;
   };
@@ -41,7 +41,7 @@ export interface AnalyticsConfig {
   // Forecasting settings
   forecasting: {
     enabled: boolean;
-    methods: ('linear' | 'exponential' | 'arima' | 'moving_average')[];
+    methods: ("linear" | "exponential" | "arima" | "moving_average")[];
     horizon: number; // prediction periods
     confidenceIntervals: boolean;
   };
@@ -50,14 +50,14 @@ export interface AnalyticsConfig {
   visualization: {
     enabled: boolean;
     colorOutput: boolean;
-    chartTypes: ('line' | 'bar' | 'sparkline' | 'table')[];
+    chartTypes: ("line" | "bar" | "sparkline" | "table")[];
     maxWidth: number; // terminal columns
     maxHeight: number; // terminal rows
   };
 
   // Export settings
   export: {
-    formats: ('json' | 'csv' | 'html' | 'markdown')[];
+    formats: ("json" | "csv" | "html" | "markdown")[];
     includeMetadata: boolean;
     includeConfidenceIntervals: boolean;
     timestampFormat: string;
@@ -73,7 +73,7 @@ export const defaultAnalyticsConfig: AnalyticsConfig = {
     ttl: 3600, // 1 hour
     diskCache: {
       enabled: true,
-      directory: '.fscrape/analytics-cache',
+      directory: ".fscrape/analytics-cache",
       maxSize: 500, // 500MB
     },
   },
@@ -89,19 +89,19 @@ export const defaultAnalyticsConfig: AnalyticsConfig = {
     minDataPoints: 10,
     confidenceThreshold: 0.95,
     seasonalityDetection: true,
-    changePointSensitivity: 'medium',
+    changePointSensitivity: "medium",
   },
 
   anomalies: {
     enabled: true,
-    methods: ['statistical', 'iqr'],
+    methods: ["statistical", "iqr"],
     sensitivity: 0.95,
     minSampleSize: 30,
   },
 
   forecasting: {
     enabled: true,
-    methods: ['linear', 'exponential'],
+    methods: ["linear", "exponential"],
     horizon: 30,
     confidenceIntervals: true,
   },
@@ -109,41 +109,49 @@ export const defaultAnalyticsConfig: AnalyticsConfig = {
   visualization: {
     enabled: true,
     colorOutput: true,
-    chartTypes: ['sparkline', 'table'],
+    chartTypes: ["sparkline", "table"],
     maxWidth: 120,
     maxHeight: 40,
   },
 
   export: {
-    formats: ['json', 'csv'],
+    formats: ["json", "csv"],
     includeMetadata: true,
     includeConfidenceIntervals: true,
-    timestampFormat: 'ISO',
+    timestampFormat: "ISO",
   },
 };
 
-export function validateAnalyticsConfig(config: Partial<AnalyticsConfig>): AnalyticsConfig {
+export function validateAnalyticsConfig(
+  config: Partial<AnalyticsConfig>,
+): AnalyticsConfig {
   const merged = { ...defaultAnalyticsConfig, ...config };
 
   // Validate numeric ranges
-  if (merged.performance.samplingRate < 0 || merged.performance.samplingRate > 1) {
-    throw new Error('Sampling rate must be between 0 and 1');
+  if (
+    merged.performance.samplingRate < 0 ||
+    merged.performance.samplingRate > 1
+  ) {
+    throw new Error("Sampling rate must be between 0 and 1");
   }
 
-  if (merged.trends.confidenceThreshold < 0 || merged.trends.confidenceThreshold > 1) {
-    throw new Error('Confidence threshold must be between 0 and 1');
+  if (
+    merged.trends.confidenceThreshold < 0 ||
+    merged.trends.confidenceThreshold > 1
+  ) {
+    throw new Error("Confidence threshold must be between 0 and 1");
   }
 
   if (merged.anomalies.sensitivity < 0 || merged.anomalies.sensitivity > 1) {
-    throw new Error('Anomaly sensitivity must be between 0 and 1');
+    throw new Error("Anomaly sensitivity must be between 0 and 1");
   }
 
   if (merged.trends.minDataPoints < 2) {
-    throw new Error('Minimum data points must be at least 2');
+    throw new Error("Minimum data points must be at least 2");
   }
 
   if (merged.forecasting.horizon < 1) {
-    throw new Error('Forecast horizon must be at least 1');
+    throw new Error("Forecast horizon must be at least 1");
   }
 
   return merged;

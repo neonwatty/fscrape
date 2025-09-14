@@ -917,16 +917,22 @@ export class AnalyticsVisualizer {
 
     lines.push(`Current: ${current.toFixed(2)} ${arrow} ${trendText}`);
     lines.push(`Previous: ${previous.toFixed(2)}`);
-    lines.push(`Change: ${change >= 0 ? "+" : ""}${change.toFixed(2)} (${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(1)}%)`);
+    lines.push(
+      `Change: ${change >= 0 ? "+" : ""}${change.toFixed(2)} (${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(1)}%)`,
+    );
 
     if (opts.style === "detailed") {
       // Add visual bar
       const barWidth = 30;
       const absPercent = Math.abs(changePercent);
-      const filledWidth = Math.min(Math.floor((absPercent / 100) * barWidth), barWidth);
-      const bar = change >= 0
-        ? "▲".repeat(filledWidth) + "░".repeat(barWidth - filledWidth)
-        : "▼".repeat(filledWidth) + "░".repeat(barWidth - filledWidth);
+      const filledWidth = Math.min(
+        Math.floor((absPercent / 100) * barWidth),
+        barWidth,
+      );
+      const bar =
+        change >= 0
+          ? "▲".repeat(filledWidth) + "░".repeat(barWidth - filledWidth)
+          : "▼".repeat(filledWidth) + "░".repeat(barWidth - filledWidth);
       lines.push(`[${bar}]`);
     }
 
@@ -964,7 +970,8 @@ export class AnalyticsVisualizer {
     const iqr = q3 - q1;
 
     // Calculate standard deviation
-    const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
+    const variance =
+      data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
     const stdDev = Math.sqrt(variance);
 
     // Create visual representation
@@ -1011,7 +1018,7 @@ export class AnalyticsVisualizer {
       ["IQR", iqr.toFixed(2)],
     ];
 
-    const maxLabelWidth = Math.max(...stats.map(s => s[0].length));
+    const maxLabelWidth = Math.max(...stats.map((s) => s[0].length));
     stats.forEach(([label, value]) => {
       lines.push(`${this.padRight(label + ":", maxLabelWidth + 2)} ${value}`);
     });
@@ -1042,7 +1049,7 @@ export class AnalyticsVisualizer {
       ...this.defaultOptions,
       showPercentage: true,
       showValue: false,
-      ...options
+      ...options,
     };
 
     const percentage = Math.min(100, (value / max) * 100);
@@ -1052,7 +1059,7 @@ export class AnalyticsVisualizer {
 
     // Determine bar character based on percentage
     let fillChar = "█";
-    let emptyChar = "░";
+    const emptyChar = "░";
 
     if (opts.style === "detailed") {
       if (percentage < 33) fillChar = "▓";
@@ -1060,7 +1067,7 @@ export class AnalyticsVisualizer {
       else fillChar = "█";
     }
 
-    let bar = fillChar.repeat(filled) + emptyChar.repeat(empty);
+    const bar = fillChar.repeat(filled) + emptyChar.repeat(empty);
 
     // Build the complete progress bar
     let result = "";
@@ -1081,7 +1088,7 @@ export class AnalyticsVisualizer {
 
     // Add threshold indicators
     if (opts.thresholds && opts.thresholds.length > 0) {
-      const threshold = opts.thresholds.find(t => value >= t.value);
+      const threshold = opts.thresholds.find((t) => value >= t.value);
       if (threshold) {
         result += ` - ${threshold.label}`;
       }
@@ -1115,7 +1122,7 @@ export class AnalyticsVisualizer {
     // Metrics
     if (data.metrics && data.metrics.length > 0) {
       lines.push("║ Metrics:" + " ".repeat(opts.width - 11) + "║");
-      data.metrics.forEach(metric => {
+      data.metrics.forEach((metric) => {
         let metricLine = `  ${this.padRight(metric.label + ":", 20)} ${metric.value.toFixed(2)}`;
         if (metric.change !== undefined) {
           const arrow = metric.change > 0 ? "↑" : metric.change < 0 ? "↓" : "→";
@@ -1128,18 +1135,34 @@ export class AnalyticsVisualizer {
     // Mini chart
     if (data.chart && data.chart.length > 0) {
       lines.push("║" + " ".repeat(opts.width - 2) + "║");
-      lines.push("║ Trend: " + this.padRight(this.createSparkline(data.chart.map(d => d.value)), opts.width - 10) + "║");
+      lines.push(
+        "║ Trend: " +
+          this.padRight(
+            this.createSparkline(data.chart.map((d) => d.value)),
+            opts.width - 10,
+          ) +
+          "║",
+      );
     }
 
     // Distribution
     if (data.distribution && data.distribution.length > 0) {
       const sorted = [...data.distribution].sort((a, b) => a - b);
       const median = sorted[Math.floor(sorted.length / 2)];
-      const mean = data.distribution.reduce((sum, val) => sum + val, 0) / data.distribution.length;
+      const mean =
+        data.distribution.reduce((sum, val) => sum + val, 0) /
+        data.distribution.length;
 
       lines.push("║" + " ".repeat(opts.width - 2) + "║");
       lines.push("║ Distribution:" + " ".repeat(opts.width - 16) + "║");
-      lines.push("║  Mean: " + this.padRight(mean.toFixed(2), 10) + " Median: " + this.padRight(median.toFixed(2), 10) + " ".repeat(opts.width - 36) + "║");
+      lines.push(
+        "║  Mean: " +
+          this.padRight(mean.toFixed(2), 10) +
+          " Median: " +
+          this.padRight(median.toFixed(2), 10) +
+          " ".repeat(opts.width - 36) +
+          "║",
+      );
     }
 
     // Bottom border
@@ -1154,7 +1177,11 @@ export class AnalyticsVisualizer {
   public createColoredOutput(
     text: string,
     value: number,
-    thresholds: { min: number; max: number; color: "red" | "yellow" | "green" }[],
+    thresholds: {
+      min: number;
+      max: number;
+      color: "red" | "yellow" | "green";
+    }[],
   ): string {
     // ANSI color codes
     const colors = {
@@ -1164,7 +1191,7 @@ export class AnalyticsVisualizer {
       reset: "\x1b[0m",
     };
 
-    const threshold = thresholds.find(t => value >= t.min && value <= t.max);
+    const threshold = thresholds.find((t) => value >= t.min && value <= t.max);
     if (threshold) {
       return `${colors[threshold.color]}${text}${colors.reset}`;
     }

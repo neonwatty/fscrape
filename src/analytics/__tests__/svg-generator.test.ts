@@ -282,7 +282,7 @@ describe("SvgGenerator", () => {
 
       const svg = generator.generateScatterPlot(
         [...cluster1, ...cluster2],
-        "Clusters"
+        "Clusters",
       );
 
       expect(svg).toContain("<svg");
@@ -419,7 +419,7 @@ describe("SvgGenerator", () => {
       const svg = generator.generatePieChart(data, "ARIA Chart");
 
       expect(svg).toContain('role="img"');
-      expect(svg).toContain('aria-label');
+      expect(svg).toContain("aria-label");
     });
   });
 

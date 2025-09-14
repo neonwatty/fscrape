@@ -142,11 +142,17 @@ const AnalyticsComputationSchema = z.object({
 
 // Analytics visualization configuration schema
 const AnalyticsVisualizationSchema = z.object({
-  defaultChartType: z.enum(["line", "bar", "pie", "scatter", "heatmap"]).default("line"),
+  defaultChartType: z
+    .enum(["line", "bar", "pie", "scatter", "heatmap"])
+    .default("line"),
   maxSeriesPoints: z.number().positive().default(1000),
   enableInteractive: z.boolean().default(true),
-  colorScheme: z.enum(["default", "dark", "colorblind", "monochrome"]).default("default"),
-  exportFormats: z.array(z.enum(["png", "svg", "json", "csv"])).default(["png", "svg", "json"]),
+  colorScheme: z
+    .enum(["default", "dark", "colorblind", "monochrome"])
+    .default("default"),
+  exportFormats: z
+    .array(z.enum(["png", "svg", "json", "csv"]))
+    .default(["png", "svg", "json"]),
   animationDuration: z.number().positive().default(750),
   responsiveResize: z.boolean().default(true),
 });
@@ -181,7 +187,9 @@ const AnalyticsTrendsSchema = z.object({
 // Analytics anomalies configuration schema
 const AnalyticsAnomaliesSchema = z.object({
   enabled: z.boolean().default(true),
-  method: z.enum(["isolation", "zscore", "mad", "ensemble"]).default("isolation"),
+  method: z
+    .enum(["isolation", "zscore", "mad", "ensemble"])
+    .default("isolation"),
   sensitivity: z.number().min(0).max(1).default(0.5),
   minSamples: z.number().positive().default(30),
   lookbackWindow: z.number().positive().default(100),
@@ -189,9 +197,11 @@ const AnalyticsAnomaliesSchema = z.object({
 
 // Analytics forecasting configuration schema
 const AnalyticsForecastingSchema = z.object({
-  defaultMethod: z.enum(["auto", "arima", "exponential", "linear"]).default("auto"),
+  defaultMethod: z
+    .enum(["auto", "arima", "exponential", "linear"])
+    .default("auto"),
   horizonDays: z.number().positive().default(7),
-  confidenceIntervals: z.array(z.number().min(0).max(1)).default([0.80, 0.95]),
+  confidenceIntervals: z.array(z.number().min(0).max(1)).default([0.8, 0.95]),
   maxModelComplexity: z.number().min(1).max(5).default(3),
 });
 
@@ -364,7 +374,7 @@ export const ConfigSchema = z.object({
     forecasting: {
       defaultMethod: "auto",
       horizonDays: 7,
-      confidenceIntervals: [0.80, 0.95],
+      confidenceIntervals: [0.8, 0.95],
       maxModelComplexity: 3,
     },
   }),
@@ -709,7 +719,7 @@ const configDefaults = {
     forecasting: {
       defaultMethod: "auto" as const,
       horizonDays: 7,
-      confidenceIntervals: [0.80, 0.95],
+      confidenceIntervals: [0.8, 0.95],
       maxModelComplexity: 3,
     },
   },

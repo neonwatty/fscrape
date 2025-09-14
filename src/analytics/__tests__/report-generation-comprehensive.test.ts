@@ -22,31 +22,59 @@ describe("ReportGenerator - Comprehensive Enhancements", () => {
         growthRate: 12.5,
       },
       platformBreakdown: new Map([
-        ["reddit", {
-          platform: "reddit",
-          totalPosts: 6000,
-          totalComments: 30000,
-          totalUsers: 1200,
-          avgScore: 25.5,
-          avgCommentCount: 5,
-          mostActiveUser: { username: "poweruser", posts: 100, comments: 500 },
-          lastUpdateTime: new Date(),
-        }],
-        ["hackernews", {
-          platform: "hackernews",
-          totalPosts: 4000,
-          totalComments: 20000,
-          totalUsers: 800,
-          avgScore: 30.2,
-          avgCommentCount: 5,
-          mostActiveUser: null,
-          lastUpdateTime: new Date(),
-        }],
+        [
+          "reddit",
+          {
+            platform: "reddit",
+            totalPosts: 6000,
+            totalComments: 30000,
+            totalUsers: 1200,
+            avgScore: 25.5,
+            avgCommentCount: 5,
+            mostActiveUser: {
+              username: "poweruser",
+              posts: 100,
+              comments: 500,
+            },
+            lastUpdateTime: new Date(),
+          },
+        ],
+        [
+          "hackernews",
+          {
+            platform: "hackernews",
+            totalPosts: 4000,
+            totalComments: 20000,
+            totalUsers: 800,
+            avgScore: 30.2,
+            avgCommentCount: 5,
+            mostActiveUser: null,
+            lastUpdateTime: new Date(),
+          },
+        ],
       ]),
       timeSeries: [
-        { timestamp: new Date("2024-01-01"), posts: 100, comments: 500, users: 50, avgScore: 20 },
-        { timestamp: new Date("2024-01-02"), posts: 150, comments: 700, users: 60, avgScore: 25 },
-        { timestamp: new Date("2024-01-03"), posts: 200, comments: 900, users: 70, avgScore: 30 },
+        {
+          timestamp: new Date("2024-01-01"),
+          posts: 100,
+          comments: 500,
+          users: 50,
+          avgScore: 20,
+        },
+        {
+          timestamp: new Date("2024-01-02"),
+          posts: 150,
+          comments: 700,
+          users: 60,
+          avgScore: 25,
+        },
+        {
+          timestamp: new Date("2024-01-03"),
+          posts: 200,
+          comments: 900,
+          users: 70,
+          avgScore: 30,
+        },
       ],
       trends: {
         rising: [],
@@ -186,7 +214,10 @@ describe("ReportGenerator - Comprehensive Enhancements", () => {
   describe("Actionable Insights Engine", () => {
     it("should generate priority actions with impact and effort", () => {
       const data = {
-        metrics: { ...mockMetrics, overview: { ...mockMetrics.overview, growthRate: -5 } },
+        metrics: {
+          ...mockMetrics,
+          overview: { ...mockMetrics.overview, growthRate: -5 },
+        },
         performance: { scraping: { errorRate: 15 } },
         generatedAt: new Date(),
       };
@@ -201,7 +232,10 @@ describe("ReportGenerator - Comprehensive Enhancements", () => {
 
     it("should identify optimization opportunities", () => {
       const data = {
-        metrics: { ...mockMetrics, overview: { ...mockMetrics.overview, avgEngagement: 0.3 } },
+        metrics: {
+          ...mockMetrics,
+          overview: { ...mockMetrics.overview, avgEngagement: 0.3 },
+        },
         generatedAt: new Date(),
       };
 
@@ -213,7 +247,10 @@ describe("ReportGenerator - Comprehensive Enhancements", () => {
 
     it("should provide risk mitigation strategies", () => {
       const data = {
-        metrics: { ...mockMetrics, health: { ...mockMetrics.health, databaseSize: 4000000000 } },
+        metrics: {
+          ...mockMetrics,
+          health: { ...mockMetrics.health, databaseSize: 4000000000 },
+        },
         performance: { database: { queryPerformance: 60 } },
         generatedAt: new Date(),
       };
@@ -262,7 +299,11 @@ describe("ReportGenerator - Comprehensive Enhancements", () => {
         metrics: mockMetrics,
         performance: {
           scraping: { successRate: 0.95, avgResponseTime: 200, errorRate: 5 },
-          database: { queryPerformance: 85, indexEfficiency: 90, size: 1000000 },
+          database: {
+            queryPerformance: 85,
+            indexEfficiency: 90,
+            size: 1000000,
+          },
         },
         generatedAt: new Date(),
       };
@@ -352,11 +393,11 @@ describe("ReportGenerator - Comprehensive Enhancements", () => {
       const report = generator.generateComprehensiveReport(data, "html");
 
       expect(report).toContain("<!DOCTYPE html>");
-      expect(report).toContain('<style>');
+      expect(report).toContain("<style>");
       expect(report).toContain('class="report-header"');
       expect(report).toContain('class="report-section');
       expect(report).toContain('class="table-of-contents"');
-      expect(report).toContain('<script>');
+      expect(report).toContain("<script>");
     });
 
     it("should generate structured JSON format", () => {
@@ -425,7 +466,10 @@ describe("ReportGenerator - Comprehensive Enhancements", () => {
 
     it("should assess current load", () => {
       const data = {
-        metrics: { ...mockMetrics, health: { ...mockMetrics.health, databaseSize: 500000000 } },
+        metrics: {
+          ...mockMetrics,
+          health: { ...mockMetrics.health, databaseSize: 500000000 },
+        },
         generatedAt: new Date(),
       };
 
@@ -438,7 +482,10 @@ describe("ReportGenerator - Comprehensive Enhancements", () => {
 
     it("should calculate capacity utilization", () => {
       const data = {
-        metrics: { ...mockMetrics, health: { ...mockMetrics.health, databaseSize: 5000000000 } },
+        metrics: {
+          ...mockMetrics,
+          health: { ...mockMetrics.health, databaseSize: 5000000000 },
+        },
         generatedAt: new Date(),
       };
 
@@ -451,7 +498,10 @@ describe("ReportGenerator - Comprehensive Enhancements", () => {
 
     it("should provide scaling recommendations", () => {
       const data = {
-        metrics: { ...mockMetrics, health: { ...mockMetrics.health, databaseSize: 8000000000 } },
+        metrics: {
+          ...mockMetrics,
+          health: { ...mockMetrics.health, databaseSize: 8000000000 },
+        },
         generatedAt: new Date(),
       };
 
@@ -481,7 +531,7 @@ describe("ReportGenerator - Comprehensive Enhancements", () => {
         "Actionable Insights & Recommendations",
       ];
 
-      requiredSections.forEach(section => {
+      requiredSections.forEach((section) => {
         expect(report).toContain(section);
       });
     });

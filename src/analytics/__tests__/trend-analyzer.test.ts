@@ -537,7 +537,7 @@ describe("TrendAnalyzer", () => {
       it("should detect pure sinusoidal pattern", () => {
         const values = [];
         for (let i = 0; i < 100; i++) {
-          values.push(50 + 20 * Math.sin(2 * Math.PI * i / 20));
+          values.push(50 + 20 * Math.sin((2 * Math.PI * i) / 20));
         }
 
         const result = analyzer.analyzeTrend(values);
@@ -549,7 +549,7 @@ describe("TrendAnalyzer", () => {
       it("should detect trending sinusoidal pattern", () => {
         const values = [];
         for (let i = 0; i < 100; i++) {
-          values.push(i * 0.5 + 10 * Math.sin(2 * Math.PI * i / 10));
+          values.push(i * 0.5 + 10 * Math.sin((2 * Math.PI * i) / 10));
         }
 
         const result = analyzer.analyzeTrend(values);
@@ -565,15 +565,15 @@ describe("TrendAnalyzer", () => {
         for (let i = 0; i < 100; i++) {
           values.push(
             50 +
-            10 * Math.sin(2 * Math.PI * i / 7) +    // Weekly
-            5 * Math.sin(2 * Math.PI * i / 30) +     // Monthly
-            Math.random() * 2
+              10 * Math.sin((2 * Math.PI * i) / 7) + // Weekly
+              5 * Math.sin((2 * Math.PI * i) / 30) + // Monthly
+              Math.random() * 2,
           );
         }
 
         const timeSeries = values.map((v, i) => ({
           timestamp: new Date(2024, 0, i + 1),
-          value: v
+          value: v,
         }));
 
         const seasonality = analyzer.detectSeasonality(timeSeries);
@@ -583,7 +583,11 @@ describe("TrendAnalyzer", () => {
   });
 
   describe("Noise Level Variation Tests", () => {
-    const generateTrendWithNoise = (size: number, trend: number, noiseLevel: number) => {
+    const generateTrendWithNoise = (
+      size: number,
+      trend: number,
+      noiseLevel: number,
+    ) => {
       const values = [];
       for (let i = 0; i < size; i++) {
         const signal = i * trend;
@@ -652,12 +656,14 @@ describe("TrendAnalyzer", () => {
     describe("Single Seasonality", () => {
       it("should detect daily seasonality pattern", () => {
         const timeSeries: TimeSeriesPoint[] = [];
-        for (let i = 0; i < 168; i++) { // One week of hourly data
+        for (let i = 0; i < 168; i++) {
+          // One week of hourly data
           const hour = i % 24;
-          const dayEffect = 10 * Math.sin(2 * Math.PI * hour / 24 - Math.PI/2);
+          const dayEffect =
+            10 * Math.sin((2 * Math.PI * hour) / 24 - Math.PI / 2);
           timeSeries.push({
-            timestamp: new Date(2024, 0, Math.floor(i/24) + 1, hour),
-            value: 100 + dayEffect + Math.random() * 2
+            timestamp: new Date(2024, 0, Math.floor(i / 24) + 1, hour),
+            value: 100 + dayEffect + Math.random() * 2,
           });
         }
 
@@ -672,12 +678,13 @@ describe("TrendAnalyzer", () => {
 
       it("should detect weekly seasonality pattern", () => {
         const timeSeries: TimeSeriesPoint[] = [];
-        for (let i = 0; i < 56; i++) { // 8 weeks of daily data
+        for (let i = 0; i < 56; i++) {
+          // 8 weeks of daily data
           const dayOfWeek = i % 7;
           const weeklyEffect = dayOfWeek < 5 ? 20 : -20; // Weekday vs weekend
           timeSeries.push({
             timestamp: new Date(2024, 0, i + 1),
-            value: 100 + weeklyEffect + Math.random() * 5
+            value: 100 + weeklyEffect + Math.random() * 5,
           });
         }
 
@@ -691,12 +698,13 @@ describe("TrendAnalyzer", () => {
 
       it("should detect monthly seasonality pattern", () => {
         const timeSeries: TimeSeriesPoint[] = [];
-        for (let i = 0; i < 365; i++) { // One year of daily data
+        for (let i = 0; i < 365; i++) {
+          // One year of daily data
           const dayOfMonth = (i % 30) + 1;
-          const monthlyEffect = 15 * Math.sin(2 * Math.PI * dayOfMonth / 30);
+          const monthlyEffect = 15 * Math.sin((2 * Math.PI * dayOfMonth) / 30);
           timeSeries.push({
             timestamp: new Date(2024, 0, i + 1),
-            value: 100 + monthlyEffect + Math.random() * 3
+            value: 100 + monthlyEffect + Math.random() * 3,
           });
         }
 
@@ -708,16 +716,17 @@ describe("TrendAnalyzer", () => {
     describe("Multiple Seasonalities", () => {
       it("should handle daily and weekly patterns combined", () => {
         const timeSeries: TimeSeriesPoint[] = [];
-        for (let i = 0; i < 336; i++) { // Two weeks of hourly data
+        for (let i = 0; i < 336; i++) {
+          // Two weeks of hourly data
           const hour = i % 24;
           const dayOfWeek = Math.floor(i / 24) % 7;
 
-          const hourlyEffect = 5 * Math.sin(2 * Math.PI * hour / 24);
+          const hourlyEffect = 5 * Math.sin((2 * Math.PI * hour) / 24);
           const weeklyEffect = dayOfWeek < 5 ? 10 : -10;
 
           timeSeries.push({
-            timestamp: new Date(2024, 0, Math.floor(i/24) + 1, hour),
-            value: 100 + hourlyEffect + weeklyEffect + Math.random() * 2
+            timestamp: new Date(2024, 0, Math.floor(i / 24) + 1, hour),
+            value: 100 + hourlyEffect + weeklyEffect + Math.random() * 2,
           });
         }
 
@@ -730,10 +739,10 @@ describe("TrendAnalyzer", () => {
         const timeSeries: TimeSeriesPoint[] = [];
         for (let i = 0; i < 90; i++) {
           const trend = i * 0.5;
-          const seasonal = 10 * Math.sin(2 * Math.PI * i / 7);
+          const seasonal = 10 * Math.sin((2 * Math.PI * i) / 7);
           timeSeries.push({
             timestamp: new Date(2024, 0, i + 1),
-            value: 100 + trend + seasonal + Math.random() * 2
+            value: 100 + trend + seasonal + Math.random() * 2,
           });
         }
 
@@ -747,7 +756,7 @@ describe("TrendAnalyzer", () => {
       it("should detect anomalies in seasonal patterns", () => {
         const values = [];
         for (let i = 0; i < 100; i++) {
-          let value = 50 + 20 * Math.sin(2 * Math.PI * i / 10);
+          let value = 50 + 20 * Math.sin((2 * Math.PI * i) / 10);
           // Add anomalies at specific points
           if (i === 25 || i === 50 || i === 75) {
             value += 50;
@@ -757,18 +766,18 @@ describe("TrendAnalyzer", () => {
 
         const anomalies = analyzer.detectAnomalies(values, "zscore");
         expect(anomalies.anomalies.length).toBeGreaterThanOrEqual(3);
-        expect(anomalies.anomalies.map(a => a.index)).toContain(25);
+        expect(anomalies.anomalies.map((a) => a.index)).toContain(25);
       });
 
       it("should handle seasonal breaks", () => {
         const values = [];
         // First pattern
         for (let i = 0; i < 50; i++) {
-          values.push(50 + 10 * Math.sin(2 * Math.PI * i / 7));
+          values.push(50 + 10 * Math.sin((2 * Math.PI * i) / 7));
         }
         // Changed pattern
         for (let i = 50; i < 100; i++) {
-          values.push(80 + 15 * Math.sin(2 * Math.PI * i / 14));
+          values.push(80 + 15 * Math.sin((2 * Math.PI * i) / 14));
         }
 
         const breakpoints = analyzer.detectBreakpoints(values, 10);
@@ -803,21 +812,25 @@ describe("TrendAnalyzer", () => {
       const timeSeries: TimeSeriesPoint[] = [];
       for (let i = 0; i < 100; i++) {
         const trend = i * 0.3;
-        const seasonal = 8 * Math.sin(2 * Math.PI * i / 7);
+        const seasonal = 8 * Math.sin((2 * Math.PI * i) / 7);
         const noise = Math.random() * 4 - 2;
         timeSeries.push({
           timestamp: new Date(2024, 0, i + 1),
-          value: 50 + trend + seasonal + noise
+          value: 50 + trend + seasonal + noise,
         });
       }
 
       const decomposition = analyzer.seasonalDecomposition(timeSeries, 7);
-      const trendAnalysis = analyzer.analyzeTrend(timeSeries.map(t => t.value));
+      const trendAnalysis = analyzer.analyzeTrend(
+        timeSeries.map((t) => t.value),
+      );
 
       expect(decomposition.strength.trend).toBeGreaterThan(0.5);
       expect(decomposition.strength.seasonal).toBeGreaterThan(0.6);
       // Mixed patterns can appear stable or increasing
-      expect(["increasing", "stable", "volatile"]).toContain(trendAnalysis.trend);
+      expect(["increasing", "stable", "volatile"]).toContain(
+        trendAnalysis.trend,
+      );
     });
 
     it("should handle non-stationary variance", () => {
@@ -835,10 +848,20 @@ describe("TrendAnalyzer", () => {
       // Variance should increase over time
       const firstThird = values.slice(0, 33);
       const lastThird = values.slice(67);
-      const firstStd = Math.sqrt(firstThird.reduce((acc, v, i, arr) =>
-        acc + Math.pow(v - arr.reduce((a, b) => a + b) / arr.length, 2), 0) / firstThird.length);
-      const lastStd = Math.sqrt(lastThird.reduce((acc, v, i, arr) =>
-        acc + Math.pow(v - arr.reduce((a, b) => a + b) / arr.length, 2), 0) / lastThird.length);
+      const firstStd = Math.sqrt(
+        firstThird.reduce(
+          (acc, v, i, arr) =>
+            acc + Math.pow(v - arr.reduce((a, b) => a + b) / arr.length, 2),
+          0,
+        ) / firstThird.length,
+      );
+      const lastStd = Math.sqrt(
+        lastThird.reduce(
+          (acc, v, i, arr) =>
+            acc + Math.pow(v - arr.reduce((a, b) => a + b) / arr.length, 2),
+          0,
+        ) / lastThird.length,
+      );
 
       expect(lastStd).toBeGreaterThan(firstStd);
     });

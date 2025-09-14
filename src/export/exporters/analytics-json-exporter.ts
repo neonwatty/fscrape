@@ -71,31 +71,37 @@ export interface EnhancedAnalyticsData {
   platformStats?: PlatformStats & {
     statistics?: StatisticalMetadata;
   };
-  trendingPosts?: Array<TrendingPost & {
-    statistics?: StatisticalMetadata;
-    relativePerformance?: {
-      percentile: number;
-      zScore: number;
-      isOutlier: boolean;
-    };
-  }>;
-  userActivity?: Array<UserActivity & {
-    statistics?: StatisticalMetadata;
-    engagementMetrics?: {
-      postEngagementRate: number;
-      commentEngagementRate: number;
-      overallEngagement: number;
-    };
-  }>;
-  timeSeries?: Array<TimeSeriesData & {
-    movingAverage?: number;
-    volatility?: number;
-    seasonality?: {
-      dayOfWeek: string;
-      hourOfDay: number;
-      isWeekend: boolean;
-    };
-  }>;
+  trendingPosts?: Array<
+    TrendingPost & {
+      statistics?: StatisticalMetadata;
+      relativePerformance?: {
+        percentile: number;
+        zScore: number;
+        isOutlier: boolean;
+      };
+    }
+  >;
+  userActivity?: Array<
+    UserActivity & {
+      statistics?: StatisticalMetadata;
+      engagementMetrics?: {
+        postEngagementRate: number;
+        commentEngagementRate: number;
+        overallEngagement: number;
+      };
+    }
+  >;
+  timeSeries?: Array<
+    TimeSeriesData & {
+      movingAverage?: number;
+      volatility?: number;
+      seasonality?: {
+        dayOfWeek: string;
+        hourOfDay: number;
+        isWeekend: boolean;
+      };
+    }
+  >;
   correlations?: {
     scoreToComments: number;
     scoreToTime: number;
@@ -225,7 +231,9 @@ export class AnalyticsJsonExporter {
   /**
    * Enhance data with statistical metadata
    */
-  private async enhanceWithStatistics(data: any): Promise<EnhancedAnalyticsData> {
+  private async enhanceWithStatistics(
+    data: any,
+  ): Promise<EnhancedAnalyticsData> {
     const enhanced: EnhancedAnalyticsData = {
       metadata: this.generateMetadata(data),
     };
@@ -233,7 +241,9 @@ export class AnalyticsJsonExporter {
     // Enhance platform stats
     if (data.platformStats && data.platformStats.length > 0) {
       const stats = data.platformStats[0];
-      const scores = [stats.avgPostScore, stats.avgCommentScore].filter(s => s != null);
+      const scores = [stats.avgPostScore, stats.avgCommentScore].filter(
+        (s) => s != null,
+      );
 
       if (this.options.includeStatistics && scores.length > 0) {
         stats.statistics = this.calculateStatisticalMetadata(scores);
@@ -251,17 +261,22 @@ export class AnalyticsJsonExporter {
 
         if (this.options.includeStatistics) {
           // Calculate relative performance
-          const zScore = (post.score - scoreSummary.mean) / scoreSummary.standardDeviation;
+          const zScore =
+            (post.score - scoreSummary.mean) / scoreSummary.standardDeviation;
           const percentile = this.calculatePercentile(post.score, allScores);
 
           enhancedPost.relativePerformance = {
             percentile,
             zScore,
-            isOutlier: Math.abs(zScore) > 2.5 || scoreSummary.outliers.includes(post.score),
+            isOutlier:
+              Math.abs(zScore) > 2.5 ||
+              scoreSummary.outliers.includes(post.score),
           };
 
           // Add post-specific statistics
-          enhancedPost.statistics = this.calculateStatisticalMetadata([post.score]);
+          enhancedPost.statistics = this.calculateStatisticalMetadata([
+            post.score,
+          ]);
         }
 
         return enhancedPost;
@@ -277,14 +292,18 @@ export class AnalyticsJsonExporter {
           // Calculate engagement metrics
           enhancedUser.engagementMetrics = {
             postEngagementRate: user.avgPostScore / (user.postCount || 1),
-            commentEngagementRate: user.avgCommentScore / (user.commentCount || 1),
+            commentEngagementRate:
+              user.avgCommentScore / (user.commentCount || 1),
             overallEngagement: (user.avgPostScore + user.avgCommentScore) / 2,
           };
 
           // Add user-specific statistics
-          const userScores = [user.avgPostScore, user.avgCommentScore].filter(s => s != null);
+          const userScores = [user.avgPostScore, user.avgCommentScore].filter(
+            (s) => s != null,
+          );
           if (userScores.length > 0) {
-            enhancedUser.statistics = this.calculateStatisticalMetadata(userScores);
+            enhancedUser.statistics =
+              this.calculateStatisticalMetadata(userScores);
           }
         }
 
@@ -293,43 +312,69 @@ export class AnalyticsJsonExporter {
     }
 
     // Enhance time series data
-    if (data.timeSeries && data.timeSeries.length > 0 && this.options.includeTimeSeries) {
-      const values = data.timeSeries.map((ts: TimeSeriesData) => ts.avgScore || 0);
+    if (
+      data.timeSeries &&
+      data.timeSeries.length > 0 &&
+      this.options.includeTimeSeries
+    ) {
+      const values = data.timeSeries.map(
+        (ts: TimeSeriesData) => ts.avgScore || 0,
+      );
 
-      enhanced.timeSeries = data.timeSeries.map((point: TimeSeriesData, index: number) => {
-        const enhancedPoint: any = { ...point };
+      enhanced.timeSeries = data.timeSeries.map(
+        (point: TimeSeriesData, index: number) => {
+          const enhancedPoint: any = { ...point };
 
-        // Calculate moving average (5-period)
-        const windowStart = Math.max(0, index - 2);
-        const windowEnd = Math.min(data.timeSeries.length, index + 3);
-        const window = values.slice(windowStart, windowEnd);
-        enhancedPoint.movingAverage = StatisticsEngine.calculateMean(window);
+          // Calculate moving average (5-period)
+          const windowStart = Math.max(0, index - 2);
+          const windowEnd = Math.min(data.timeSeries.length, index + 3);
+          const window = values.slice(windowStart, windowEnd);
+          enhancedPoint.movingAverage = StatisticsEngine.calculateMean(window);
 
-        // Calculate volatility
-        if (index > 0) {
-          const previousValue = values[index - 1];
-          enhancedPoint.volatility = Math.abs(values[index] - previousValue) / previousValue;
-        }
+          // Calculate volatility
+          if (index > 0) {
+            const previousValue = values[index - 1];
+            enhancedPoint.volatility =
+              Math.abs(values[index] - previousValue) / previousValue;
+          }
 
-        // Add seasonality information
-        const date = new Date(point.timestamp);
-        enhancedPoint.seasonality = {
-          dayOfWeek: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][date.getDay()],
-          hourOfDay: date.getHours(),
-          isWeekend: date.getDay() === 0 || date.getDay() === 6,
-        };
+          // Add seasonality information
+          const date = new Date(point.timestamp);
+          enhancedPoint.seasonality = {
+            dayOfWeek: [
+              "Sunday",
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+            ][date.getDay()],
+            hourOfDay: date.getHours(),
+            isWeekend: date.getDay() === 0 || date.getDay() === 6,
+          };
 
-        return enhancedPoint;
-      });
+          return enhancedPoint;
+        },
+      );
     }
 
     // Calculate correlations
-    if (this.options.includeCorrelations && data.trendingPosts && data.trendingPosts.length > 1) {
+    if (
+      this.options.includeCorrelations &&
+      data.trendingPosts &&
+      data.trendingPosts.length > 1
+    ) {
       const scores = data.trendingPosts.map((p: TrendingPost) => p.score);
-      const comments = data.trendingPosts.map((p: TrendingPost) => p.commentCount);
+      const comments = data.trendingPosts.map(
+        (p: TrendingPost) => p.commentCount,
+      );
 
       enhanced.correlations = {
-        scoreToComments: StatisticsEngine.calculateCorrelation(scores, comments),
+        scoreToComments: StatisticsEngine.calculateCorrelation(
+          scores,
+          comments,
+        ),
         scoreToTime: 0, // Would need time data
         userActivityToScore: 0, // Would need to correlate with user data
         pValues: {
@@ -342,7 +387,8 @@ export class AnalyticsJsonExporter {
 
     // Calculate aggregate statistics
     if (this.options.includeStatistics) {
-      enhanced.aggregateStatistics = await this.calculateAggregateStatistics(data);
+      enhanced.aggregateStatistics =
+        await this.calculateAggregateStatistics(data);
     }
 
     return enhanced;
@@ -378,7 +424,8 @@ export class AnalyticsJsonExporter {
       const slope = this.calculateSlope(indices, values);
 
       metadata.trend = {
-        direction: slope > 0.1 ? "increasing" : slope < -0.1 ? "decreasing" : "stable",
+        direction:
+          slope > 0.1 ? "increasing" : slope < -0.1 ? "decreasing" : "stable",
         slope,
         rSquared: this.calculateRSquared(indices, values),
       };
@@ -400,7 +447,7 @@ export class AnalyticsJsonExporter {
 
     // Z-scores for common confidence levels
     const zScores: Record<number, number> = {
-      0.90: 1.645,
+      0.9: 1.645,
       0.95: 1.96,
       0.99: 2.576,
     };
@@ -420,7 +467,7 @@ export class AnalyticsJsonExporter {
    */
   private calculatePercentile(value: number, dataset: number[]): number {
     const sorted = [...dataset].sort((a, b) => a - b);
-    const index = sorted.findIndex(v => v >= value);
+    const index = sorted.findIndex((v) => v >= value);
     return index === -1 ? 100 : (index / sorted.length) * 100;
   }
 
@@ -432,7 +479,7 @@ export class AnalyticsJsonExporter {
     const r = StatisticsEngine.calculateCorrelation(x, y);
 
     // Calculate t-statistic
-    const t = r * Math.sqrt(n - 2) / Math.sqrt(1 - r * r);
+    const t = (r * Math.sqrt(n - 2)) / Math.sqrt(1 - r * r);
 
     // Approximate p-value (would need proper t-distribution)
     const p = 2 * (1 - this.normalCDF(Math.abs(t)));
@@ -460,7 +507,8 @@ export class AnalyticsJsonExporter {
     const t4 = t3 * t;
     const t5 = t4 * t;
 
-    const y = 1.0 - (((((a5 * t5 + a4 * t4) + a3 * t3) + a2 * t2) + a1 * t) * Math.exp(-x * x));
+    const y =
+      1.0 - (a5 * t5 + a4 * t4 + a3 * t3 + a2 * t2 + a1 * t) * Math.exp(-x * x);
 
     return 0.5 * (1.0 + sign * y);
   }
@@ -493,7 +541,7 @@ export class AnalyticsJsonExporter {
 
     const ssTot = y.reduce((sum, yi) => sum + Math.pow(yi - meanY, 2), 0);
 
-    return 1 - (ssRes / ssTot);
+    return 1 - ssRes / ssTot;
   }
 
   /**
@@ -510,7 +558,9 @@ export class AnalyticsJsonExporter {
 
     // Comment statistics
     if (data.trendingPosts && data.trendingPosts.length > 0) {
-      const commentCounts = data.trendingPosts.map((p: TrendingPost) => p.commentCount);
+      const commentCounts = data.trendingPosts.map(
+        (p: TrendingPost) => p.commentCount,
+      );
       stats.comments = this.calculateStatisticalMetadata(commentCounts);
     }
 
@@ -519,7 +569,7 @@ export class AnalyticsJsonExporter {
       const scores = [
         data.platformStats[0].avgPostScore,
         data.platformStats[0].avgCommentScore,
-      ].filter(s => s != null);
+      ].filter((s) => s != null);
       if (scores.length > 0) {
         stats.scores = this.calculateStatisticalMetadata(scores);
       }
@@ -527,8 +577,8 @@ export class AnalyticsJsonExporter {
 
     // Engagement statistics
     if (data.userActivity && data.userActivity.length > 0) {
-      const engagements = data.userActivity.map((u: UserActivity) =>
-        (u.avgPostScore + u.avgCommentScore) / 2
+      const engagements = data.userActivity.map(
+        (u: UserActivity) => (u.avgPostScore + u.avgCommentScore) / 2,
       );
       stats.engagement = this.calculateStatisticalMetadata(engagements);
     }
@@ -557,10 +607,12 @@ export class AnalyticsJsonExporter {
 
     // Add date range if time series data exists
     if (data.timeSeries && data.timeSeries.length > 0) {
-      const timestamps = data.timeSeries.map((ts: TimeSeriesData) => new Date(ts.timestamp));
+      const timestamps = data.timeSeries.map(
+        (ts: TimeSeriesData) => new Date(ts.timestamp),
+      );
       metadata.dateRange = {
-        start: new Date(Math.min(...timestamps.map(d => d.getTime()))),
-        end: new Date(Math.max(...timestamps.map(d => d.getTime()))),
+        start: new Date(Math.min(...timestamps.map((d) => d.getTime()))),
+        end: new Date(Math.max(...timestamps.map((d) => d.getTime()))),
       };
     }
 

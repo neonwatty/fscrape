@@ -19,19 +19,41 @@ export const visualizeCommand = new Command("visualize")
   .alias("viz")
   .description("Generate visualizations from analytics data")
   .option("-d, --database <path>", "Path to database", "scraped_data.db")
-  .option("-t, --type <type>", "Visualization type (chart|dashboard|report)", "chart")
+  .option(
+    "-t, --type <type>",
+    "Visualization type (chart|dashboard|report)",
+    "chart",
+  )
   .option("-o, --output <path>", "Output file path")
-  .option("-f, --format <format>", "Output format (terminal|text|html|svg|json)", "terminal")
-  .option("--chart <type>", "Chart type (line|bar|pie|scatter|heatmap|histogram)")
-  .option("--metric <metric>", "Metric to visualize (score|comments|engagement)")
+  .option(
+    "-f, --format <format>",
+    "Output format (terminal|text|html|svg|json)",
+    "terminal",
+  )
+  .option(
+    "--chart <type>",
+    "Chart type (line|bar|pie|scatter|heatmap|histogram)",
+  )
+  .option(
+    "--metric <metric>",
+    "Metric to visualize (score|comments|engagement)",
+  )
   .option("--platform <platform>", "Filter by platform")
   .option("--days <number>", "Number of days to include", "30")
   .option("--width <number>", "Chart width", "120")
   .option("--height <number>", "Chart height", "30")
   .option("--colors", "Use colors in terminal output", true)
   .option("--unicode", "Use Unicode characters", true)
-  .option("--theme <theme>", "Color theme (default|vibrant|pastel|monochrome)", "default")
-  .option("--style <style>", "Visualization style (minimal|standard|rich)", "rich")
+  .option(
+    "--theme <theme>",
+    "Color theme (default|vibrant|pastel|monochrome)",
+    "default",
+  )
+  .option(
+    "--style <style>",
+    "Visualization style (minimal|standard|rich)",
+    "rich",
+  )
   .option("--interactive", "Interactive mode for dashboard")
   .action(async (options) => {
     const spinner = ora("Initializing visualization...").start();
@@ -60,7 +82,9 @@ export const visualizeCommand = new Command("visualize")
 
       spinner.succeed("Visualization complete!");
     } catch (error) {
-      spinner.fail(`Visualization failed: ${error instanceof Error ? error.message : String(error)}`);
+      spinner.fail(
+        `Visualization failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
       process.exit(1);
     }
   });
@@ -137,7 +161,10 @@ async function generateChart(
     switch (chartType) {
       case "pie":
         output = svgGen.generatePieChart(
-          data.map((d: any) => ({ label: d.title || d.date, value: d.score || d.value })),
+          data.map((d: any) => ({
+            label: d.title || d.date,
+            value: d.score || d.value,
+          })),
           `${metric.charAt(0).toUpperCase() + metric.slice(1)} Distribution`,
         );
         break;
@@ -211,18 +238,24 @@ async function generateChart(
         );
 
         // Create progress bars for top items
-        const progressBars = data.slice(0, 5).map((d: any, i: number) => {
-          const maxValue = Math.max(...data.map((item: any) => item.score || item.value || 0));
-          return `${i + 1}. ${termViz.createProgressBar(
-            d.score || d.value || 0,
-            maxValue,
-            { label: d.title || d.date },
-          )}`;
-        }).join("\n");
+        const progressBars = data
+          .slice(0, 5)
+          .map((d: any, i: number) => {
+            const maxValue = Math.max(
+              ...data.map((item: any) => item.score || item.value || 0),
+            );
+            return `${i + 1}. ${termViz.createProgressBar(
+              d.score || d.value || 0,
+              maxValue,
+              { label: d.title || d.date },
+            )}`;
+          })
+          .join("\n");
 
-        output = `${chalk.bold(`${metric.toUpperCase()} VISUALIZATION`)}\n\n` +
-                 `Trend: ${sparkline}\n\n` +
-                 `Top Items:\n${progressBars}`;
+        output =
+          `${chalk.bold(`${metric.toUpperCase()} VISUALIZATION`)}\n\n` +
+          `Trend: ${sparkline}\n\n` +
+          `Top Items:\n${progressBars}`;
     }
   } else {
     // Generate standard ASCII visualization
@@ -259,7 +292,9 @@ async function generateChart(
         break;
 
       case "histogram":
-        const values = data.map((d: any) => d.score || d.value || d.postCount || 0);
+        const values = data.map(
+          (d: any) => d.score || d.value || d.postCount || 0,
+        );
         output = visualizer.createHistogram(
           values,
           10,
@@ -314,12 +349,7 @@ async function generateDashboard(
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - parseInt(options.days));
 
-  const [
-    overview,
-    platformStats,
-    trending,
-    timeSeries,
-  ] = await Promise.all([
+  const [overview, platformStats, trending, timeSeries] = await Promise.all([
     analytics.getOverviewStats(options.platform),
     analytics.getPlatformStats(startDate, endDate),
     analytics.getTrendingPosts(10, parseInt(options.days), options.platform),
@@ -336,7 +366,7 @@ async function generateDashboard(
       growthRate: 0.15, // Placeholder
     },
     platformBreakdown: new Map(
-      platformStats.map(stat => [stat.platform as Platform, stat])
+      platformStats.map((stat) => [stat.platform as Platform, stat]),
     ),
     trending,
     timeSeries,
@@ -391,16 +421,18 @@ async function generateDashboard(
       },
       {
         title: "TRENDING POSTS",
-        content: trending.slice(0, 5).map((post, i) =>
-          `${i + 1}. ${post.title.substring(0, 60)} (${post.score})`
-        ).join("\n"),
+        content: trending
+          .slice(0, 5)
+          .map(
+            (post, i) =>
+              `${i + 1}. ${post.title.substring(0, 60)} (${post.score})`,
+          )
+          .join("\n"),
         style: "box" as const,
       },
       {
         title: "ACTIVITY SPARKLINE",
-        content: termViz.createSparkline(
-          timeSeries.map(ts => ts.postCount)
-        ),
+        content: termViz.createSparkline(timeSeries.map((ts) => ts.postCount)),
         style: "simple" as const,
       },
     ];
@@ -453,7 +485,9 @@ async function generateReport(
     outputStyle: "detailed",
   });
 
-  const outputPath = options.output || `analytics-report.${options.format === "svg" ? "svg" : options.format}`;
+  const outputPath =
+    options.output ||
+    `analytics-report.${options.format === "svg" ? "svg" : options.format}`;
   const result = await exporter.exportReport(report, outputPath, {
     format: options.format,
   });

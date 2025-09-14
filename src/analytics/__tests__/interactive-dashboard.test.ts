@@ -26,8 +26,8 @@ describe("InteractiveDashboard", () => {
   beforeEach(() => {
     // Mock console methods
     consoleSpy = {
-      log: vi.spyOn(console, "log").mockImplementation(),
-      clear: vi.spyOn(console, "clear").mockImplementation(),
+      log: vi.spyOn(console, "log").mockImplementation(() => {}),
+      clear: vi.spyOn(console, "clear").mockImplementation(() => {}),
     };
 
     // Mock process.stdin
@@ -59,26 +59,40 @@ describe("InteractiveDashboard", () => {
         growthRate: 12.5,
       },
       platformBreakdown: new Map([
-        ["reddit", {
-          platform: "reddit",
-          totalPosts: 6000,
-          totalComments: 30000,
-          totalUsers: 1200,
-          avgScore: 25.5,
-          avgCommentCount: 5,
-          mostActiveUser: { username: "poweruser", posts: 100, comments: 500 },
-          lastUpdateTime: new Date(),
-        }],
-        ["hackernews", {
-          platform: "hackernews",
-          totalPosts: 4000,
-          totalComments: 20000,
-          totalUsers: 800,
-          avgScore: 30.2,
-          avgCommentCount: 5,
-          mostActiveUser: null,
-          lastUpdateTime: new Date(),
-        }],
+        [
+          "reddit",
+          {
+            platform: "reddit",
+            totalPosts: 6000,
+            totalComments: 30000,
+            totalUsers: 1200,
+            avgScore: 25.5,
+            avgPostScore: 30.0,
+            avgCommentScore: 20.0,
+            avgCommentCount: 5,
+            mostActiveUser: {
+              username: "poweruser",
+              posts: 100,
+              comments: 500,
+            },
+            lastUpdateTime: new Date(),
+          },
+        ],
+        [
+          "hackernews",
+          {
+            platform: "hackernews",
+            totalPosts: 4000,
+            totalComments: 20000,
+            totalUsers: 800,
+            avgScore: 30.2,
+            avgPostScore: 35.0,
+            avgCommentScore: 25.0,
+            avgCommentCount: 5,
+            mostActiveUser: null,
+            lastUpdateTime: new Date(),
+          },
+        ],
       ]),
       trending: [
         {
@@ -88,24 +102,45 @@ describe("InteractiveDashboard", () => {
           author: "author1",
           score: 100,
           commentCount: 50,
+          hotness: 85.5,
           createdAt: new Date(),
           platform: "reddit",
         },
         {
           id: "2",
-          title: "Test Post 2 with a very long title that should be truncated in the display",
+          title:
+            "Test Post 2 with a very long title that should be truncated in the display",
           url: "https://test.com/2",
           author: "author2",
           score: 80,
           commentCount: 40,
+          hotness: 75.0,
           createdAt: new Date(),
           platform: "hackernews",
         },
       ],
       timeSeries: [
-        { timestamp: new Date(), posts: 100, comments: 500, users: 50, avgScore: 25 },
-        { timestamp: new Date(), posts: 120, comments: 600, users: 55, avgScore: 28 },
-        { timestamp: new Date(), posts: 150, comments: 700, users: 60, avgScore: 30 },
+        {
+          timestamp: new Date(),
+          posts: 100,
+          comments: 500,
+          users: 50,
+          avgScore: 25,
+        },
+        {
+          timestamp: new Date(),
+          posts: 120,
+          comments: 600,
+          users: 55,
+          avgScore: 28,
+        },
+        {
+          timestamp: new Date(),
+          posts: 150,
+          comments: 700,
+          users: 60,
+          avgScore: 30,
+        },
       ],
       topPerformers: {
         posts: [],
@@ -167,7 +202,7 @@ describe("InteractiveDashboard", () => {
 
       expect(consoleSpy.clear).toHaveBeenCalled();
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Welcome to Interactive Analytics Dashboard")
+        expect.stringContaining("Welcome to Interactive Analytics Dashboard"),
       );
     });
 
@@ -176,7 +211,10 @@ describe("InteractiveDashboard", () => {
 
       expect(readline.createInterface).toHaveBeenCalled();
       expect(readline.emitKeypressEvents).toHaveBeenCalled();
-      expect(processStdinSpy.on).toHaveBeenCalledWith("keypress", expect.any(Function));
+      expect(processStdinSpy.on).toHaveBeenCalledWith(
+        "keypress",
+        expect.any(Function),
+      );
     });
 
     it("should stop dashboard cleanly", async () => {
@@ -205,7 +243,7 @@ describe("InteractiveDashboard", () => {
 
       // Simulate switching to platforms view
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -213,13 +251,13 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Platform Breakdown")
+        expect.stringContaining("Platform Breakdown"),
       );
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("REDDIT")
+        expect.stringContaining("REDDIT"),
       );
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("HACKERNEWS")
+        expect.stringContaining("HACKERNEWS"),
       );
     });
 
@@ -227,7 +265,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -235,10 +273,10 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Trending Content")
+        expect.stringContaining("Trending Content"),
       );
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Test Post 1")
+        expect.stringContaining("Test Post 1"),
       );
     });
 
@@ -246,7 +284,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -254,13 +292,13 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("System Performance")
+        expect.stringContaining("System Performance"),
       );
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Database Size")
+        expect.stringContaining("Database Size"),
       );
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Data Quality")
+        expect.stringContaining("Data Quality"),
       );
     });
 
@@ -268,7 +306,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -276,7 +314,7 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Detailed View")
+        expect.stringContaining("Detailed View"),
       );
     });
   });
@@ -286,7 +324,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -304,7 +342,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -318,20 +356,20 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
         // Switch right
         await keypressHandler(null, { name: "right" });
         expect(consoleSpy.log).toHaveBeenCalledWith(
-          expect.stringContaining("Platform Breakdown")
+          expect.stringContaining("Platform Breakdown"),
         );
 
         // Switch left
         await keypressHandler(null, { name: "left" });
         expect(consoleSpy.log).toHaveBeenCalledWith(
-          expect.stringContaining("Overview Metrics")
+          expect.stringContaining("Overview Metrics"),
         );
       }
     });
@@ -340,7 +378,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -348,7 +386,7 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Detailed View")
+        expect.stringContaining("Detailed View"),
       );
     });
 
@@ -356,7 +394,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -367,7 +405,7 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Overview Metrics")
+        expect.stringContaining("Overview Metrics"),
       );
     });
 
@@ -375,7 +413,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -383,7 +421,7 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Dashboard Help")
+        expect.stringContaining("Dashboard Help"),
       );
     });
 
@@ -396,7 +434,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -422,7 +460,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       // Get initial call count
-      const initialCalls = mockAnalytics.getPlatformStats.mock.calls.length;
+      const initialCalls = (mockAnalytics.getPlatformStats as any).mock.calls.length;
 
       // Fast-forward time by 5 seconds (the default refresh interval)
       vi.advanceTimersByTime(5100); // Add a small buffer
@@ -431,7 +469,7 @@ describe("InteractiveDashboard", () => {
       await Promise.resolve();
 
       // Should have fetched metrics again
-      const newCalls = mockAnalytics.getPlatformStats.mock.calls.length;
+      const newCalls = (mockAnalytics.getPlatformStats as any).mock.calls.length;
 
       // Stop the dashboard to clean up the timer
       dashboard.stop();
@@ -444,20 +482,20 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
         // Toggle off
         await keypressHandler(null, { name: "p" });
         expect(consoleSpy.log).toHaveBeenCalledWith(
-          expect.stringContaining("Auto-refresh disabled")
+          expect.stringContaining("Auto-refresh disabled"),
         );
 
         // Toggle on
         await keypressHandler(null, { name: "p" });
         expect(consoleSpy.log).toHaveBeenCalledWith(
-          expect.stringContaining("Auto-refresh enabled")
+          expect.stringContaining("Auto-refresh enabled"),
         );
       }
     });
@@ -466,20 +504,20 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
         // Increase rate
         await keypressHandler(null, { name: "+" });
         expect(consoleSpy.log).toHaveBeenCalledWith(
-          expect.stringContaining("Refresh rate: 6s")
+          expect.stringContaining("Refresh rate: 6s"),
         );
 
         // Decrease rate
         await keypressHandler(null, { name: "-" });
         expect(consoleSpy.log).toHaveBeenCalledWith(
-          expect.stringContaining("Refresh rate: 5s")
+          expect.stringContaining("Refresh rate: 5s"),
         );
       }
     });
@@ -501,7 +539,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -509,7 +547,7 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("MB") // Database size in MB
+        expect.stringContaining("MB"), // Database size in MB
       );
     });
 
@@ -517,7 +555,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -525,7 +563,7 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("...")
+        expect.stringContaining("..."),
       );
     });
 
@@ -533,7 +571,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -541,7 +579,7 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringMatching(/\d+[smhd] ago/)
+        expect.stringMatching(/\d+[smhd] ago/),
       );
     });
   });
@@ -551,7 +589,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -560,7 +598,7 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringMatching(/[█░]+/) // Progress bar characters
+        expect.stringMatching(/[█░]+/), // Progress bar characters
       );
     });
 
@@ -568,7 +606,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringMatching(/[▁▂▃▄▅▆▇█]+/) // Sparkline characters
+        expect.stringMatching(/[▁▂▃▄▅▆▇█]+/), // Sparkline characters
       );
     });
 
@@ -576,7 +614,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringMatching(/[┌┐└┘─│├┤┬┴┼]+/) // Box characters
+        expect.stringMatching(/[┌┐└┘─│├┤┬┴┼]+/), // Box characters
       );
     });
 
@@ -584,7 +622,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringMatching(/\x1b\[\d+m/) // ANSI color codes
+        expect.stringMatching(/\x1b\[\d+m/), // ANSI color codes
       );
     });
   });
@@ -599,7 +637,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to fetch metrics")
+        expect.stringContaining("Failed to fetch metrics"),
       );
     });
 
@@ -621,7 +659,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -630,7 +668,7 @@ describe("InteractiveDashboard", () => {
 
       // Should render empty platforms view without crashing
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Platform Breakdown")
+        expect.stringContaining("Platform Breakdown"),
       );
     });
   });
@@ -640,7 +678,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -648,7 +686,7 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Detailed View")
+        expect.stringContaining("Detailed View"),
       );
     });
 
@@ -656,7 +694,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -665,7 +703,7 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("REDDIT") // Platform details
+        expect.stringContaining("REDDIT"), // Platform details
       );
     });
 
@@ -673,7 +711,7 @@ describe("InteractiveDashboard", () => {
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -684,7 +722,7 @@ describe("InteractiveDashboard", () => {
       }
 
       expect(consoleSpy.log).toHaveBeenCalledWith(
-        expect.stringContaining("Platform Breakdown")
+        expect.stringContaining("Platform Breakdown"),
       );
     });
   });
@@ -693,10 +731,10 @@ describe("InteractiveDashboard", () => {
     it("should handle manual refresh", async () => {
       await dashboard.start();
 
-      const initialCalls = mockAnalytics.getPlatformStats.mock.calls.length;
+      const initialCalls = (mockAnalytics.getPlatformStats as any).mock.calls.length;
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -704,19 +742,19 @@ describe("InteractiveDashboard", () => {
       }
 
       // After manual refresh, should have more calls
-      const finalCalls = mockAnalytics.getPlatformStats.mock.calls.length;
+      const finalCalls = (mockAnalytics.getPlatformStats as any).mock.calls.length;
 
       // Manual refresh should cause additional platform stats calls (one per platform)
       expect(finalCalls).toBeGreaterThanOrEqual(initialCalls);
     });
 
     it("should show loading indicator during refresh", async () => {
-      const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation();
+      const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
       await dashboard.start();
 
       const keypressHandler = processStdinSpy.on.mock.calls.find(
-        call => call[0] === "keypress"
+        (call: any) => call[0] === "keypress",
       )?.[1];
 
       if (keypressHandler) {
@@ -725,7 +763,7 @@ describe("InteractiveDashboard", () => {
 
       // The loading indicator is written to stdout.write, not console.log
       expect(writeSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Refreshing...")
+        expect.stringContaining("Refreshing..."),
       );
 
       writeSpy.mockRestore();

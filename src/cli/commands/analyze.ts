@@ -3,10 +3,7 @@
  */
 
 import { Command } from "commander";
-import {
-  validatePositiveInt,
-  formatError,
-} from "../validation.js";
+import { validatePositiveInt, formatError } from "../validation.js";
 import { DatabaseManager } from "../../database/database.js";
 import { StatisticsEngine } from "../../analytics/statistics.js";
 import { TrendAnalyzer } from "../../analytics/trend-analyzer.js";
@@ -506,7 +503,9 @@ export function createAnalyzeCommand(): Command {
       console.log(chalk.bold("\n📊 Analytics Cache Statistics"));
       console.log(chalk.gray("─".repeat(50)));
       console.log(`${chalk.cyan("Cache entries:")} ${stats.size}`);
-      console.log(`${chalk.cyan("Total memory:")} ${(stats.totalMemory / 1024).toFixed(2)} KB`);
+      console.log(
+        `${chalk.cyan("Total memory:")} ${(stats.totalMemory / 1024).toFixed(2)} KB`,
+      );
       console.log(`${chalk.cyan("TTL:")} 5 minutes`);
 
       if (stats.entries.length > 0) {
@@ -518,7 +517,8 @@ export function createAnalyzeCommand(): Command {
 
         stats.entries.forEach((entry) => {
           const ageSeconds = Math.floor(entry.age / 1000);
-          const status = ageSeconds < 300 ? chalk.green("Active") : chalk.yellow("Expiring");
+          const status =
+            ageSeconds < 300 ? chalk.green("Active") : chalk.yellow("Expiring");
           table.push([
             entry.key.substring(0, 50) + (entry.key.length > 50 ? "..." : ""),
             ageSeconds,
@@ -534,7 +534,7 @@ export function createAnalyzeCommand(): Command {
     }
 
     // If no subcommand is provided, show help
-    if (!process.argv.slice(3).some(arg => !arg.startsWith('-'))) {
+    if (!process.argv.slice(3).some((arg) => !arg.startsWith("-"))) {
       command.outputHelp();
     }
   });
@@ -556,9 +556,10 @@ async function handleStatistics(parentOpts: any, options: any): Promise<void> {
     };
 
     // Check cache if enabled (and not explicitly disabled with --no-cache)
-    const cacheKey = parentOpts.cache && !parentOpts.noCache
-      ? getCacheKey("statistics", mergedOptions)
-      : null;
+    const cacheKey =
+      parentOpts.cache && !parentOpts.noCache
+        ? getCacheKey("statistics", mergedOptions)
+        : null;
     if (cacheKey) {
       const cached = analyticsCache.get(cacheKey);
       if (cached) {
@@ -697,9 +698,10 @@ async function handleTrends(parentOpts: any, options: any): Promise<void> {
     };
 
     // Check cache if enabled (and not explicitly disabled with --no-cache)
-    const cacheKey = parentOpts.cache && !parentOpts.noCache
-      ? getCacheKey("trends", mergedOptions)
-      : null;
+    const cacheKey =
+      parentOpts.cache && !parentOpts.noCache
+        ? getCacheKey("trends", mergedOptions)
+        : null;
     if (cacheKey) {
       const cached = analyticsCache.get(cacheKey);
       if (cached) {

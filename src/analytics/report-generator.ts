@@ -514,7 +514,7 @@ export class ReportGenerator {
 ${insights.summary}
 
 ## Key Performance Indicators
-${kpis.map(kpi => `- **${kpi.name}**: ${kpi.value} ${kpi.trend}`).join("\n")}
+${kpis.map((kpi) => `- **${kpi.name}**: ${kpi.value} ${kpi.trend}`).join("\n")}
 
 ## Critical Metrics
 - Total Posts: ${this.formatNumber(overview.totalPosts)}
@@ -534,7 +534,7 @@ ${Array.from(metrics.platformBreakdown.entries())
   .join("\n")}
 
 ## Key Trends & Insights
-${trends.map(trend => `- ${trend}`).join("\n")}
+${trends.map((trend) => `- ${trend}`).join("\n")}
 
 ## Data Health Status
 - Database Size: ${this.formatBytes(metrics.health.databaseSize)}
@@ -543,7 +543,10 @@ ${trends.map(trend => `- ${trend}`).join("\n")}
 - Data Gaps: ${metrics.health.gaps.length === 0 ? "✅ None detected" : `⚠️ ${metrics.health.gaps.length} periods`}
 
 ## Strategic Recommendations
-${insights.recommendations.slice(0, 3).map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
+${insights.recommendations
+  .slice(0, 3)
+  .map((rec, i) => `${i + 1}. ${rec}`)
+  .join("\n")}
 `;
 
     return {
@@ -716,10 +719,10 @@ ${trending.predictions
 ${insights.priorities.map((action, i) => `${i + 1}. **${action.title}**\n   ${action.description}\n   *Impact: ${action.impact} | Effort: ${action.effort}*`).join("\n\n")}
 
 ## Optimization Opportunities
-${insights.optimizations.map(opt => `- ${opt}`).join("\n")}
+${insights.optimizations.map((opt) => `- ${opt}`).join("\n")}
 
 ## Risk Mitigation
-${insights.risks.map(risk => `- **${risk.type}**: ${risk.action}`).join("\n")}
+${insights.risks.map((risk) => `- **${risk.type}**: ${risk.action}`).join("\n")}
 
 ## Long-term Strategic Recommendations
 ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
@@ -764,7 +767,8 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
     if (metrics.overview.growthRate < 0) {
       insights.priorities.push({
         title: "Reverse Negative Growth Trend",
-        description: "Implement immediate measures to increase content acquisition and user engagement",
+        description:
+          "Implement immediate measures to increase content acquisition and user engagement",
         impact: "High",
         effort: "Medium",
       });
@@ -773,7 +777,8 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
     if (metrics.health.dataQuality < 70) {
       insights.priorities.push({
         title: "Improve Data Quality",
-        description: "Enhance validation rules and implement data cleansing processes",
+        description:
+          "Enhance validation rules and implement data cleansing processes",
         impact: "High",
         effort: "Low",
       });
@@ -782,7 +787,8 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
     if (performance?.scraping?.errorRate > 10) {
       insights.priorities.push({
         title: "Stabilize Scraping Infrastructure",
-        description: "Review rate limiting, implement retry logic, and optimize connection pooling",
+        description:
+          "Review rate limiting, implement retry logic, and optimize connection pooling",
         impact: "Medium",
         effort: "Medium",
       });
@@ -790,19 +796,29 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
 
     // Optimization opportunities
     if (metrics.overview.avgEngagement < 0.5) {
-      insights.optimizations.push("Increase scraping frequency during peak activity hours");
+      insights.optimizations.push(
+        "Increase scraping frequency during peak activity hours",
+      );
     }
 
     const platforms = Array.from(metrics.platformBreakdown.entries());
-    const underutilized = platforms.filter(([_, stats]) => stats.totalPosts < 100);
+    const underutilized = platforms.filter(
+      ([_, stats]) => stats.totalPosts < 100,
+    );
     if (underutilized.length > 0) {
-      insights.optimizations.push(`Expand coverage for underutilized platforms: ${underutilized.map(p => p[0]).join(", ")}`);
+      insights.optimizations.push(
+        `Expand coverage for underutilized platforms: ${underutilized.map((p) => p[0]).join(", ")}`,
+      );
     }
 
     if (metrics.timeSeries.length > 0) {
-      const avgScore = metrics.timeSeries.reduce((sum, t) => sum + t.avgScore, 0) / metrics.timeSeries.length;
+      const avgScore =
+        metrics.timeSeries.reduce((sum, t) => sum + t.avgScore, 0) /
+        metrics.timeSeries.length;
       if (avgScore < 20) {
-        insights.optimizations.push("Focus on high-quality content sources to improve average scores");
+        insights.optimizations.push(
+          "Focus on high-quality content sources to improve average scores",
+        );
       }
     }
 
@@ -810,14 +826,16 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
     if (metrics.health.databaseSize > 3000000000) {
       insights.risks.push({
         type: "Storage Capacity",
-        action: "Implement data archiving strategy and optimize database indexes",
+        action:
+          "Implement data archiving strategy and optimize database indexes",
       });
     }
 
     if (metrics.health.gaps.length > 5) {
       insights.risks.push({
         type: "Data Continuity",
-        action: "Set up automated monitoring and alerting for data collection gaps",
+        action:
+          "Set up automated monitoring and alerting for data collection gaps",
       });
     }
 
@@ -829,12 +847,20 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
     }
 
     // Strategic recommendations
-    insights.strategic.push("Develop predictive models to anticipate content trends");
-    insights.strategic.push("Implement real-time analytics dashboard for immediate insights");
-    insights.strategic.push("Create automated reporting workflows for key stakeholders");
+    insights.strategic.push(
+      "Develop predictive models to anticipate content trends",
+    );
+    insights.strategic.push(
+      "Implement real-time analytics dashboard for immediate insights",
+    );
+    insights.strategic.push(
+      "Create automated reporting workflows for key stakeholders",
+    );
 
     if (platforms.length < 3) {
-      insights.strategic.push("Diversify data sources to reduce platform dependency");
+      insights.strategic.push(
+        "Diversify data sources to reduce platform dependency",
+      );
     }
 
     return insights;
@@ -1034,7 +1060,9 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
     } else if (num >= 1000) {
       const formatted = (num / 1000).toFixed(1);
       // Remove decimal if it's .0
-      return formatted.endsWith('.0') ? `${Math.round(num / 1000)}K` : `${formatted}K`;
+      return formatted.endsWith(".0")
+        ? `${Math.round(num / 1000)}K`
+        : `${formatted}K`;
     }
     return num.toString();
   }
@@ -1086,44 +1114,63 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
     const engagement = metrics.overview.avgEngagement;
 
     if (growth > 10 && engagement > 0.7) {
-      insights.summary = "The platform is experiencing strong growth with high user engagement. All key metrics are trending positively.";
+      insights.summary =
+        "The platform is experiencing strong growth with high user engagement. All key metrics are trending positively.";
     } else if (growth > 0 && engagement > 0.5) {
-      insights.summary = "The platform shows steady growth with moderate engagement levels. There are opportunities for optimization.";
+      insights.summary =
+        "The platform shows steady growth with moderate engagement levels. There are opportunities for optimization.";
     } else if (growth < 0) {
-      insights.summary = "The platform is experiencing declining metrics. Immediate attention required to address negative trends.";
+      insights.summary =
+        "The platform is experiencing declining metrics. Immediate attention required to address negative trends.";
     } else {
-      insights.summary = "The platform metrics are stable with room for improvement in growth and engagement strategies.";
+      insights.summary =
+        "The platform metrics are stable with room for improvement in growth and engagement strategies.";
     }
 
     // Generate recommendations
     if (growth < 5) {
-      insights.recommendations.push("Increase content acquisition frequency to drive growth");
+      insights.recommendations.push(
+        "Increase content acquisition frequency to drive growth",
+      );
     }
     if (engagement < 0.6) {
-      insights.recommendations.push("Implement engagement optimization strategies to improve user interaction");
+      insights.recommendations.push(
+        "Implement engagement optimization strategies to improve user interaction",
+      );
     }
     if (metrics.health.dataQuality < 80) {
-      insights.recommendations.push("Improve data collection processes to enhance data quality");
+      insights.recommendations.push(
+        "Improve data collection processes to enhance data quality",
+      );
     }
     if (metrics.health.gaps.length > 0) {
-      insights.recommendations.push("Address data collection gaps to ensure comprehensive analytics");
+      insights.recommendations.push(
+        "Address data collection gaps to ensure comprehensive analytics",
+      );
     }
 
     // Platform-specific recommendations
     const platforms = Array.from(metrics.platformBreakdown.entries());
-    const underperformingPlatforms = platforms.filter(([_, stats]) => stats.avgScore < 10);
+    const underperformingPlatforms = platforms.filter(
+      ([_, stats]) => stats.avgScore < 10,
+    );
     if (underperformingPlatforms.length > 0) {
-      insights.recommendations.push(`Focus on improving performance for: ${underperformingPlatforms.map(p => p[0]).join(", ")}`);
+      insights.recommendations.push(
+        `Focus on improving performance for: ${underperformingPlatforms.map((p) => p[0]).join(", ")}`,
+      );
     }
 
     // Identify risks
     if (growth < -5) {
-      insights.risks.push("Significant decline in growth rate requires immediate intervention");
+      insights.risks.push(
+        "Significant decline in growth rate requires immediate intervention",
+      );
     }
     if (metrics.health.dataQuality < 60) {
       insights.risks.push("Poor data quality may impact analytics accuracy");
     }
-    if (metrics.health.databaseSize > 5000000000) { // 5GB
+    if (metrics.health.databaseSize > 5000000000) {
+      // 5GB
       insights.risks.push("Database size approaching critical levels");
     }
 
@@ -1141,9 +1188,10 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
     const kpis = [];
 
     // Content velocity
-    const contentVelocity = metrics.timeSeries.length > 0
-      ? metrics.timeSeries[metrics.timeSeries.length - 1].posts / 24 // posts per hour
-      : 0;
+    const contentVelocity =
+      metrics.timeSeries.length > 0
+        ? metrics.timeSeries[metrics.timeSeries.length - 1].posts / 24 // posts per hour
+        : 0;
     kpis.push({
       name: "Content Velocity",
       value: `${contentVelocity.toFixed(1)}/hr`,
@@ -1168,7 +1216,8 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
     });
 
     // Data freshness
-    const hoursSinceUpdate = (Date.now() - metrics.health.lastUpdate.getTime()) / (1000 * 60 * 60);
+    const hoursSinceUpdate =
+      (Date.now() - metrics.health.lastUpdate.getTime()) / (1000 * 60 * 60);
     const freshnessScore = Math.max(0, 100 - hoursSinceUpdate * 2);
     kpis.push({
       name: "Data Freshness",
@@ -1208,10 +1257,13 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
     }
 
     // Platform trends
-    const topPlatform = Array.from(metrics.platformBreakdown.entries())
-      .sort((a, b) => b[1].totalPosts - a[1].totalPosts)[0];
+    const topPlatform = Array.from(metrics.platformBreakdown.entries()).sort(
+      (a, b) => b[1].totalPosts - a[1].totalPosts,
+    )[0];
     if (topPlatform) {
-      trends.push(`🏆 ${topPlatform[0]} is the dominant platform with ${this.formatNumber(topPlatform[1].totalPosts)} posts`);
+      trends.push(
+        `🏆 ${topPlatform[0]} is the dominant platform with ${this.formatNumber(topPlatform[1].totalPosts)} posts`,
+      );
     }
 
     // Time series trends
@@ -1251,7 +1303,7 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
       includeDistributions?: boolean;
       includeCorrelations?: boolean;
       includePredictions?: boolean;
-    }
+    },
   ): string {
     const opts = {
       includeStatistics: true,
@@ -1325,13 +1377,13 @@ ${insights.strategic.map((rec, i) => `${i + 1}. ${rec}`).join("\n")}
     return `# Distribution Analysis
 
 ## Platform Distribution
-${distributions.platforms.map(p => `- **${p.platform}**: ${p.percentage.toFixed(1)}% (${this.formatNumber(p.count)} items)`).join("\n")}
+${distributions.platforms.map((p) => `- **${p.platform}**: ${p.percentage.toFixed(1)}% (${this.formatNumber(p.count)} items)`).join("\n")}
 
 ## Temporal Distribution
-${distributions.temporal.map(t => `- **${t.period}**: ${t.percentage.toFixed(1)}% activity`).join("\n")}
+${distributions.temporal.map((t) => `- **${t.period}**: ${t.percentage.toFixed(1)}% activity`).join("\n")}
 
 ## Engagement Distribution
-${distributions.engagement.map(e => `- **${e.range}**: ${e.percentage.toFixed(1)}% of content`).join("\n")}
+${distributions.engagement.map((e) => `- **${e.range}**: ${e.percentage.toFixed(1)}% of content`).join("\n")}
 
 ## Score Distribution
 \`\`\`
@@ -1348,10 +1400,10 @@ ${this.createHistogram(distributions.scores, 10)}
     return `# Correlation Analysis
 
 ## Strong Positive Correlations
-${correlations.strong.positive.map(c => `- ${c.var1} ↔️ ${c.var2}: ${c.value.toFixed(3)}`).join("\n")}
+${correlations.strong.positive.map((c) => `- ${c.var1} ↔️ ${c.var2}: ${c.value.toFixed(3)}`).join("\n")}
 
 ## Strong Negative Correlations
-${correlations.strong.negative.map(c => `- ${c.var1} ↔️ ${c.var2}: ${c.value.toFixed(3)}`).join("\n")}
+${correlations.strong.negative.map((c) => `- ${c.var1} ↔️ ${c.var2}: ${c.value.toFixed(3)}`).join("\n")}
 
 ## Key Insights
 ${correlations.insights.map((insight, i) => `${i + 1}. ${insight}`).join("\n")}`;
@@ -1374,14 +1426,14 @@ ${correlations.insights.map((insight, i) => `${i + 1}. ${insight}`).join("\n")}`
 ${predictions.outcomes.map((outcome, i) => `${i + 1}. ${outcome}`).join("\n")}
 
 ## Risk Factors
-${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (${r.impact} impact)`).join("\n")}`;
+${predictions.risks.map((r) => `- **${r.factor}**: ${r.probability}% probability (${r.impact} impact)`).join("\n")}`;
   }
 
   /**
    * Calculate comprehensive statistics
    */
   private calculateStatistics(metrics: DashboardMetrics): any {
-    const scores = metrics.timeSeries.map(t => t.avgScore);
+    const scores = metrics.timeSeries.map((t) => t.avgScore);
 
     if (scores.length === 0) {
       return this.getDefaultStatistics();
@@ -1392,19 +1444,23 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
 
     // Central tendency
     const mean = scores.reduce((a, b) => a + b, 0) / n;
-    const median = n % 2 === 0
-      ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
-      : sorted[Math.floor(n / 2)];
+    const median =
+      n % 2 === 0
+        ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+        : sorted[Math.floor(n / 2)];
 
     // Mode (simplified - most frequent score)
     const frequency = {};
-    scores.forEach(s => frequency[s] = (frequency[s] || 0) + 1);
-    const mode = Number(Object.keys(frequency).reduce((a, b) =>
-      frequency[a] > frequency[b] ? a : b
-    ));
+    scores.forEach((s) => (frequency[s] = (frequency[s] || 0) + 1));
+    const mode = Number(
+      Object.keys(frequency).reduce((a, b) =>
+        frequency[a] > frequency[b] ? a : b,
+      ),
+    );
 
     // Dispersion
-    const variance = scores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / n;
+    const variance =
+      scores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / n;
     const stdDev = Math.sqrt(variance);
 
     // Percentiles
@@ -1420,7 +1476,7 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
     const m3 = scores.reduce((sum, s) => sum + Math.pow(s - mean, 3), 0) / n;
     const m4 = scores.reduce((sum, s) => sum + Math.pow(s - mean, 4), 0) / n;
     const skewness = stdDev > 0 ? m3 / Math.pow(stdDev, 3) : 0;
-    const kurtosis = stdDev > 0 ? (m4 / Math.pow(stdDev, 4)) - 3 : 0;
+    const kurtosis = stdDev > 0 ? m4 / Math.pow(stdDev, 4) - 3 : 0;
 
     return {
       meanScore: mean,
@@ -1482,7 +1538,10 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
    */
   private analyzeDistributions(metrics: DashboardMetrics): any {
     const platforms = Array.from(metrics.platformBreakdown.entries());
-    const totalPosts = platforms.reduce((sum, [_, stats]) => sum + stats.totalPosts, 0);
+    const totalPosts = platforms.reduce(
+      (sum, [_, stats]) => sum + stats.totalPosts,
+      0,
+    );
 
     return {
       platforms: platforms.map(([platform, stats]) => ({
@@ -1492,7 +1551,7 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
       })),
       temporal: this.analyzeTemporalDistribution(metrics.timeSeries),
       engagement: this.analyzeEngagementDistribution(metrics),
-      scores: metrics.timeSeries.map(t => t.avgScore),
+      scores: metrics.timeSeries.map((t) => t.avgScore),
     };
   }
 
@@ -1505,7 +1564,7 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
     const hourly = new Array(24).fill(0);
     const daily = new Array(7).fill(0);
 
-    timeSeries.forEach(item => {
+    timeSeries.forEach((item) => {
       const date = new Date(item.timestamp);
       hourly[date.getHours()]++;
       daily[date.getDay()]++;
@@ -1515,7 +1574,10 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
     const maxDaily = Math.max(...daily);
 
     return [
-      { period: "Peak Hour", percentage: (maxHourly / timeSeries.length) * 100 },
+      {
+        period: "Peak Hour",
+        percentage: (maxHourly / timeSeries.length) * 100,
+      },
       { period: "Peak Day", percentage: (maxDaily / timeSeries.length) * 100 },
     ];
   }
@@ -1528,7 +1590,10 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
 
     return [
       { range: "High (>0.7)", percentage: engagement > 0.7 ? 100 : 0 },
-      { range: "Medium (0.4-0.7)", percentage: engagement >= 0.4 && engagement <= 0.7 ? 100 : 0 },
+      {
+        range: "Medium (0.4-0.7)",
+        percentage: engagement >= 0.4 && engagement <= 0.7 ? 100 : 0,
+      },
       { range: "Low (<0.4)", percentage: engagement < 0.4 ? 100 : 0 },
     ];
   }
@@ -1545,7 +1610,7 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
     const binWidth = range / bins;
 
     const histogram = new Array(bins).fill(0);
-    data.forEach(value => {
+    data.forEach((value) => {
       const binIndex = Math.min(Math.floor((value - min) / binWidth), bins - 1);
       histogram[binIndex]++;
     });
@@ -1553,12 +1618,14 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
     const maxCount = Math.max(...histogram);
     const scale = 40 / maxCount;
 
-    return histogram.map((count, i) => {
-      const start = (min + i * binWidth).toFixed(1);
-      const end = (min + (i + 1) * binWidth).toFixed(1);
-      const bar = "█".repeat(Math.round(count * scale));
-      return `${start.padStart(6)}-${end.padEnd(6)} | ${bar} (${count})`;
-    }).join("\n");
+    return histogram
+      .map((count, i) => {
+        const start = (min + i * binWidth).toFixed(1);
+        const end = (min + (i + 1) * binWidth).toFixed(1);
+        const bar = "█".repeat(Math.round(count * scale));
+        return `${start.padStart(6)}-${end.padEnd(6)} | ${bar} (${count})`;
+      })
+      .join("\n");
   }
 
   /**
@@ -1577,11 +1644,15 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
         var2: "Comments",
         value: 0.85,
       });
-      correlations.insights.push("Strong positive correlation between post count and comment activity");
+      correlations.insights.push(
+        "Strong positive correlation between post count and comment activity",
+      );
     }
 
     if (metrics.overview.avgEngagement > 0.6) {
-      correlations.insights.push("High engagement correlates with content quality");
+      correlations.insights.push(
+        "High engagement correlates with content quality",
+      );
     }
 
     return correlations;
@@ -1595,10 +1666,13 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
 
     return {
       growth: {
-        week: currentGrowth * 0.7,  // Conservative weekly estimate
-        month: currentGrowth * 2.5,  // Monthly projection
+        week: currentGrowth * 0.7, // Conservative weekly estimate
+        month: currentGrowth * 2.5, // Monthly projection
       },
-      confidence: Math.max(50, Math.min(95, 70 + metrics.health.dataQuality / 4)),
+      confidence: Math.max(
+        50,
+        Math.min(95, 70 + metrics.health.dataQuality / 4),
+      ),
       outcomes: [
         `Expected ${this.formatNumber(metrics.overview.totalPosts * 1.1)} total posts in 30 days`,
         `User base likely to grow by ${(currentGrowth * 0.8).toFixed(1)}%`,
@@ -1634,7 +1708,7 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
       reportType?: "executive" | "detailed" | "technical";
       includeSections?: string[];
       excludeSections?: string[];
-    }
+    },
   ): string {
     const cfg = { ...this.defaultConfig, reportType: "detailed", ...config };
     const sections: ReportSection[] = [];
@@ -1706,13 +1780,13 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
     // Filter sections if specified
     let finalSections = sections;
     if (cfg.includeSections && cfg.includeSections.length > 0) {
-      finalSections = sections.filter(s =>
-        cfg.includeSections.includes(s.title)
+      finalSections = sections.filter((s) =>
+        cfg.includeSections.includes(s.title),
       );
     }
     if (cfg.excludeSections && cfg.excludeSections.length > 0) {
-      finalSections = sections.filter(s =>
-        !cfg.excludeSections.includes(s.title)
+      finalSections = sections.filter(
+        (s) => !cfg.excludeSections.includes(s.title),
       );
     }
 
@@ -1795,7 +1869,10 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
   /**
    * Format as enhanced Markdown
    */
-  private formatAsEnhancedMarkdown(report: GeneratedReport, config: any): string {
+  private formatAsEnhancedMarkdown(
+    report: GeneratedReport,
+    config: any,
+  ): string {
     const lines: string[] = [];
 
     // Enhanced header
@@ -1805,7 +1882,9 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
     lines.push("");
     lines.push(`**Generated:** ${this.formatDate(report.generatedAt, "long")}`);
     lines.push(`**Report Type:** ${report.metadata.reportType || "Standard"}`);
-    lines.push(`**Data Points:** ${this.formatNumber(report.metadata.recordCount || 0)}`);
+    lines.push(
+      `**Data Points:** ${this.formatNumber(report.metadata.recordCount || 0)}`,
+    );
     lines.push("");
     lines.push("---");
     lines.push("");
@@ -1815,7 +1894,9 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
       lines.push("## Table of Contents");
       lines.push("");
       report.sections.forEach((section, index) => {
-        lines.push(`${index + 1}. [${section.title}](#${this.slugify(section.title)})`);
+        lines.push(
+          `${index + 1}. [${section.title}](#${this.slugify(section.title)})`,
+        );
       });
       lines.push("");
       lines.push("---");
@@ -1851,7 +1932,9 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
     lines.push("| Property | Value |");
     lines.push("|----------|-------|");
     lines.push(`| Generated | ${this.formatDate(report.generatedAt, "iso")} |`);
-    lines.push(`| Platforms | ${report.metadata.platforms?.join(", ") || "All"} |`);
+    lines.push(
+      `| Platforms | ${report.metadata.platforms?.join(", ") || "All"} |`,
+    );
     lines.push(`| Format | ${report.format} |`);
     lines.push(`| Version | 2.0 |`);
     lines.push("");
@@ -1885,16 +1968,17 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
       })
       .join("\n");
 
-    const toc = config.reportType !== "executive"
-      ? `
+    const toc =
+      config.reportType !== "executive"
+        ? `
         <nav class="table-of-contents">
           <h3>Table of Contents</h3>
           <ol>
-            ${report.sections.map(s => `<li><a href="#${this.slugify(s.title)}">${s.title}</a></li>`).join("\n")}
+            ${report.sections.map((s) => `<li><a href="#${this.slugify(s.title)}">${s.title}</a></li>`).join("\n")}
           </ol>
         </nav>
       `
-      : "";
+        : "";
 
     return `
 <!DOCTYPE html>
@@ -2195,12 +2279,14 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
       recommendations: {},
     };
 
-    report.sections.forEach(section => {
+    report.sections.forEach((section) => {
       const key = this.slugify(section.title);
       if (section.title.toLowerCase().includes("summary")) {
         structured.summary[key] = section.content;
-      } else if (section.title.toLowerCase().includes("insight") ||
-                 section.title.toLowerCase().includes("recommendation")) {
+      } else if (
+        section.title.toLowerCase().includes("insight") ||
+        section.title.toLowerCase().includes("recommendation")
+      ) {
         structured.insights[key] = section.content;
       } else {
         structured.sections[key] = {
@@ -2220,18 +2306,18 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
    */
   private markdownToHTML(markdown: string): string {
     return markdown
-      .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-      .replace(/^\* (.+)/gim, '<li>$1</li>')
-      .replace(/^- (.+)/gim, '<li>$1</li>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/^/, '<p>')
-      .replace(/$/, '</p>')
+      .replace(/^### (.*$)/gim, "<h3>$1</h3>")
+      .replace(/^## (.*$)/gim, "<h2>$1</h2>")
+      .replace(/^# (.*$)/gim, "<h1>$1</h1>")
+      .replace(/^\* (.+)/gim, "<li>$1</li>")
+      .replace(/^- (.+)/gim, "<li>$1</li>")
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/\n\n/g, "</p><p>")
+      .replace(/^/, "<p>")
+      .replace(/$/, "</p>")
       .replace(/<li>.*<\/li>/s, (match) => `<ul>${match}</ul>`)
-      .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+      .replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>");
   }
 
   /**
@@ -2240,9 +2326,9 @@ ${predictions.risks.map(r => `- **${r.factor}**: ${r.probability}% probability (
   private slugify(text: string): string {
     return text
       .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
       .trim();
   }
 

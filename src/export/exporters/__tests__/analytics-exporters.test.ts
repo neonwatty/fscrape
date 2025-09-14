@@ -5,7 +5,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { AnalyticsJsonExporter } from "../analytics-json-exporter.js";
 import { AnalyticsCsvExporter } from "../analytics-csv-exporter.js";
-import type { PlatformStats, TrendingPost, UserActivity, TimeSeriesData } from "../../../database/analytics.js";
+import type {
+  PlatformStats,
+  TrendingPost,
+  UserActivity,
+  TimeSeriesData,
+} from "../../../database/analytics.js";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -34,18 +39,20 @@ describe("Analytics Exporters", () => {
       });
 
       const testData = {
-        platformStats: [{
-          platform: "reddit" as const,
-          totalPosts: 100,
-          totalComments: 500,
-          totalUsers: 50,
-          avgScore: 25.5,
-          avgPostScore: 30.2,
-          avgCommentScore: 20.8,
-          avgCommentCount: 5,
-          mostActiveUser: { username: "testuser", posts: 10, comments: 50 },
-          lastUpdateTime: new Date(),
-        }] as PlatformStats[],
+        platformStats: [
+          {
+            platform: "reddit" as const,
+            totalPosts: 100,
+            totalComments: 500,
+            totalUsers: 50,
+            avgScore: 25.5,
+            avgPostScore: 30.2,
+            avgCommentScore: 20.8,
+            avgCommentCount: 5,
+            mostActiveUser: { username: "testuser", posts: 10, comments: 50 },
+            lastUpdateTime: new Date(),
+          },
+        ] as PlatformStats[],
         trendingPosts: [
           {
             id: "1",
@@ -86,7 +93,9 @@ describe("Analytics Exporters", () => {
 
       // Check for statistical enhancements
       expect(content.trendingPosts[0].relativePerformance).toBeDefined();
-      expect(content.trendingPosts[0].relativePerformance.percentile).toBeDefined();
+      expect(
+        content.trendingPosts[0].relativePerformance.percentile,
+      ).toBeDefined();
       expect(content.trendingPosts[0].relativePerformance.zScore).toBeDefined();
     });
 
@@ -116,10 +125,16 @@ describe("Analytics Exporters", () => {
       const content = JSON.parse(fs.readFileSync(files[0], "utf-8"));
       expect(content.aggregateStatistics).toBeDefined();
       expect(content.aggregateStatistics.posts).toBeDefined();
-      expect(content.aggregateStatistics.posts.confidenceInterval).toBeDefined();
-      expect(content.aggregateStatistics.posts.confidenceInterval.level).toBe(0.95);
-      expect(content.aggregateStatistics.posts.confidenceInterval.lower).toBeLessThan(
-        content.aggregateStatistics.posts.confidenceInterval.upper
+      expect(
+        content.aggregateStatistics.posts.confidenceInterval,
+      ).toBeDefined();
+      expect(content.aggregateStatistics.posts.confidenceInterval.level).toBe(
+        0.95,
+      );
+      expect(
+        content.aggregateStatistics.posts.confidenceInterval.lower,
+      ).toBeLessThan(
+        content.aggregateStatistics.posts.confidenceInterval.upper,
       );
     });
 
@@ -129,52 +144,58 @@ describe("Analytics Exporters", () => {
       });
 
       const testData = {
-        platformStats: [{
-          platform: "reddit" as const,
-          totalPosts: 100,
-          totalComments: 500,
-          totalUsers: 50,
-          avgScore: 25.5,
-          avgPostScore: 30.2,
-          avgCommentScore: 20.8,
-          avgCommentCount: 5,
-          mostActiveUser: null,
-          lastUpdateTime: new Date(),
-        }] as PlatformStats[],
-        trendingPosts: [{
-          id: "1",
-          title: "Test Post",
-          url: "https://example.com",
-          author: "user1",
-          score: 100,
-          commentCount: 20,
-          hotness: 95.5,
-          createdAt: new Date(),
-          platform: "reddit" as const,
-        }] as TrendingPost[],
-        userActivity: [{
-          username: "testuser",
-          platform: "reddit" as const,
-          postCount: 10,
-          commentCount: 50,
-          totalKarma: 500,
-          avgPostScore: 30,
-          avgCommentScore: 10,
-          firstSeen: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-          lastSeen: new Date(),
-        }] as UserActivity[],
+        platformStats: [
+          {
+            platform: "reddit" as const,
+            totalPosts: 100,
+            totalComments: 500,
+            totalUsers: 50,
+            avgScore: 25.5,
+            avgPostScore: 30.2,
+            avgCommentScore: 20.8,
+            avgCommentCount: 5,
+            mostActiveUser: null,
+            lastUpdateTime: new Date(),
+          },
+        ] as PlatformStats[],
+        trendingPosts: [
+          {
+            id: "1",
+            title: "Test Post",
+            url: "https://example.com",
+            author: "user1",
+            score: 100,
+            commentCount: 20,
+            hotness: 95.5,
+            createdAt: new Date(),
+            platform: "reddit" as const,
+          },
+        ] as TrendingPost[],
+        userActivity: [
+          {
+            username: "testuser",
+            platform: "reddit" as const,
+            postCount: 10,
+            commentCount: 50,
+            totalKarma: 500,
+            avgPostScore: 30,
+            avgCommentScore: 10,
+            firstSeen: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            lastSeen: new Date(),
+          },
+        ] as UserActivity[],
       };
 
       const outputPath = path.join(tempDir, "analytics.json");
       const files = await exporter.export(testData, outputPath);
 
       expect(files.length).toBeGreaterThan(1);
-      expect(files.some(f => f.includes("platform-stats"))).toBe(true);
-      expect(files.some(f => f.includes("trending"))).toBe(true);
-      expect(files.some(f => f.includes("users"))).toBe(true);
-      expect(files.some(f => f.includes("statistics"))).toBe(true);
+      expect(files.some((f) => f.includes("platform-stats"))).toBe(true);
+      expect(files.some((f) => f.includes("trending"))).toBe(true);
+      expect(files.some((f) => f.includes("users"))).toBe(true);
+      expect(files.some((f) => f.includes("statistics"))).toBe(true);
 
-      files.forEach(file => {
+      files.forEach((file) => {
         expect(fs.existsSync(file)).toBe(true);
       });
     });
@@ -283,18 +304,20 @@ describe("Analytics Exporters", () => {
       });
 
       const testData = {
-        platformStats: [{
-          platform: "reddit" as const,
-          totalPosts: 100,
-          totalComments: 500,
-          totalUsers: 50,
-          avgScore: 25.5,
-          avgPostScore: 30.2,
-          avgCommentScore: 20.8,
-          avgCommentCount: 5,
-          mostActiveUser: null,
-          lastUpdateTime: new Date(),
-        }] as PlatformStats[],
+        platformStats: [
+          {
+            platform: "reddit" as const,
+            totalPosts: 100,
+            totalComments: 500,
+            totalUsers: 50,
+            avgScore: 25.5,
+            avgPostScore: 30.2,
+            avgCommentScore: 20.8,
+            avgCommentCount: 5,
+            mostActiveUser: null,
+            lastUpdateTime: new Date(),
+          },
+        ] as PlatformStats[],
         trendingPosts: Array.from({ length: 20 }, (_, i) => ({
           id: `post-${i}`,
           title: `Post ${i}`,
@@ -313,7 +336,7 @@ describe("Analytics Exporters", () => {
 
       // Should create multiple files including summary
       expect(files.length).toBeGreaterThan(1);
-      const summaryFile = files.find(f => f.includes("summary-stats"));
+      const summaryFile = files.find((f) => f.includes("summary-stats"));
       expect(summaryFile).toBeDefined();
 
       if (summaryFile) {
@@ -336,17 +359,19 @@ describe("Analytics Exporters", () => {
       });
 
       const testData = {
-        trendingPosts: [{
-          id: "1",
-          title: "Test Post",
-          url: "https://example.com",
-          author: "user1",
-          score: 123.456789,
-          commentCount: 20,
-          hotness: 95.123456,
-          createdAt: new Date(),
-          platform: "reddit" as const,
-        }] as TrendingPost[],
+        trendingPosts: [
+          {
+            id: "1",
+            title: "Test Post",
+            url: "https://example.com",
+            author: "user1",
+            score: 123.456789,
+            commentCount: 20,
+            hotness: 95.123456,
+            createdAt: new Date(),
+            platform: "reddit" as const,
+          },
+        ] as TrendingPost[],
       };
 
       const outputPath = path.join(tempDir, "formatted.csv");
@@ -400,7 +425,9 @@ describe("Analytics Exporters", () => {
       const csvContent = fs.readFileSync(csvFiles[0], "utf-8");
 
       expect(jsonContent.trendingPosts).toHaveLength(5);
-      expect(csvContent.split("\n").filter(line => line.trim())).toHaveLength(6); // Header + 5 rows
+      expect(csvContent.split("\n").filter((line) => line.trim())).toHaveLength(
+        6,
+      ); // Header + 5 rows
     });
   });
 });

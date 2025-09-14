@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { CachedAnalytics } from "../cached-analytics.js";
 import type { DatabaseAnalytics } from "../../database/analytics.js";
+import type { Platform } from "../../types/core.js";
 
 describe("CachedAnalytics", () => {
   let mockAnalytics: DatabaseAnalytics;
@@ -28,14 +29,20 @@ describe("CachedAnalytics", () => {
         { id: "2", title: "Post 2", score: 80 },
       ]),
       getTimeSeriesData: vi.fn().mockReturnValue([
-        { timestamp: new Date(), posts: 10, comments: 50, users: 5, avgScore: 20 },
+        {
+          timestamp: new Date(),
+          posts: 10,
+          comments: 50,
+          users: 5,
+          avgScore: 20,
+        },
       ]),
-      getTopAuthors: vi.fn().mockReturnValue([
-        { username: "user1", karma: 1000, posts: 50 },
-      ]),
-      getMostEngagedPosts: vi.fn().mockReturnValue([
-        { id: "1", title: "Engaged Post", engagement: 0.8 },
-      ]),
+      getTopAuthors: vi
+        .fn()
+        .mockReturnValue([{ username: "user1", karma: 1000, posts: 50 }]),
+      getMostEngagedPosts: vi
+        .fn()
+        .mockReturnValue([{ id: "1", title: "Engaged Post", engagement: 0.8 }]),
       getPostsByDateRange: vi.fn().mockReturnValue([]),
       getDatabaseHealth: vi.fn().mockReturnValue({
         databaseSize: 1000000,
@@ -100,8 +107,16 @@ describe("CachedAnalytics", () => {
       const start = new Date("2024-01-01");
       const end = new Date("2024-01-31");
 
-      const result1 = cachedAnalytics.getTimeSeriesData("reddit", start, end, "daily");
-      const result2 = cachedAnalytics.getTimeSeriesData("reddit", start, end, "daily");
+      const result1 = cachedAnalytics.getTimeSeriesData(
+        "reddit",
+        start,
+        end,
+      );
+      const result2 = cachedAnalytics.getTimeSeriesData(
+        "reddit",
+        start,
+        end,
+      );
 
       expect(result1).toBe(result2);
       expect(mockAnalytics.getTimeSeriesData).toHaveBeenCalledTimes(1);
@@ -213,8 +228,8 @@ describe("CachedAnalytics", () => {
       // Add 4 items, oldest should be evicted
       limitedCache.getPlatformStats("reddit");
       limitedCache.getPlatformStats("hackernews");
-      limitedCache.getPlatformStats("twitter");
-      limitedCache.getPlatformStats("facebook");
+      limitedCache.getPlatformStats("discourse");
+      limitedCache.getPlatformStats("lemmy");
 
       // Access first item again - should cause new fetch
       limitedCache.getPlatformStats("reddit");
@@ -230,13 +245,13 @@ describe("CachedAnalytics", () => {
 
       lruCache.getPlatformStats("reddit");
       lruCache.getPlatformStats("hackernews");
-      lruCache.getPlatformStats("twitter");
+      lruCache.getPlatformStats("discourse");
 
       // Access reddit again - moves to front
       lruCache.getPlatformStats("reddit");
 
       // Add new item - hackernews should be evicted
-      lruCache.getPlatformStats("facebook");
+      lruCache.getPlatformStats("lemmy");
       lruCache.getPlatformStats("hackernews");
 
       expect(mockAnalytics.getPlatformStats).toHaveBeenCalledTimes(5);
@@ -355,13 +370,14 @@ describe("CachedAnalytics", () => {
   describe("Conditional Caching", () => {
     it("should skip caching based on condition", () => {
       const conditionalCache = new CachedAnalytics(mockAnalytics, {
-        shouldCache: (method, args, result) => {
+        shouldCache: (method: string, args: any[], result: any) => {
           // Only cache if result has data
           return result && result.length > 0;
         },
       });
 
-      mockAnalytics.getTrendingPosts = vi.fn()
+      mockAnalytics.getTrendingPosts = vi
+        .fn()
         .mockReturnValueOnce([])
         .mockReturnValueOnce([{ id: "1", title: "Post" }]);
 
@@ -428,7 +444,9 @@ describe("CachedAnalytics", () => {
       vi.advanceTimersByTime(5100);
 
       expect(mockAnalytics.getPlatformStats).toHaveBeenCalledWith("reddit");
-      expect(mockAnalytics.getPlatformStats).not.toHaveBeenCalledWith("hackernews");
+      expect(mockAnalytics.getPlatformStats).not.toHaveBeenCalledWith(
+        "hackernews",
+      );
 
       bgCache.stopBackgroundRefresh();
     });
@@ -436,7 +454,8 @@ describe("CachedAnalytics", () => {
 
   describe("Error Handling", () => {
     it("should not cache errors by default", () => {
-      mockAnalytics.getPlatformStats = vi.fn()
+      mockAnalytics.getPlatformStats = vi
+        .fn()
         .mockImplementationOnce(() => {
           throw new Error("Network error");
         })
@@ -455,10 +474,9 @@ describe("CachedAnalytics", () => {
         errorTTL: 1000,
       });
 
-      mockAnalytics.getPlatformStats = vi.fn()
-        .mockImplementationOnce(() => {
-          throw new Error("Network error");
-        });
+      mockAnalytics.getPlatformStats = vi.fn().mockImplementationOnce(() => {
+        throw new Error("Network error");
+      });
 
       expect(() => errorCache.getPlatformStats("reddit")).toThrow();
       expect(() => errorCache.getPlatformStats("reddit")).toThrow();
@@ -497,12 +515,23 @@ describe("CachedAnalytics", () => {
       let callCount = 0;
       mockAnalytics.getPlatformStats = vi.fn(() => {
         callCount++;
-        return { platform: "reddit", totalPosts: 100 };
+        return {
+          platform: "reddit" as Platform,
+          totalPosts: 100,
+          totalComments: 200,
+          totalUsers: 50,
+          avgScore: 10.5,
+          avgPostScore: 15.0,
+          avgCommentScore: 5.5,
+          avgCommentCount: 2.0,
+          mostActiveUser: { username: "user1", posts: 10, comments: 20 },
+          lastUpdateTime: new Date(),
+        };
       });
 
       // Make multiple concurrent requests
       const promises = Array.from({ length: 10 }, () =>
-        Promise.resolve(cachedAnalytics.getPlatformStats("reddit"))
+        Promise.resolve(cachedAnalytics.getPlatformStats("reddit")),
       );
 
       return Promise.all(promises).then(() => {

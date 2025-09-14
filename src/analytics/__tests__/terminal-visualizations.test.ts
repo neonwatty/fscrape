@@ -79,9 +79,13 @@ describe("Terminal Visualizations", () => {
 
     it("should show distribution box plot when not minimal", () => {
       const data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-      const summary = visualizer.createStatisticalSummary(data, "Distribution", {
-        style: "simple",
-      });
+      const summary = visualizer.createStatisticalSummary(
+        data,
+        "Distribution",
+        {
+          style: "simple",
+        },
+      );
 
       expect(summary).toContain("Distribution:");
       expect(summary).toContain("├"); // Box plot start
@@ -178,12 +182,7 @@ describe("Terminal Visualizations", () => {
           { label: "Users", value: 1000, change: 5.2 },
           { label: "Revenue", value: 50000, change: -2.1 },
         ],
-        chart: [
-          { value: 10 },
-          { value: 20 },
-          { value: 15 },
-          { value: 25 },
-        ],
+        chart: [{ value: 10 }, { value: 20 }, { value: 15 }, { value: 25 }],
         distribution: [10, 20, 30, 40, 50],
       });
 
@@ -233,8 +232,16 @@ describe("Terminal Visualizations", () => {
       ];
 
       const red = visualizer.createColoredOutput("Low Score", 20, thresholds);
-      const yellow = visualizer.createColoredOutput("Medium Score", 50, thresholds);
-      const green = visualizer.createColoredOutput("High Score", 80, thresholds);
+      const yellow = visualizer.createColoredOutput(
+        "Medium Score",
+        50,
+        thresholds,
+      );
+      const green = visualizer.createColoredOutput(
+        "High Score",
+        80,
+        thresholds,
+      );
 
       expect(red).toContain("\x1b[31m"); // Red color code
       expect(red).toContain("\x1b[0m"); // Reset code

@@ -214,7 +214,11 @@ export class ExportManager {
     outputPath: string,
     options?: AnalyticsExportOptions,
   ): Promise<{ files: string[]; metadata: any }> {
-    return await this.analyticsExporter.exportReport(report, outputPath, options);
+    return await this.analyticsExporter.exportReport(
+      report,
+      outputPath,
+      options,
+    );
   }
 
   /**
@@ -225,7 +229,11 @@ export class ExportManager {
     outputPath: string,
     options?: AnalyticsExportOptions,
   ): Promise<{ files: string[]; metadata: any }> {
-    return await this.analyticsExporter.exportDashboard(metrics, outputPath, options);
+    return await this.analyticsExporter.exportDashboard(
+      metrics,
+      outputPath,
+      options,
+    );
   }
 
   /**

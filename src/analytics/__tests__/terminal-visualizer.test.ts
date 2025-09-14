@@ -19,12 +19,16 @@ describe("TerminalVisualizer", () => {
     });
 
     it("should accept custom color scheme", () => {
-      const customVisualizer = new TerminalVisualizer({ colorScheme: "vibrant" });
+      const customVisualizer = new TerminalVisualizer({
+        colorScheme: "vibrant",
+      });
       expect(customVisualizer.getColorScheme()).toBe("vibrant");
     });
 
     it("should validate color scheme", () => {
-      const customVisualizer = new TerminalVisualizer({ colorScheme: "invalid" as any });
+      const customVisualizer = new TerminalVisualizer({
+        colorScheme: "invalid" as any,
+      });
       expect(customVisualizer.getColorScheme()).toBe("default");
     });
   });
@@ -241,17 +245,15 @@ describe("TerminalVisualizer", () => {
       const chart = visualizer.createBarChart(data, { maxWidth: 20 });
 
       const lines = chart.split("\n");
-      const smallBar = lines.find(l => l.includes("Small"));
-      const largeBar = lines.find(l => l.includes("Large"));
+      const smallBar = lines.find((l) => l.includes("Small"));
+      const largeBar = lines.find((l) => l.includes("Large"));
 
       expect(smallBar).toBeDefined();
       expect(largeBar).toBeDefined();
     });
 
     it("should show values", () => {
-      const data = [
-        { label: "Test", value: 42 },
-      ];
+      const data = [{ label: "Test", value: 42 }];
       const chart = visualizer.createBarChart(data, {
         showValues: true,
       });
@@ -371,7 +373,9 @@ describe("TerminalVisualizer", () => {
       const lines = box.split("\n");
 
       // Check for padding lines
-      expect(lines.some(l => l.includes("│") && l.trim().length > 2)).toBe(true);
+      expect(lines.some((l) => l.includes("│") && l.trim().length > 2)).toBe(
+        true,
+      );
     });
 
     it("should center content", () => {
@@ -394,7 +398,7 @@ describe("TerminalVisualizer", () => {
     it("should show additions and deletions", () => {
       const diff = visualizer.createDiff(
         ["line1", "line2", "line3"],
-        ["line1", "line2-modified", "line3", "line4"]
+        ["line1", "line2-modified", "line3", "line4"],
       );
 
       expect(diff).toContain("+"); // Addition
@@ -477,10 +481,7 @@ describe("TerminalVisualizer", () => {
 
   describe("Utility Functions", () => {
     it("should truncate text", () => {
-      const truncated = visualizer.truncate(
-        "This is a very long text",
-        10
-      );
+      const truncated = visualizer.truncate("This is a very long text", 10);
       expect(truncated).toBe("This is...");
       expect(truncated.length).toBeLessThanOrEqual(10);
     });
@@ -551,7 +552,7 @@ describe("TerminalVisualizer", () => {
       });
 
       const lines = box.split("\n");
-      lines.forEach(line => {
+      lines.forEach((line) => {
         expect(line.length).toBeLessThanOrEqual(80);
       });
     });
@@ -559,7 +560,7 @@ describe("TerminalVisualizer", () => {
     it("should handle null and undefined", () => {
       const table = visualizer.createTable(
         [{ value: null }, { value: undefined }],
-        ["value"]
+        ["value"],
       );
 
       expect(table).not.toContain("null");

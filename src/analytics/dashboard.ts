@@ -1249,7 +1249,12 @@ export class AnalyticsDashboard {
 export class InteractiveDashboard {
   private dashboard: AnalyticsDashboard;
   private rl?: readline.Interface;
-  private currentView: "overview" | "platforms" | "trending" | "performance" | "details" = "overview";
+  private currentView:
+    | "overview"
+    | "platforms"
+    | "trending"
+    | "performance"
+    | "details" = "overview";
   private selectedPlatform?: Platform;
   private selectedIndex = 0;
   private refreshInterval = 5000; // 5 seconds default
@@ -1261,15 +1266,15 @@ export class InteractiveDashboard {
 
   // UI Configuration
   private readonly colors = {
-    header: "\x1b[36m",    // Cyan
-    success: "\x1b[32m",   // Green
-    warning: "\x1b[33m",   // Yellow
-    error: "\x1b[31m",     // Red
-    info: "\x1b[34m",      // Blue
-    reset: "\x1b[0m",      // Reset
-    bold: "\x1b[1m",       // Bold
-    dim: "\x1b[2m",        // Dim
-    inverse: "\x1b[7m",    // Inverse
+    header: "\x1b[36m", // Cyan
+    success: "\x1b[32m", // Green
+    warning: "\x1b[33m", // Yellow
+    error: "\x1b[31m", // Red
+    info: "\x1b[34m", // Blue
+    reset: "\x1b[0m", // Reset
+    bold: "\x1b[1m", // Bold
+    dim: "\x1b[2m", // Dim
+    inverse: "\x1b[7m", // Inverse
   };
 
   private readonly boxChars = {
@@ -1454,7 +1459,13 @@ export class InteractiveDashboard {
   }
 
   private handleNavigateLeft(): void {
-    const views: Array<typeof this.currentView> = ["overview", "platforms", "trending", "performance", "details"];
+    const views: Array<typeof this.currentView> = [
+      "overview",
+      "platforms",
+      "trending",
+      "performance",
+      "details",
+    ];
     const currentIdx = views.indexOf(this.currentView);
     if (currentIdx > 0) {
       this.switchView(views[currentIdx - 1]);
@@ -1462,7 +1473,13 @@ export class InteractiveDashboard {
   }
 
   private handleNavigateRight(): void {
-    const views: Array<typeof this.currentView> = ["overview", "platforms", "trending", "performance", "details"];
+    const views: Array<typeof this.currentView> = [
+      "overview",
+      "platforms",
+      "trending",
+      "performance",
+      "details",
+    ];
     const currentIdx = views.indexOf(this.currentView);
     if (currentIdx < views.length - 1) {
       this.switchView(views[currentIdx + 1]);
@@ -1476,7 +1493,10 @@ export class InteractiveDashboard {
     // Store current state for back navigation
     this.drillDownStack.push({
       view: this.currentView,
-      data: { selectedIndex: this.selectedIndex, selectedPlatform: this.selectedPlatform },
+      data: {
+        selectedIndex: this.selectedIndex,
+        selectedPlatform: this.selectedPlatform,
+      },
     });
 
     // Perform drill-down based on current view and selection
@@ -1489,7 +1509,9 @@ export class InteractiveDashboard {
       case "platforms":
         // Drill into specific platform
         if (this.lastMetrics) {
-          const platforms = Array.from(this.lastMetrics.platformBreakdown.keys());
+          const platforms = Array.from(
+            this.lastMetrics.platformBreakdown.keys(),
+          );
           if (this.selectedIndex < platforms.length) {
             this.selectedPlatform = platforms[this.selectedIndex];
             this.currentView = "details";
@@ -1563,7 +1585,10 @@ export class InteractiveDashboard {
    * Adjust refresh rate
    */
   private adjustRefreshRate(delta: number): void {
-    this.refreshInterval = Math.max(1000, Math.min(60000, this.refreshInterval + delta));
+    this.refreshInterval = Math.max(
+      1000,
+      Math.min(60000, this.refreshInterval + delta),
+    );
     if (this.autoRefreshTimer) {
       this.stopAutoRefresh();
       this.startAutoRefresh();
@@ -1646,13 +1671,23 @@ export class InteractiveDashboard {
     const width = process.stdout.columns || 80;
     const title = "📊 Analytics Dashboard - Interactive Mode";
 
-    console.log(this.colors.header + this.boxChars.topLeft +
-                this.boxChars.horizontal.repeat(width - 2) +
-                this.boxChars.topRight);
-    console.log(this.boxChars.vertical + this.centerText(title, width - 2) + this.boxChars.vertical);
-    console.log(this.boxChars.tLeft +
-                this.boxChars.horizontal.repeat(width - 2) +
-                this.boxChars.tRight + this.colors.reset);
+    console.log(
+      this.colors.header +
+        this.boxChars.topLeft +
+        this.boxChars.horizontal.repeat(width - 2) +
+        this.boxChars.topRight,
+    );
+    console.log(
+      this.boxChars.vertical +
+        this.centerText(title, width - 2) +
+        this.boxChars.vertical,
+    );
+    console.log(
+      this.boxChars.tLeft +
+        this.boxChars.horizontal.repeat(width - 2) +
+        this.boxChars.tRight +
+        this.colors.reset,
+    );
   }
 
   /**
@@ -1667,12 +1702,14 @@ export class InteractiveDashboard {
       { key: "5", label: "Details", view: "details" },
     ];
 
-    const tabStr = tabs.map(tab => {
-      const isActive = tab.view === this.currentView;
-      const color = isActive ? this.colors.inverse : "";
-      const reset = isActive ? this.colors.reset : "";
-      return `${color}[${tab.key}] ${tab.label}${reset}`;
-    }).join("  ");
+    const tabStr = tabs
+      .map((tab) => {
+        const isActive = tab.view === this.currentView;
+        const color = isActive ? this.colors.inverse : "";
+        const reset = isActive ? this.colors.reset : "";
+        return `${color}[${tab.key}] ${tab.label}${reset}`;
+      })
+      .join("  ");
 
     console.log("\n" + tabStr + "\n");
   }
@@ -1685,26 +1722,52 @@ export class InteractiveDashboard {
 
     const m = this.lastMetrics.overview;
     const items = [
-      { label: "Total Posts", value: this.formatNumber(m.totalPosts), selected: this.selectedIndex === 0 },
-      { label: "Total Comments", value: this.formatNumber(m.totalComments), selected: this.selectedIndex === 1 },
-      { label: "Total Users", value: this.formatNumber(m.totalUsers), selected: this.selectedIndex === 2 },
-      { label: "Avg Engagement", value: `${(m.avgEngagement * 100).toFixed(1)}%`, selected: this.selectedIndex === 3 },
-      { label: "Growth Rate", value: `${m.growthRate > 0 ? "+" : ""}${m.growthRate.toFixed(1)}%`, selected: this.selectedIndex === 4 },
+      {
+        label: "Total Posts",
+        value: this.formatNumber(m.totalPosts),
+        selected: this.selectedIndex === 0,
+      },
+      {
+        label: "Total Comments",
+        value: this.formatNumber(m.totalComments),
+        selected: this.selectedIndex === 1,
+      },
+      {
+        label: "Total Users",
+        value: this.formatNumber(m.totalUsers),
+        selected: this.selectedIndex === 2,
+      },
+      {
+        label: "Avg Engagement",
+        value: `${(m.avgEngagement * 100).toFixed(1)}%`,
+        selected: this.selectedIndex === 3,
+      },
+      {
+        label: "Growth Rate",
+        value: `${m.growthRate > 0 ? "+" : ""}${m.growthRate.toFixed(1)}%`,
+        selected: this.selectedIndex === 4,
+      },
     ];
 
-    console.log(this.colors.bold + "📈 Overview Metrics" + this.colors.reset + "\n");
+    console.log(
+      this.colors.bold + "📈 Overview Metrics" + this.colors.reset + "\n",
+    );
 
-    items.forEach(item => {
+    items.forEach((item) => {
       const indicator = item.selected ? "▶ " : "  ";
       const color = item.selected ? this.colors.info : "";
-      console.log(`${indicator}${color}${item.label}: ${item.value}${this.colors.reset}`);
+      console.log(
+        `${indicator}${color}${item.label}: ${item.value}${this.colors.reset}`,
+      );
     });
 
     // Show mini sparkline for time series
     if (this.lastMetrics.timeSeries.length > 0) {
-      console.log("\n" + this.colors.dim + "Recent Activity:" + this.colors.reset);
+      console.log(
+        "\n" + this.colors.dim + "Recent Activity:" + this.colors.reset,
+      );
       const sparkline = this.createSparkline(
-        this.lastMetrics.timeSeries.slice(-20).map(t => t.avgScore)
+        this.lastMetrics.timeSeries.slice(-20).map((t) => t.avgScore),
       );
       console.log(sparkline);
     }
@@ -1716,7 +1779,9 @@ export class InteractiveDashboard {
   private renderPlatforms(): void {
     if (!this.lastMetrics) return;
 
-    console.log(this.colors.bold + "🌐 Platform Breakdown" + this.colors.reset + "\n");
+    console.log(
+      this.colors.bold + "🌐 Platform Breakdown" + this.colors.reset + "\n",
+    );
 
     const platforms = Array.from(this.lastMetrics.platformBreakdown.entries());
     platforms.forEach(([platform, stats], index) => {
@@ -1724,13 +1789,20 @@ export class InteractiveDashboard {
       const indicator = selected ? "▶ " : "  ";
       const color = selected ? this.colors.info : "";
 
-      console.log(`${indicator}${color}${platform.toUpperCase()}${this.colors.reset}`);
-      console.log(`   Posts: ${this.formatNumber(stats.totalPosts)} | Comments: ${this.formatNumber(stats.totalComments)}`);
-      console.log(`   Avg Score: ${stats.avgScore.toFixed(1)} | Users: ${this.formatNumber(stats.totalUsers)}`);
+      console.log(
+        `${indicator}${color}${platform.toUpperCase()}${this.colors.reset}`,
+      );
+      console.log(
+        `   Posts: ${this.formatNumber(stats.totalPosts)} | Comments: ${this.formatNumber(stats.totalComments)}`,
+      );
+      console.log(
+        `   Avg Score: ${stats.avgScore.toFixed(1)} | Users: ${this.formatNumber(stats.totalUsers)}`,
+      );
 
       if (selected) {
         // Show progress bar for this platform
-        const percentage = (stats.totalPosts / this.lastMetrics.overview.totalPosts) * 100;
+        const percentage =
+          (stats.totalPosts / this.lastMetrics.overview.totalPosts) * 100;
         const progressBar = this.createProgressBar(percentage, 30);
         console.log(`   Share: ${progressBar} ${percentage.toFixed(1)}%`);
       }
@@ -1744,7 +1816,9 @@ export class InteractiveDashboard {
   private renderTrending(): void {
     if (!this.lastMetrics) return;
 
-    console.log(this.colors.bold + "🔥 Trending Content" + this.colors.reset + "\n");
+    console.log(
+      this.colors.bold + "🔥 Trending Content" + this.colors.reset + "\n",
+    );
 
     const trending = this.lastMetrics.trending.slice(0, 10);
     trending.forEach((post, index) => {
@@ -1752,15 +1826,22 @@ export class InteractiveDashboard {
       const indicator = selected ? "▶ " : "  ";
       const color = selected ? this.colors.info : "";
 
-      const title = post.title.length > 60
-        ? post.title.substring(0, 57) + "..."
-        : post.title;
+      const title =
+        post.title.length > 60
+          ? post.title.substring(0, 57) + "..."
+          : post.title;
 
-      console.log(`${indicator}${color}${index + 1}. ${title}${this.colors.reset}`);
+      console.log(
+        `${indicator}${color}${index + 1}. ${title}${this.colors.reset}`,
+      );
 
       if (selected) {
-        console.log(`   Score: ${post.score} | Comments: ${post.commentCount} | Author: ${post.author}`);
-        console.log(`   Platform: ${post.platform} | ${this.getRelativeTime(post.createdAt)}`);
+        console.log(
+          `   Score: ${post.score} | Comments: ${post.commentCount} | Author: ${post.author}`,
+        );
+        console.log(
+          `   Platform: ${post.platform} | ${this.getRelativeTime(post.createdAt)}`,
+        );
       }
     });
   }
@@ -1771,7 +1852,9 @@ export class InteractiveDashboard {
   private renderPerformance(): void {
     if (!this.lastMetrics) return;
 
-    console.log(this.colors.bold + "⚡ System Performance" + this.colors.reset + "\n");
+    console.log(
+      this.colors.bold + "⚡ System Performance" + this.colors.reset + "\n",
+    );
 
     const health = this.lastMetrics.health;
     const items = [
@@ -1779,34 +1862,43 @@ export class InteractiveDashboard {
         label: "Database Size",
         value: this.formatBytes(health.databaseSize),
         status: health.databaseSize > 1000000000 ? "warning" : "success",
-        selected: this.selectedIndex === 0
+        selected: this.selectedIndex === 0,
       },
       {
         label: "Data Quality",
         value: `${health.dataQuality}%`,
-        status: health.dataQuality > 80 ? "success" : health.dataQuality > 60 ? "warning" : "error",
-        selected: this.selectedIndex === 1
+        status:
+          health.dataQuality > 80
+            ? "success"
+            : health.dataQuality > 60
+              ? "warning"
+              : "error",
+        selected: this.selectedIndex === 1,
       },
       {
         label: "Last Update",
         value: this.getRelativeTime(health.lastUpdate),
         status: "info",
-        selected: this.selectedIndex === 2
+        selected: this.selectedIndex === 2,
       },
       {
         label: "Data Gaps",
-        value: health.gaps.length === 0 ? "None" : `${health.gaps.length} detected`,
+        value:
+          health.gaps.length === 0 ? "None" : `${health.gaps.length} detected`,
         status: health.gaps.length === 0 ? "success" : "warning",
-        selected: this.selectedIndex === 3
+        selected: this.selectedIndex === 3,
       },
     ];
 
-    items.forEach(item => {
+    items.forEach((item) => {
       const indicator = item.selected ? "▶ " : "  ";
-      const statusColor = this.colors[item.status as keyof typeof this.colors] || "";
+      const statusColor =
+        this.colors[item.status as keyof typeof this.colors] || "";
       const selectedColor = item.selected ? this.colors.info : "";
 
-      console.log(`${indicator}${selectedColor}${item.label}: ${statusColor}${item.value}${this.colors.reset}`);
+      console.log(
+        `${indicator}${selectedColor}${item.label}: ${statusColor}${item.value}${this.colors.reset}`,
+      );
 
       if (item.selected && item.label === "Data Quality") {
         const progressBar = this.createProgressBar(health.dataQuality, 30);
@@ -1819,14 +1911,22 @@ export class InteractiveDashboard {
    * Render details view
    */
   private renderDetails(): void {
-    console.log(this.colors.bold + "📋 Detailed View" + this.colors.reset + "\n");
+    console.log(
+      this.colors.bold + "📋 Detailed View" + this.colors.reset + "\n",
+    );
 
     if (this.selectedPlatform && this.lastMetrics) {
-      const stats = this.lastMetrics.platformBreakdown.get(this.selectedPlatform);
+      const stats = this.lastMetrics.platformBreakdown.get(
+        this.selectedPlatform,
+      );
       if (stats) {
-        console.log(`Platform: ${this.colors.info}${this.selectedPlatform.toUpperCase()}${this.colors.reset}\n`);
+        console.log(
+          `Platform: ${this.colors.info}${this.selectedPlatform.toUpperCase()}${this.colors.reset}\n`,
+        );
         console.log(`Total Posts: ${this.formatNumber(stats.totalPosts)}`);
-        console.log(`Total Comments: ${this.formatNumber(stats.totalComments)}`);
+        console.log(
+          `Total Comments: ${this.formatNumber(stats.totalComments)}`,
+        );
         console.log(`Total Users: ${this.formatNumber(stats.totalUsers)}`);
         console.log(`Average Score: ${stats.avgScore.toFixed(2)}`);
         console.log(`Average Comments: ${stats.avgCommentCount.toFixed(2)}`);
@@ -1841,9 +1941,15 @@ export class InteractiveDashboard {
       }
     } else if (this.lastMetrics) {
       // Show general details
-      console.log("Use arrow keys to navigate and ENTER to drill down into specific metrics.\n");
-      console.log(`Total Metrics Points: ${this.lastMetrics.timeSeries.length}`);
-      console.log(`Platforms Tracked: ${this.lastMetrics.platformBreakdown.size}`);
+      console.log(
+        "Use arrow keys to navigate and ENTER to drill down into specific metrics.\n",
+      );
+      console.log(
+        `Total Metrics Points: ${this.lastMetrics.timeSeries.length}`,
+      );
+      console.log(
+        `Platforms Tracked: ${this.lastMetrics.platformBreakdown.size}`,
+      );
       console.log(`Trending Posts: ${this.lastMetrics.trending.length}`);
     }
   }
@@ -1855,11 +1961,16 @@ export class InteractiveDashboard {
     const width = process.stdout.columns || 80;
     console.log("\n" + this.colors.dim + "─".repeat(width) + this.colors.reset);
 
-    const helpText = "↑↓ Navigate | ← → Switch View | Enter: Select | B: Back | R: Refresh | H: Help | Q: Quit";
-    console.log(this.colors.dim + this.centerText(helpText, width) + this.colors.reset);
+    const helpText =
+      "↑↓ Navigate | ← → Switch View | Enter: Select | B: Back | R: Refresh | H: Help | Q: Quit";
+    console.log(
+      this.colors.dim + this.centerText(helpText, width) + this.colors.reset,
+    );
 
-    const statusText = `Auto-refresh: ${this.autoRefreshTimer ? `ON (${this.refreshInterval/1000}s)` : "OFF"} | Press P to toggle`;
-    console.log(this.colors.dim + this.centerText(statusText, width) + this.colors.reset);
+    const statusText = `Auto-refresh: ${this.autoRefreshTimer ? `ON (${this.refreshInterval / 1000}s)` : "OFF"} | Press P to toggle`;
+    console.log(
+      this.colors.dim + this.centerText(statusText, width) + this.colors.reset,
+    );
   }
 
   /**
@@ -1867,7 +1978,9 @@ export class InteractiveDashboard {
    */
   private showHelp(): void {
     this.clearScreen();
-    console.log(this.colors.header + "📚 Dashboard Help" + this.colors.reset + "\n");
+    console.log(
+      this.colors.header + "📚 Dashboard Help" + this.colors.reset + "\n",
+    );
 
     const helpItems = [
       { key: "↑/↓", desc: "Navigate up/down in lists" },
@@ -1882,8 +1995,10 @@ export class InteractiveDashboard {
       { key: "Q/Esc", desc: "Quit dashboard" },
     ];
 
-    helpItems.forEach(item => {
-      console.log(`  ${this.colors.info}${item.key.padEnd(10)}${this.colors.reset} ${item.desc}`);
+    helpItems.forEach((item) => {
+      console.log(
+        `  ${this.colors.info}${item.key.padEnd(10)}${this.colors.reset} ${item.desc}`,
+      );
     });
 
     console.log("\nPress any key to return...");
@@ -1902,7 +2017,11 @@ export class InteractiveDashboard {
   private showWelcomeScreen(): void {
     const width = process.stdout.columns || 80;
     console.log(this.colors.header + "═".repeat(width) + this.colors.reset);
-    console.log(this.colors.bold + this.centerText("Welcome to Interactive Analytics Dashboard", width) + this.colors.reset);
+    console.log(
+      this.colors.bold +
+        this.centerText("Welcome to Interactive Analytics Dashboard", width) +
+        this.colors.reset,
+    );
     console.log(this.colors.header + "═".repeat(width) + this.colors.reset);
     console.log("\nLoading metrics...\n");
   }
@@ -1922,12 +2041,19 @@ export class InteractiveDashboard {
   private showNotification(message: string): void {
     const width = process.stdout.columns || 80;
     const notification = `[${message}]`;
-    console.log("\n" + this.colors.success + this.centerText(notification, width) + this.colors.reset);
+    console.log(
+      "\n" +
+        this.colors.success +
+        this.centerText(notification, width) +
+        this.colors.reset,
+    );
     setTimeout(() => this.render(), 1500);
   }
 
   private showError(message: string): void {
-    console.log(this.colors.error + `\n❌ Error: ${message}` + this.colors.reset);
+    console.log(
+      this.colors.error + `\n❌ Error: ${message}` + this.colors.reset,
+    );
   }
 
   private formatNumber(num: number): string {
@@ -1968,7 +2094,13 @@ export class InteractiveDashboard {
   private createProgressBar(percentage: number, width: number): string {
     const filled = Math.round((percentage / 100) * width);
     const empty = width - filled;
-    return this.colors.success + "█".repeat(filled) + this.colors.dim + "░".repeat(empty) + this.colors.reset;
+    return (
+      this.colors.success +
+      "█".repeat(filled) +
+      this.colors.dim +
+      "░".repeat(empty) +
+      this.colors.reset
+    );
   }
 
   private createSparkline(data: number[]): string {
@@ -1979,11 +2111,13 @@ export class InteractiveDashboard {
     const range = max - min || 1;
     const chars = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
 
-    return data.map(value => {
-      const normalized = (value - min) / range;
-      const index = Math.floor(normalized * (chars.length - 1));
-      return this.colors.info + chars[index] + this.colors.reset;
-    }).join("");
+    return data
+      .map((value) => {
+        const normalized = (value - min) / range;
+        const index = Math.floor(normalized * (chars.length - 1));
+        return this.colors.info + chars[index] + this.colors.reset;
+      })
+      .join("");
   }
 
   private centerText(text: string, width: number): string {

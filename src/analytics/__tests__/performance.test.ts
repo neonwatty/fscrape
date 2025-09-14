@@ -37,7 +37,7 @@ describe("Analytics Performance Benchmarks", () => {
     for (let i = 0; i < size; i++) {
       data.push({
         timestamp: new Date(startDate.getTime() + i * 3600000),
-        value: Math.sin(i * 0.1) * 100 + Math.random() * 20 + i * 0.01
+        value: Math.sin(i * 0.1) * 100 + Math.random() * 20 + i * 0.01,
       });
     }
     return data;
@@ -107,7 +107,9 @@ describe("Analytics Performance Benchmarks", () => {
       const summary = StatisticsEngine.getSummary(data);
       const skewness = StatisticsEngine.calculateSkewness(data);
       const kurtosis = StatisticsEngine.calculateKurtosis(data);
-      const result = measurePerformance("Distribution analysis for 100K points");
+      const result = measurePerformance(
+        "Distribution analysis for 100K points",
+      );
 
       expect(result.duration).toBeLessThan(2000);
     });
@@ -143,7 +145,10 @@ describe("Analytics Performance Benchmarks", () => {
     it("should handle time series analysis efficiently", () => {
       const data = generateTimeSeriesData(10000);
 
-      analyzer.analyzeTrend(data.map(d => d.value), data);
+      analyzer.analyzeTrend(
+        data.map((d) => d.value),
+        data,
+      );
       const result = measurePerformance("Time series trend for 10K points");
 
       expect(result.duration).toBeLessThan(500);
@@ -153,7 +158,9 @@ describe("Analytics Performance Benchmarks", () => {
       const data = generateLargeDataset(20000);
 
       analyzer.detectChangePoints(data);
-      const result = measurePerformance("Change point detection for 20K points");
+      const result = measurePerformance(
+        "Change point detection for 20K points",
+      );
 
       expect(result.duration).toBeLessThan(2000);
     });
@@ -161,8 +168,13 @@ describe("Analytics Performance Benchmarks", () => {
     it("should efficiently analyze seasonal patterns", () => {
       const data = generateTimeSeriesData(8760); // One year hourly data
 
-      analyzer.analyzeTrend(data.map(d => d.value), data);
-      const result = measurePerformance("Seasonal pattern analysis for 8760 points");
+      analyzer.analyzeTrend(
+        data.map((d) => d.value),
+        data,
+      );
+      const result = measurePerformance(
+        "Seasonal pattern analysis for 8760 points",
+      );
 
       expect(result.duration).toBeLessThan(3000);
     });
@@ -204,7 +216,9 @@ describe("Analytics Performance Benchmarks", () => {
         detector.detect(batch);
       }
 
-      const result = measurePerformance(`Streaming detection: ${numBatches} batches of ${batchSize}`);
+      const result = measurePerformance(
+        `Streaming detection: ${numBatches} batches of ${batchSize}`,
+      );
 
       expect(result.duration).toBeLessThan(2000);
     });
@@ -238,8 +252,10 @@ describe("Analytics Performance Benchmarks", () => {
     it("should forecast efficiently with 10,000 historical points", () => {
       const data = generateTimeSeriesData(10000);
 
-      forecasting.forecast(data.map(d => d.value));
-      const result = measurePerformance("Forecasting with 10K historical points");
+      forecasting.forecast(data.map((d) => d.value));
+      const result = measurePerformance(
+        "Forecasting with 10K historical points",
+      );
 
       expect(result.duration).toBeLessThan(1000);
       expect(result.memoryDelta).toBeLessThan(50 * 1024 * 1024); // 50MB
@@ -248,7 +264,7 @@ describe("Analytics Performance Benchmarks", () => {
     it("should handle linear regression forecasting efficiently", () => {
       const data = generateTimeSeriesData(5000);
 
-      forecasting.forecast(data.map(d => d.value));
+      forecasting.forecast(data.map((d) => d.value));
       const result = measurePerformance("Linear regression for 5K points");
 
       expect(result.duration).toBeLessThan(500);
@@ -257,7 +273,7 @@ describe("Analytics Performance Benchmarks", () => {
     it("should perform exponential smoothing efficiently", () => {
       const data = generateTimeSeriesData(10000);
 
-      forecasting.forecast(data.map(d => d.value));
+      forecasting.forecast(data.map((d) => d.value));
       const result = measurePerformance("Exponential smoothing for 10K points");
 
       expect(result.duration).toBeLessThan(500);
@@ -266,7 +282,7 @@ describe("Analytics Performance Benchmarks", () => {
     it("should handle moving average forecasting", () => {
       const data = generateTimeSeriesData(5000);
 
-      forecasting.forecast(data.map(d => d.value));
+      forecasting.forecast(data.map((d) => d.value));
       const result = measurePerformance("Moving average for 5K points");
 
       expect(result.duration).toBeLessThan(300);
@@ -275,7 +291,7 @@ describe("Analytics Performance Benchmarks", () => {
     it("should efficiently perform ARIMA-like forecasting", () => {
       const data = generateTimeSeriesData(3000);
 
-      forecasting.forecast(data.map(d => d.value));
+      forecasting.forecast(data.map((d) => d.value));
       const result = measurePerformance("ARIMA-like forecasting for 3K points");
 
       expect(result.duration).toBeLessThan(2000);
@@ -338,7 +354,7 @@ describe("Analytics Performance Benchmarks", () => {
       for (let i = 0; i < 1000; i++) {
         cache.set(`key${i}`, {
           data: generateLargeDataset(100),
-          metadata: { index: i }
+          metadata: { index: i },
         });
       }
 
@@ -357,21 +373,21 @@ describe("Analytics Performance Benchmarks", () => {
       // Take initial snapshot
       memorySnapshots.push({
         label: "Initial",
-        memory: process.memoryUsage()
+        memory: process.memoryUsage(),
       });
 
       // Generate large dataset
       const data = generateLargeDataset(dataSize);
       memorySnapshots.push({
         label: "After data generation",
-        memory: process.memoryUsage()
+        memory: process.memoryUsage(),
       });
 
       // Perform statistics
       const basicStats = StatisticsEngine.getSummary(data);
       memorySnapshots.push({
         label: "After basic stats",
-        memory: process.memoryUsage()
+        memory: process.memoryUsage(),
       });
 
       // Perform trend analysis
@@ -379,7 +395,7 @@ describe("Analytics Performance Benchmarks", () => {
       const trend = analyzer.analyzeTrend(data);
       memorySnapshots.push({
         label: "After trend analysis",
-        memory: process.memoryUsage()
+        memory: process.memoryUsage(),
       });
 
       // Perform anomaly detection
@@ -387,19 +403,24 @@ describe("Analytics Performance Benchmarks", () => {
       const anomalies = detector.detect(data);
       memorySnapshots.push({
         label: "After anomaly detection",
-        memory: process.memoryUsage()
+        memory: process.memoryUsage(),
       });
 
       // Print memory progression
       console.log("\nMemory Usage Progression:");
       memorySnapshots.forEach((snapshot, index) => {
         if (index > 0) {
-          const delta = snapshot.memory.heapUsed - memorySnapshots[0].memory.heapUsed;
-          console.log(`  ${snapshot.label}: +${(delta / 1024 / 1024).toFixed(2)}MB`);
+          const delta =
+            snapshot.memory.heapUsed - memorySnapshots[0].memory.heapUsed;
+          console.log(
+            `  ${snapshot.label}: +${(delta / 1024 / 1024).toFixed(2)}MB`,
+          );
         }
       });
 
-      const totalMemoryUsed = memorySnapshots[memorySnapshots.length - 1].memory.heapUsed - memorySnapshots[0].memory.heapUsed;
+      const totalMemoryUsed =
+        memorySnapshots[memorySnapshots.length - 1].memory.heapUsed -
+        memorySnapshots[0].memory.heapUsed;
       expect(totalMemoryUsed).toBeLessThan(200 * 1024 * 1024); // 200MB total
     });
 
@@ -419,7 +440,9 @@ describe("Analytics Performance Benchmarks", () => {
       const finalMemory = process.memoryUsage().heapUsed;
       const memoryGrowth = finalMemory - initialMemory;
 
-      console.log(`\nMemory growth after ${iterations} iterations: ${(memoryGrowth / 1024 / 1024).toFixed(2)}MB`);
+      console.log(
+        `\nMemory growth after ${iterations} iterations: ${(memoryGrowth / 1024 / 1024).toFixed(2)}MB`,
+      );
 
       expect(memoryGrowth).toBeLessThan(50 * 1024 * 1024); // Less than 50MB growth
     });
@@ -430,7 +453,7 @@ describe("Analytics Performance Benchmarks", () => {
       const sizes = [1000, 5000, 10000, 50000];
       const timings = [];
 
-      sizes.forEach(size => {
+      sizes.forEach((size) => {
         const data = generateLargeDataset(size);
         startTime = performance.now();
 
@@ -441,12 +464,14 @@ describe("Analytics Performance Benchmarks", () => {
       });
 
       console.log("\nScalability Analysis:");
-      timings.forEach(t => {
-        console.log(`  ${t.size} points: ${t.duration.toFixed(2)}ms (${(t.duration / t.size * 1000).toFixed(2)}μs/point)`);
+      timings.forEach((t) => {
+        console.log(
+          `  ${t.size} points: ${t.duration.toFixed(2)}ms (${((t.duration / t.size) * 1000).toFixed(2)}μs/point)`,
+        );
       });
 
       // Check that time per point doesn't increase dramatically
-      const timePerPoint = timings.map(t => t.duration / t.size);
+      const timePerPoint = timings.map((t) => t.duration / t.size);
       const maxIncrease = Math.max(...timePerPoint) / Math.min(...timePerPoint);
 
       expect(maxIncrease).toBeLessThan(3); // Should not be more than 3x slower per point
@@ -458,11 +483,17 @@ describe("Analytics Performance Benchmarks", () => {
         { label: "Single element", data: [1] },
         { label: "Two elements", data: [1, 2] },
         { label: "All same values", data: new Array(10000).fill(42) },
-        { label: "Sorted ascending", data: Array.from({ length: 10000 }, (_, i) => i) },
-        { label: "Sorted descending", data: Array.from({ length: 10000 }, (_, i) => 10000 - i) }
+        {
+          label: "Sorted ascending",
+          data: Array.from({ length: 10000 }, (_, i) => i),
+        },
+        {
+          label: "Sorted descending",
+          data: Array.from({ length: 10000 }, (_, i) => 10000 - i),
+        },
       ];
 
-      testCases.forEach(testCase => {
+      testCases.forEach((testCase) => {
         startTime = performance.now();
         startMemory = process.memoryUsage();
 
