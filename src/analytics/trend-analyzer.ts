@@ -1,5 +1,7 @@
 import { StatisticsEngine, TimeSeriesPoint } from "./statistics.js";
 
+export { TimeSeriesPoint } from "./statistics.js";
+
 export interface TrendResult {
   trend: "increasing" | "decreasing" | "stable" | "volatile";
   slope: number;
@@ -64,12 +66,13 @@ export class TrendAnalyzer {
     this.options = { ...this.defaultOptions, ...options };
   }
 
-  analyzeTrend(values: number[], timestamps?: Date[]): TrendResult {
+  analyzeTrend(values: number[], _timestamps?: Date[]): TrendResult {
     if (values.length < 2) {
       return this.createEmptyTrendResult();
     }
 
-    const smoothedValues = StatisticsEngine.exponentialSmoothing(
+    // smoothedValues could be used for trend detection in future enhancements
+    const _smoothedValues = StatisticsEngine.exponentialSmoothing(
       values,
       this.options.smoothingFactor!,
     );
@@ -394,7 +397,7 @@ export class TrendAnalyzer {
     values: number[],
     regression: ReturnType<typeof StatisticsEngine.linearRegression>,
   ): TrendResult["predictions"] {
-    const lastValue = values[values.length - 1];
+    // const lastValue = values[values.length - 1]; // Could be used for validation
     const nextX = values.length;
     const predictedValue = regression.slope * nextX + regression.intercept;
 
@@ -506,8 +509,8 @@ export class TrendAnalyzer {
   }
 
   private arimaForecast(values: number[], steps: number): number[] {
-    const arOrder = 1;
-    const maOrder = 1;
+    // const arOrder = 1; // For future ARIMA implementation
+    // const maOrder = 1; // For future ARIMA implementation
 
     const differences: number[] = [];
     for (let i = 1; i < values.length; i++) {
@@ -532,5 +535,351 @@ export class TrendAnalyzer {
     }
 
     return forecast;
+  }
+
+  /**
+   * Mann-Kendall Test for trend detection
+   * Returns test statistic, p-value, and trend significance
+   */
+  mannKendallTest(values: number[]): {
+    statistic: number;
+    pValue: number;
+    trend: "increasing" | "decreasing" | "no_trend";
+    significant: boolean;
+  } {
+    const n = values.length;
+    if (n < 2) {
+      return { statistic: 0, pValue: 1, trend: "no_trend", significant: false };
+    }
+
+    let s = 0;
+    for (let i = 0; i < n - 1; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const diff = values[j] - values[i];
+        if (diff > 0) s++;
+        else if (diff < 0) s--;
+      }
+    }
+
+    // Calculate variance
+    let variance = (n * (n - 1) * (2 * n + 5)) / 18;
+
+    // Adjust for ties
+    const tieGroups = this.countTieGroups(values);
+    if (tieGroups.length > 0) {
+      let tieAdjustment = 0;
+      for (const g of tieGroups) {
+        tieAdjustment += (g * (g - 1) * (2 * g + 5)) / 18;
+      }
+      variance -= tieAdjustment;
+    }
+
+    // Calculate z-statistic
+    let z = 0;
+    if (s > 0) {
+      z = (s - 1) / Math.sqrt(variance);
+    } else if (s < 0) {
+      z = (s + 1) / Math.sqrt(variance);
+    }
+
+    // Calculate p-value (two-tailed)
+    const pValue = 2 * (1 - this.normalCDF(Math.abs(z)));
+
+    // Determine trend
+    const alpha = 0.05; // significance level
+    const significant = pValue < alpha;
+    let trend: "increasing" | "decreasing" | "no_trend";
+
+    if (!significant) {
+      trend = "no_trend";
+    } else {
+      trend = s > 0 ? "increasing" : "decreasing";
+    }
+
+    return { statistic: s, pValue, trend, significant };
+  }
+
+  /**
+   * Count tie groups for Mann-Kendall test
+   */
+  private countTieGroups(values: number[]): number[] {
+    const sorted = [...values].sort((a, b) => a - b);
+    const groups: number[] = [];
+    let currentCount = 1;
+
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] === sorted[i - 1]) {
+        currentCount++;
+      } else {
+        if (currentCount > 1) {
+          groups.push(currentCount);
+        }
+        currentCount = 1;
+      }
+    }
+
+    if (currentCount > 1) {
+      groups.push(currentCount);
+    }
+
+    return groups;
+  }
+
+  /**
+   * Cumulative distribution function for standard normal distribution
+   */
+  private normalCDF(z: number): number {
+    const a1 = 0.254829592;
+    const a2 = -0.284496736;
+    const a3 = 1.421413741;
+    const a4 = -1.453152027;
+    const a5 = 1.061405429;
+    const p = 0.3275911;
+
+    const sign = z < 0 ? -1 : 1;
+    z = Math.abs(z) / Math.sqrt(2);
+
+    const t = 1.0 / (1.0 + p * z);
+    const t2 = t * t;
+    const t3 = t2 * t;
+    const t4 = t3 * t;
+    const t5 = t4 * t;
+
+    const y =
+      1.0 - (a5 * t5 + a4 * t4 + a3 * t3 + a2 * t2 + a1 * t) * Math.exp(-z * z);
+
+    return 0.5 * (1.0 + sign * y);
+  }
+
+  /**
+   * Detect breakpoints in time series using PELT algorithm
+   * (Pruned Exact Linear Time)
+   */
+  detectBreakpoints(
+    values: number[],
+    minSegmentLength: number = 5,
+    penalty: number = 3,
+  ): number[] {
+    const n = values.length;
+    if (n < 2 * minSegmentLength) return [];
+
+    const breakpoints: number[] = [];
+    const cost = new Array(n + 1).fill(0);
+    const changepoints = new Array(n + 1).fill(0);
+
+    // Calculate cumulative sums for efficiency
+    const cumSum = [0];
+    const cumSumSq = [0];
+    for (let i = 0; i < n; i++) {
+      cumSum.push(cumSum[i] + values[i]);
+      cumSumSq.push(cumSumSq[i] + values[i] * values[i]);
+    }
+
+    // Dynamic programming to find optimal breakpoints
+    for (let s = minSegmentLength; s <= n; s++) {
+      let minCost = Infinity;
+      let bestBreakpoint = 0;
+
+      for (let t = 0; t <= s - minSegmentLength; t++) {
+        const segmentCost = this.calculateSegmentCost(cumSum, cumSumSq, t, s);
+        const totalCost = cost[t] + segmentCost + penalty;
+
+        if (totalCost < minCost) {
+          minCost = totalCost;
+          bestBreakpoint = t;
+        }
+      }
+
+      cost[s] = minCost;
+      changepoints[s] = bestBreakpoint;
+    }
+
+    // Backtrack to find all breakpoints
+    let current = n;
+    while (current > 0) {
+      const prev = changepoints[current];
+      if (prev > 0) {
+        breakpoints.unshift(prev);
+      }
+      current = prev;
+    }
+
+    return breakpoints;
+  }
+
+  /**
+   * Calculate cost for a segment (for breakpoint detection)
+   */
+  private calculateSegmentCost(
+    cumSum: number[],
+    cumSumSq: number[],
+    start: number,
+    end: number,
+  ): number {
+    const length = end - start;
+    if (length === 0) return 0;
+
+    const sum = cumSum[end] - cumSum[start];
+    const sumSq = cumSumSq[end] - cumSumSq[start];
+    const mean = sum / length;
+    const variance = sumSq / length - mean * mean;
+
+    // Return negative log-likelihood
+    return length * (Math.log(2 * Math.PI * Math.max(variance, 1e-10)) + 1);
+  }
+
+  /**
+   * Enhanced seasonal decomposition using STL
+   * (Seasonal and Trend decomposition using Loess)
+   */
+  seasonalDecomposition(
+    timeSeries: TimeSeriesPoint[],
+    period: number = 7,
+  ): {
+    trend: number[];
+    seasonal: number[];
+    residual: number[];
+    strength: {
+      trend: number;
+      seasonal: number;
+    };
+  } {
+    const values = timeSeries.map((p) => p.value);
+    const n = values.length;
+
+    if (n < period * 2) {
+      return {
+        trend: values,
+        seasonal: new Array(n).fill(0),
+        residual: new Array(n).fill(0),
+        strength: { trend: 0, seasonal: 0 },
+      };
+    }
+
+    // Step 1: Initial trend using moving average
+    const trendWindow = Math.min(period * 2 + 1, n);
+    const trend = this.calculateCenteredMovingAverage(values, trendWindow);
+
+    // Step 2: Detrend the series
+    const detrended = values.map((v, i) => v - trend[i]);
+
+    // Step 3: Calculate seasonal component
+    const seasonal = this.calculateSeasonalComponent(detrended, period);
+
+    // Step 4: Calculate residuals
+    const residual = values.map((v, i) => v - trend[i] - seasonal[i]);
+
+    // Step 5: Calculate strength metrics
+    const trendStrength = this.calculateTrendStrength(values, trend, residual);
+    const seasonalStrength = this.calculateSeasonalStrength(
+      values,
+      seasonal,
+      residual,
+    );
+
+    return {
+      trend,
+      seasonal,
+      residual,
+      strength: {
+        trend: trendStrength,
+        seasonal: seasonalStrength,
+      },
+    };
+  }
+
+  /**
+   * Calculate centered moving average for seasonal decomposition
+   */
+  private calculateCenteredMovingAverage(
+    values: number[],
+    window: number,
+  ): number[] {
+    const n = values.length;
+    const result = new Array(n);
+    const halfWindow = Math.floor(window / 2);
+
+    for (let i = 0; i < n; i++) {
+      const start = Math.max(0, i - halfWindow);
+      const end = Math.min(n, i + halfWindow + 1);
+      const windowValues = values.slice(start, end);
+      result[i] = StatisticsEngine.calculateMean(windowValues);
+    }
+
+    return result;
+  }
+
+  /**
+   * Calculate seasonal component for decomposition
+   */
+  private calculateSeasonalComponent(
+    detrended: number[],
+    period: number,
+  ): number[] {
+    const n = detrended.length;
+    const seasonal = new Array(n);
+    const seasonalPattern = new Array(period).fill(0);
+    const counts = new Array(period).fill(0);
+
+    // Calculate average for each position in the period
+    for (let i = 0; i < n; i++) {
+      const position = i % period;
+      seasonalPattern[position] += detrended[i];
+      counts[position]++;
+    }
+
+    // Calculate mean for each position
+    for (let i = 0; i < period; i++) {
+      if (counts[i] > 0) {
+        seasonalPattern[i] /= counts[i];
+      }
+    }
+
+    // Center the seasonal pattern
+    const meanPattern = StatisticsEngine.calculateMean(seasonalPattern);
+    for (let i = 0; i < period; i++) {
+      seasonalPattern[i] -= meanPattern;
+    }
+
+    // Apply pattern to full series
+    for (let i = 0; i < n; i++) {
+      seasonal[i] = seasonalPattern[i % period];
+    }
+
+    return seasonal;
+  }
+
+  /**
+   * Calculate trend strength for decomposition
+   */
+  private calculateTrendStrength(
+    values: number[],
+    trend: number[],
+    residual: number[],
+  ): number {
+    const trendPlusResidual = trend.map((t, i) => t + residual[i]);
+    const varTrendResidual =
+      StatisticsEngine.calculateVariance(trendPlusResidual);
+    const varResidual = StatisticsEngine.calculateVariance(residual);
+
+    if (varTrendResidual === 0) return 0;
+    return Math.max(0, 1 - varResidual / varTrendResidual);
+  }
+
+  /**
+   * Calculate seasonal strength for decomposition
+   */
+  private calculateSeasonalStrength(
+    values: number[],
+    seasonal: number[],
+    residual: number[],
+  ): number {
+    const seasonalPlusResidual = seasonal.map((s, i) => s + residual[i]);
+    const varSeasonalResidual =
+      StatisticsEngine.calculateVariance(seasonalPlusResidual);
+    const varResidual = StatisticsEngine.calculateVariance(residual);
+
+    if (varSeasonalResidual === 0) return 0;
+    return Math.max(0, 1 - varResidual / varSeasonalResidual);
   }
 }

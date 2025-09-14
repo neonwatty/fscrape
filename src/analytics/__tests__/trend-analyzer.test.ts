@@ -279,4 +279,120 @@ describe("TrendAnalyzer", () => {
       expect(result.trend).toBeDefined();
     });
   });
+
+  describe("Mann-Kendall Test", () => {
+    it("should detect significant increasing trend", () => {
+      const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+      const result = analyzer.mannKendallTest(values);
+
+      expect(result.trend).toBe("increasing");
+      expect(result.significant).toBe(true);
+      expect(result.statistic).toBeGreaterThan(0);
+      expect(result.pValue).toBeLessThan(0.05);
+    });
+
+    it("should detect significant decreasing trend", () => {
+      const values = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+      const result = analyzer.mannKendallTest(values);
+
+      expect(result.trend).toBe("decreasing");
+      expect(result.significant).toBe(true);
+      expect(result.statistic).toBeLessThan(0);
+      expect(result.pValue).toBeLessThan(0.05);
+    });
+
+    it("should detect no trend in random data", () => {
+      const values = [5, 3, 8, 2, 7, 1, 9, 4, 6, 5];
+      const result = analyzer.mannKendallTest(values);
+
+      expect(result.trend).toBe("no_trend");
+      expect(result.significant).toBe(false);
+      expect(result.pValue).toBeGreaterThan(0.05);
+    });
+
+    it("should handle ties in data", () => {
+      const values = [1, 2, 2, 3, 3, 3, 4, 4, 5, 5];
+      const result = analyzer.mannKendallTest(values);
+
+      expect(result.trend).toBe("increasing");
+      expect(result.statistic).toBeGreaterThan(0);
+    });
+  });
+
+  describe("Breakpoint Detection", () => {
+    it("should detect obvious breakpoints", () => {
+      const values = [
+        1, 1, 1, 1, 1,  // Segment 1
+        5, 5, 5, 5, 5,  // Segment 2
+        2, 2, 2, 2, 2   // Segment 3
+      ];
+      const breakpoints = analyzer.detectBreakpoints(values, 3, 2);
+
+      expect(breakpoints.length).toBeGreaterThan(0);
+      expect(breakpoints).toContain(5);
+      expect(breakpoints).toContain(10);
+    });
+
+    it("should handle no breakpoints in stable data", () => {
+      const values = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const breakpoints = analyzer.detectBreakpoints(values);
+
+      expect(breakpoints.length).toBe(0);
+    });
+
+    it("should respect minimum segment length", () => {
+      const values = [1, 5, 1, 5, 1, 5, 1, 5];
+      const breakpoints = analyzer.detectBreakpoints(values, 4);
+
+      expect(breakpoints.length).toBeLessThanOrEqual(1);
+    });
+  });
+
+  describe("Seasonal Decomposition", () => {
+    it("should decompose time series with clear seasonality", () => {
+      const timeSeries: TimeSeriesPoint[] = [];
+      for (let i = 0; i < 28; i++) {
+        timeSeries.push({
+          timestamp: new Date(2024, 0, i + 1),
+          value: 100 + 10 * Math.sin((2 * Math.PI * i) / 7) + i * 0.5
+        });
+      }
+
+      const result = analyzer.seasonalDecomposition(timeSeries, 7);
+
+      expect(result.trend).toBeDefined();
+      expect(result.seasonal).toBeDefined();
+      expect(result.residual).toBeDefined();
+      expect(result.strength.seasonal).toBeGreaterThan(0.5);
+      expect(result.trend.length).toBe(28);
+      expect(result.seasonal.length).toBe(28);
+    });
+
+    it("should handle non-seasonal data", () => {
+      const timeSeries: TimeSeriesPoint[] = [];
+      for (let i = 0; i < 20; i++) {
+        timeSeries.push({
+          timestamp: new Date(2024, 0, i + 1),
+          value: 100 + i * 2 + Math.random() * 5
+        });
+      }
+
+      const result = analyzer.seasonalDecomposition(timeSeries, 7);
+
+      expect(result.strength.seasonal).toBeLessThan(0.3);
+      expect(result.strength.trend).toBeGreaterThan(0.7);
+    });
+
+    it("should handle insufficient data", () => {
+      const timeSeries: TimeSeriesPoint[] = [
+        { timestamp: new Date(), value: 100 },
+        { timestamp: new Date(), value: 110 }
+      ];
+
+      const result = analyzer.seasonalDecomposition(timeSeries, 7);
+
+      expect(result.seasonal.every(s => s === 0)).toBe(true);
+      expect(result.strength.seasonal).toBe(0);
+    });
+  });
 });
