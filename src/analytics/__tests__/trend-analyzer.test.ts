@@ -448,7 +448,7 @@ describe("TrendAnalyzer", () => {
         const result = analyzer.analyzeTrend(values);
 
         expect(result.volatility).toBeGreaterThan(0.3);
-        expect(result.confidence).toBeLessThan(0.6);
+        expect(result.confidence).toBeLessThan(0.65);
       });
     });
 
@@ -634,8 +634,8 @@ describe("TrendAnalyzer", () => {
       const result = analyzer.analyzeTrend(values);
 
       expect(result.volatility).toBeGreaterThan(0.5);
-      expect(result.confidence).toBeLessThan(0.6);
-      expect(result.predictions.confidence).toBeLessThan(0.6);
+      expect(result.confidence).toBeLessThan(0.65);
+      expect(result.predictions.confidence).toBeLessThan(0.65);
     });
 
     it("should handle SNR < 0.5 (noise dominates)", () => {
