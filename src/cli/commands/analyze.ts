@@ -17,7 +17,162 @@ import { ReportGenerator } from "../../analytics/report-generator.js";
 import { AnalyticsDashboard } from "../../analytics/dashboard.js";
 import chalk from "chalk";
 import Table from "cli-table3";
-import { format } from "date-fns";
+import { format, parseISO, isValid, subDays } from "date-fns";
+
+/**
+ * Common options interface for all analyze subcommands
+ */
+interface CommonAnalyzeOptions {
+  database?: string;
+  platform?: string;
+  timeRange?: string;
+  outputFormat?: string;
+  cache?: boolean;
+  cacheDir?: string;
+}
+
+/**
+ * Parse time range string into start and end dates
+ * Supports formats like "7d", "30d", "2024-01-01:2024-12-31", "last-week", "last-month"
+ */
+function parseTimeRange(timeRange: string): { start: Date; end: Date } {
+  const now = new Date();
+
+  // Handle relative ranges like "7d", "30d"
+  if (/^\d+d$/.test(timeRange)) {
+    const days = parseInt(timeRange.slice(0, -1), 10);
+    return {
+      start: subDays(now, days),
+      end: now,
+    };
+  }
+
+  // Handle date range like "2024-01-01:2024-12-31"
+  if (timeRange.includes(":")) {
+    const [startStr, endStr] = timeRange.split(":");
+    const start = parseISO(startStr);
+    const end = parseISO(endStr);
+
+    if (!isValid(start) || !isValid(end)) {
+      throw new Error(`Invalid date range format: ${timeRange}`);
+    }
+
+    return { start, end };
+  }
+
+  // Handle named ranges
+  switch (timeRange.toLowerCase()) {
+    case "today":
+      return {
+        start: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+        end: now,
+      };
+    case "yesterday":
+      const yesterday = subDays(now, 1);
+      return {
+        start: new Date(
+          yesterday.getFullYear(),
+          yesterday.getMonth(),
+          yesterday.getDate(),
+        ),
+        end: new Date(
+          yesterday.getFullYear(),
+          yesterday.getMonth(),
+          yesterday.getDate(),
+          23,
+          59,
+          59,
+        ),
+      };
+    case "last-week":
+      return {
+        start: subDays(now, 7),
+        end: now,
+      };
+    case "last-month":
+      return {
+        start: subDays(now, 30),
+        end: now,
+      };
+    case "last-year":
+      return {
+        start: subDays(now, 365),
+        end: now,
+      };
+    default:
+      throw new Error(`Unsupported time range format: ${timeRange}`);
+  }
+}
+
+/**
+ * Validate output format
+ */
+function validateOutputFormat(format: string): string {
+  const validFormats = ["json", "table", "csv", "html", "markdown", "chart"];
+  const lowerFormat = format.toLowerCase();
+
+  if (!validFormats.includes(lowerFormat)) {
+    throw new Error(
+      `Invalid output format: ${format}. Valid formats: ${validFormats.join(", ")}`,
+    );
+  }
+
+  return lowerFormat;
+}
+
+/**
+ * Get cache key for analytics results
+ */
+function getCacheKey(command: string, options: any): string {
+  const parts = [
+    command,
+    options.platform || "all",
+    options.timeRange || "30d",
+    options.outputFormat || "table",
+  ];
+
+  // Add any additional options that affect the result
+  if (options.metrics) {
+    parts.push(options.metrics.sort().join(","));
+  }
+
+  return parts.join(":");
+}
+
+/**
+ * Simple in-memory cache for analytics results
+ */
+class AnalyticsCache {
+  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private ttl: number = 5 * 60 * 1000; // 5 minutes default TTL
+
+  constructor(ttl?: number) {
+    if (ttl) this.ttl = ttl;
+  }
+
+  get(key: string): any | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    if (Date.now() - entry.timestamp > this.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.data;
+  }
+
+  set(key: string, data: any): void {
+    this.cache.set(key, { data, timestamp: Date.now() });
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
+// Global cache instance
+const analyticsCache = new AnalyticsCache();
 
 /**
  * Create the analyze command with subcommands
@@ -25,7 +180,33 @@ import { format } from "date-fns";
 export function createAnalyzeCommand(): Command {
   const command = new Command("analyze")
     .description("Analyze scraped data with various analytics tools")
-    .option("-d, --database <path>", "Database path", "fscrape.db");
+    .option("-d, --database <path>", "Database path", "fscrape.db")
+    .option(
+      "-p, --platform <platform>",
+      "Filter by platform (reddit, hackernews, etc.)",
+    )
+    .option(
+      "-t, --time-range <range>",
+      "Time range for analysis (e.g., 7d, 30d, last-week, 2024-01-01:2024-12-31)",
+      "30d",
+    )
+    .option(
+      "-o, --output-format <format>",
+      "Output format (json, table, csv, html, markdown, chart)",
+      "table",
+    )
+    .option(
+      "--cache",
+      "Enable result caching for faster repeated queries",
+      false,
+    )
+    .option(
+      "--cache-dir <path>",
+      "Directory for cache storage",
+      ".cache/analytics",
+    )
+    .option("--no-color", "Disable colored output", false)
+    .option("--verbose", "Show detailed debug information", false);
 
   // Statistics subcommand
   command
@@ -201,6 +382,29 @@ export function createAnalyzeCommand(): Command {
  */
 async function handleStatistics(parentOpts: any, options: any): Promise<void> {
   try {
+    // Merge parent and subcommand options
+    const mergedOptions = {
+      ...parentOpts,
+      ...options,
+      platform: options.platform || parentOpts.platform,
+      outputFormat: options.format || parentOpts.outputFormat || "table",
+    };
+
+    // Check cache if enabled
+    const cacheKey = parentOpts.cache
+      ? getCacheKey("statistics", mergedOptions)
+      : null;
+    if (cacheKey) {
+      const cached = analyticsCache.get(cacheKey);
+      if (cached) {
+        if (parentOpts.verbose) {
+          console.log(chalk.gray("Using cached result"));
+        }
+        displayStatisticsResult(cached, mergedOptions.outputFormat);
+        return;
+      }
+    }
+
     const dbPath = validatePath(parentOpts.database || "fscrape.db", true);
     const dbManager = new DatabaseManager({
       type: "sqlite" as const,
@@ -212,23 +416,81 @@ async function handleStatistics(parentOpts: any, options: any): Promise<void> {
     const analytics = dbManager.getAnalytics();
     const stats = new StatisticsEngine();
 
-    // Get engagement metrics
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - (options.days || 30));
+    // Parse time range from parent options
+    const timeRange = parentOpts.timeRange
+      ? parseTimeRange(parentOpts.timeRange)
+      : null;
+    const endDate = timeRange?.end || new Date();
+    const startDate =
+      timeRange?.start ||
+      new Date(endDate.getTime() - (options.days || 30) * 24 * 60 * 60 * 1000);
+
+    // Calculate days between dates for the query
+    const daysDiff = Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000),
+    );
 
     const metrics = analytics.getEngagementOverTime(
-      options.days || 30,
-      options.platform,
+      daysDiff,
+      mergedOptions.platform,
     );
 
     // Calculate statistics
     const values = metrics.map((m: any) => m.engagement || 0);
     const analysis = StatisticsEngine.getSummary(values);
 
-    if (options.format === "json") {
+    // Cache the result if caching is enabled
+    if (cacheKey) {
+      analyticsCache.set(cacheKey, analysis);
+    }
+
+    displayStatisticsResult(analysis, mergedOptions.outputFormat);
+  } catch (error) {
+    console.error(chalk.red(formatError(error)));
+    process.exit(1);
+  }
+}
+
+/**
+ * Display statistics result in the specified format
+ */
+function displayStatisticsResult(analysis: any, format: string): void {
+  const validatedFormat = validateOutputFormat(format);
+
+  switch (validatedFormat) {
+    case "json":
       console.log(JSON.stringify(analysis, null, 2));
-    } else {
+      break;
+    case "csv":
+      console.log("Metric,Value");
+      console.log(`Count,${analysis.count || 0}`);
+      console.log(`Mean,${analysis.mean.toFixed(2)}`);
+      console.log(`Median,${analysis.median.toFixed(2)}`);
+      console.log(`StdDev,${analysis.standardDeviation.toFixed(2)}`);
+      console.log(`Min,${analysis.min.toFixed(2)}`);
+      console.log(`Max,${analysis.max.toFixed(2)}`);
+      console.log(`Q1,${analysis.quartiles.q1.toFixed(2)}`);
+      console.log(`Q3,${analysis.quartiles.q3.toFixed(2)}`);
+      console.log(`Skewness,${analysis.skewness.toFixed(3)}`);
+      console.log(`Kurtosis,${analysis.kurtosis.toFixed(3)}`);
+      break;
+    case "markdown":
+      console.log("# Statistical Analysis\n");
+      console.log("| Metric | Value |");
+      console.log("|--------|-------|");
+      console.log(`| Count | ${analysis.count || 0} |`);
+      console.log(`| Mean | ${analysis.mean.toFixed(2)} |`);
+      console.log(`| Median | ${analysis.median.toFixed(2)} |`);
+      console.log(`| Std Dev | ${analysis.standardDeviation.toFixed(2)} |`);
+      console.log(`| Min | ${analysis.min.toFixed(2)} |`);
+      console.log(`| Max | ${analysis.max.toFixed(2)} |`);
+      console.log(`| Q1 | ${analysis.quartiles.q1.toFixed(2)} |`);
+      console.log(`| Q3 | ${analysis.quartiles.q3.toFixed(2)} |`);
+      console.log(`| Skewness | ${analysis.skewness.toFixed(3)} |`);
+      console.log(`| Kurtosis | ${analysis.kurtosis.toFixed(3)} |`);
+      break;
+    case "table":
+    default:
       // Display as table
       const table = new Table({
         head: ["Metric", "Value"],
@@ -236,7 +498,7 @@ async function handleStatistics(parentOpts: any, options: any): Promise<void> {
       });
 
       table.push(
-        ["Count", metrics.length],
+        ["Count", analysis.count || 0],
         ["Mean", analysis.mean.toFixed(2)],
         ["Median", analysis.median.toFixed(2)],
         ["Std Dev", analysis.standardDeviation.toFixed(2)],
@@ -250,25 +512,7 @@ async function handleStatistics(parentOpts: any, options: any): Promise<void> {
 
       console.log(chalk.cyan("📊 Statistical Analysis"));
       console.log(table.toString());
-
-      if (options.verbose) {
-        // Show additional metrics
-        const correlationResult = StatisticsEngine.calculateCorrelation(
-          metrics.map((_: any, i: number) => i),
-          values,
-        );
-        const correlation = correlationResult.correlation;
-        console.log(
-          chalk.gray(`\nTrend Correlation: ${correlation.toFixed(3)}`),
-        );
-
-        const cv = (analysis.standardDeviation / analysis.mean) * 100;
-        console.log(chalk.gray(`Coefficient of Variation: ${cv.toFixed(1)}%`));
-      }
-    }
-  } catch (error) {
-    console.error(chalk.red(formatError(error)));
-    process.exit(1);
+      break;
   }
 }
 
