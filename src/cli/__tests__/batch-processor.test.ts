@@ -54,7 +54,12 @@ describe("BatchProcessor", () => {
       upsertPost: vi.fn().mockResolvedValue({}),
       queryPosts: vi.fn().mockResolvedValue([
         { id: "1", title: "Post 1", content: "Content 1", platform: "reddit" },
-        { id: "2", title: "Post 2", content: "Content 2", platform: "hackernews" },
+        {
+          id: "2",
+          title: "Post 2",
+          content: "Content 2",
+          platform: "hackernews",
+        },
       ]),
       queryComments: vi.fn().mockResolvedValue([
         { id: "c1", postId: "1", content: "Comment 1" },
@@ -98,7 +103,7 @@ describe("BatchProcessor", () => {
       scrapePost: vi.fn().mockResolvedValue({
         id: "rp1",
         title: "Single Reddit Post",
-        platform: "reddit"
+        platform: "reddit",
       }),
     };
 
@@ -110,7 +115,7 @@ describe("BatchProcessor", () => {
       scrapePost: vi.fn().mockResolvedValue({
         id: "hn1",
         title: "HN Story",
-        platform: "hackernews"
+        platform: "hackernews",
       }),
       scrapePosts: vi.fn().mockResolvedValue([
         { id: "hnt1", title: "Top HN Story 1", platform: "hackernews" },

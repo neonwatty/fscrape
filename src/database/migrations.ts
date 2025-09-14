@@ -336,23 +336,25 @@ export const migrations: Migration[] = [
       try {
         const tableInfo = db.prepare("PRAGMA table_info(users)").all() as any[];
         const columnNames = tableInfo.map((col: any) => col.name);
-        
-        if (!columnNames.includes('post_count')) {
+
+        if (!columnNames.includes("post_count")) {
           db.exec(`ALTER TABLE users ADD COLUMN post_count INTEGER DEFAULT 0`);
-          console.log('Added post_count column to users table');
+          console.log("Added post_count column to users table");
         }
-        
-        if (!columnNames.includes('comment_count')) {
-          db.exec(`ALTER TABLE users ADD COLUMN comment_count INTEGER DEFAULT 0`);
-          console.log('Added comment_count column to users table');
+
+        if (!columnNames.includes("comment_count")) {
+          db.exec(
+            `ALTER TABLE users ADD COLUMN comment_count INTEGER DEFAULT 0`,
+          );
+          console.log("Added comment_count column to users table");
         }
       } catch (error) {
-        console.log('Note: user metrics columns might already exist');
+        console.log("Note: user metrics columns might already exist");
       }
     },
     down: (db: Database.Database) => {
       // We don't remove columns in down migration to preserve data
-      console.log('Preserving user metrics columns');
+      console.log("Preserving user metrics columns");
     },
   },
   {
@@ -363,13 +365,15 @@ export const migrations: Migration[] = [
       try {
         const tableInfo = db.prepare("PRAGMA table_info(posts)").all() as any[];
         const columnNames = tableInfo.map((col: any) => col.name);
-        
-        if (!columnNames.includes('platform_id')) {
-          db.exec(`ALTER TABLE posts ADD COLUMN platform_id TEXT NOT NULL DEFAULT ''`);
-          console.log('Added platform_id column to posts table');
+
+        if (!columnNames.includes("platform_id")) {
+          db.exec(
+            `ALTER TABLE posts ADD COLUMN platform_id TEXT NOT NULL DEFAULT ''`,
+          );
+          console.log("Added platform_id column to posts table");
         }
       } catch (error) {
-        console.log('Note: platform_id column might already exist');
+        console.log("Note: platform_id column might already exist");
       }
     },
   },
@@ -542,7 +546,7 @@ export const migrations: Migration[] = [
       for (const indexSql of MATERIALIZED_VIEW_INDEXES) {
         db.exec(indexSql);
       }
-      console.log('Created materialized view indexes');
+      console.log("Created materialized view indexes");
     },
     down: (db: Database.Database) => {
       // Drop materialized view tables

@@ -77,7 +77,7 @@ export class DatabaseManager {
 
   async initialize(): Promise<void> {
     await initializeDatabase(this.db, this.logger);
-    
+
     // Initialize queries AFTER migrations are complete
     this.queries = new PreparedQueries(this.db);
   }
@@ -88,9 +88,11 @@ export class DatabaseManager {
 
   upsertPost(post: ForumPost): any {
     if (!this.queries) {
-      throw new Error('DatabaseManager not initialized. Call initialize() first.');
+      throw new Error(
+        "DatabaseManager not initialized. Call initialize() first.",
+      );
     }
-    
+
     try {
       const existing = this.db
         .prepare("SELECT * FROM posts WHERE platform = ? AND id = ?")
@@ -113,7 +115,7 @@ export class DatabaseManager {
         const result = this.queries.insertPost.run(
           post.id,
           post.platform,
-          post.platformId || post.id,  // Use platformId if available, otherwise use id
+          post.platformId || post.id, // Use platformId if available, otherwise use id
           post.title,
           post.content,
           post.author,
@@ -191,9 +193,11 @@ export class DatabaseManager {
 
   upsertComment(comment: Comment): any {
     if (!this.queries) {
-      throw new Error('DatabaseManager not initialized. Call initialize() first.');
+      throw new Error(
+        "DatabaseManager not initialized. Call initialize() first.",
+      );
     }
-    
+
     try {
       const existing = this.db
         .prepare("SELECT * FROM comments WHERE platform = ? AND id = ?")
@@ -269,9 +273,11 @@ export class DatabaseManager {
 
   upsertUser(user: User): any {
     if (!this.queries) {
-      throw new Error('DatabaseManager not initialized. Call initialize() first.');
+      throw new Error(
+        "DatabaseManager not initialized. Call initialize() first.",
+      );
     }
-    
+
     try {
       const existing = this.db
         .prepare("SELECT * FROM users WHERE platform = ? AND id = ?")

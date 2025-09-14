@@ -103,7 +103,7 @@ export const MATERIALIZED_VIEWS = {
       last_refreshed INTEGER DEFAULT (strftime('%s', 'now') * 1000),
       PRIMARY KEY (metric_date, metric_name)
     )
-  `
+  `,
 };
 
 export const DATABASE_SCHEMA = {
@@ -347,7 +347,7 @@ export const MATERIALIZED_VIEW_INDEXES = [
 
   // Platform comparison indexes
   "CREATE INDEX IF NOT EXISTS idx_mv_platform_comp_date ON mv_platform_comparison(metric_date DESC)",
-  "CREATE INDEX IF NOT EXISTS idx_mv_platform_comp_metric ON mv_platform_comparison(metric_name)"
+  "CREATE INDEX IF NOT EXISTS idx_mv_platform_comp_metric ON mv_platform_comparison(metric_name)",
 ];
 
 export const DATABASE_INDEXES = [

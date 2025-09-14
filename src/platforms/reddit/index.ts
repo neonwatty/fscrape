@@ -96,9 +96,9 @@ export const RedditPlatform: PlatformConstructor = class
     const sort = options?.sortBy || "hot";
 
     const listing = await this.client.getSubredditPosts(category, sort, limit);
-    console.log('DEBUG: scrapeCategory listing:', listing);
-    console.log('DEBUG: listing.data:', listing.data);
-    console.log('DEBUG: listing.data.children:', listing.data?.children);
+    console.log("DEBUG: scrapeCategory listing:", listing);
+    console.log("DEBUG: listing.data:", listing.data);
+    console.log("DEBUG: listing.data.children:", listing.data?.children);
     return listing.data.children.map((child) =>
       this.client.convertPost(child.data),
     );

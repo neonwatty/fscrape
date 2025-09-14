@@ -322,9 +322,21 @@ describe("TrendAnalyzer", () => {
   describe("Breakpoint Detection", () => {
     it("should detect obvious breakpoints", () => {
       const values = [
-        1, 1, 1, 1, 1,  // Segment 1
-        5, 5, 5, 5, 5,  // Segment 2
-        2, 2, 2, 2, 2   // Segment 3
+        1,
+        1,
+        1,
+        1,
+        1, // Segment 1
+        5,
+        5,
+        5,
+        5,
+        5, // Segment 2
+        2,
+        2,
+        2,
+        2,
+        2, // Segment 3
       ];
       const breakpoints = analyzer.detectBreakpoints(values, 3, 2);
 
@@ -354,7 +366,7 @@ describe("TrendAnalyzer", () => {
       for (let i = 0; i < 28; i++) {
         timeSeries.push({
           timestamp: new Date(2024, 0, i + 1),
-          value: 100 + 10 * Math.sin((2 * Math.PI * i) / 7) + i * 0.5
+          value: 100 + 10 * Math.sin((2 * Math.PI * i) / 7) + i * 0.5,
         });
       }
 
@@ -373,7 +385,7 @@ describe("TrendAnalyzer", () => {
       for (let i = 0; i < 20; i++) {
         timeSeries.push({
           timestamp: new Date(2024, 0, i + 1),
-          value: 100 + i * 2 + Math.random() * 5
+          value: 100 + i * 2 + Math.random() * 5,
         });
       }
 
@@ -386,12 +398,12 @@ describe("TrendAnalyzer", () => {
     it("should handle insufficient data", () => {
       const timeSeries: TimeSeriesPoint[] = [
         { timestamp: new Date(), value: 100 },
-        { timestamp: new Date(), value: 110 }
+        { timestamp: new Date(), value: 110 },
       ];
 
       const result = analyzer.seasonalDecomposition(timeSeries, 7);
 
-      expect(result.seasonal.every(s => s === 0)).toBe(true);
+      expect(result.seasonal.every((s) => s === 0)).toBe(true);
       expect(result.strength.seasonal).toBe(0);
     });
   });

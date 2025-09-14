@@ -6,11 +6,11 @@
 import axios, { type AxiosInstance } from "axios";
 import type { Logger } from "winston";
 import winston from "winston";
-import { 
-  getMockItem, 
-  getMockStoryList, 
-  getMockMaxItemId, 
-  generateMockUser 
+import {
+  getMockItem,
+  getMockStoryList,
+  getMockMaxItemId,
+  generateMockUser,
 } from "./mock-data.js";
 
 /**
@@ -124,10 +124,11 @@ export class HackerNewsClient {
    */
   async getItem(id: number): Promise<HNItem | null> {
     // Use mock data in test environment
-    if (false) { // Always use real HackerNews API - it's public and reliable
+    if (false) {
+      // Always use real HackerNews API - it's public and reliable
       this.logger.info(`Using mock HackerNews data for item ${id}`);
       // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 5));
+      await new Promise((resolve) => setTimeout(resolve, 5));
       return getMockItem(id);
     }
 
@@ -153,10 +154,11 @@ export class HackerNewsClient {
    */
   async getUser(username: string): Promise<HNUser | null> {
     // Use mock data in test environment
-    if (false) { // Always use real HackerNews API - it's public and reliable
+    if (false) {
+      // Always use real HackerNews API - it's public and reliable
       this.logger.info(`Using mock HackerNews data for user ${username}`);
       // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 5));
+      await new Promise((resolve) => setTimeout(resolve, 5));
       return generateMockUser(username);
     }
 
@@ -174,10 +176,11 @@ export class HackerNewsClient {
    */
   async getStoryList(type: StoryListType, limit?: number): Promise<number[]> {
     // Use mock data in test environment
-    if (false) { // Always use real HackerNews API - it's public and reliable
+    if (false) {
+      // Always use real HackerNews API - it's public and reliable
       this.logger.info(`Using mock HackerNews data for ${type}`);
       // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       const stories = getMockStoryList(type, limit || 500);
       return limit ? stories.slice(0, limit) : stories;
     }
@@ -239,10 +242,11 @@ export class HackerNewsClient {
    */
   async getMaxItem(): Promise<number> {
     // Use mock data in test environment
-    if (false) { // Always use real HackerNews API - it's public and reliable
-      this.logger.info('Using mock HackerNews max item ID');
+    if (false) {
+      // Always use real HackerNews API - it's public and reliable
+      this.logger.info("Using mock HackerNews max item ID");
       // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 5));
+      await new Promise((resolve) => setTimeout(resolve, 5));
       return getMockMaxItemId();
     }
 

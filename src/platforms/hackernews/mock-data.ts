@@ -10,7 +10,7 @@ import type { HNItem, HNUser, StoryListType } from "./client.js";
 export function generateMockStory(overrides: Partial<HNItem> = {}): HNItem {
   const id = Math.floor(Math.random() * 1000000) + 30000000;
   const timestamp = Math.floor(Date.now() / 1000);
-  
+
   return {
     id,
     type: "story",
@@ -24,7 +24,7 @@ export function generateMockStory(overrides: Partial<HNItem> = {}): HNItem {
     text: overrides.text,
     dead: overrides.dead,
     deleted: overrides.deleted,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -34,7 +34,7 @@ export function generateMockStory(overrides: Partial<HNItem> = {}): HNItem {
 export function generateMockComment(overrides: Partial<HNItem> = {}): HNItem {
   const id = Math.floor(Math.random() * 1000000) + 30000000;
   const timestamp = Math.floor(Date.now() / 1000);
-  
+
   return {
     id,
     type: "comment",
@@ -45,23 +45,26 @@ export function generateMockComment(overrides: Partial<HNItem> = {}): HNItem {
     kids: overrides.kids || [],
     dead: overrides.dead,
     deleted: overrides.deleted,
-    ...overrides
+    ...overrides,
   };
 }
 
 /**
  * Generate mock HackerNews user
  */
-export function generateMockUser(username: string, overrides: Partial<HNUser> = {}): HNUser {
+export function generateMockUser(
+  username: string,
+  overrides: Partial<HNUser> = {},
+): HNUser {
   const timestamp = Math.floor(Date.now() / 1000) - 86400 * 365; // 1 year ago
-  
+
   return {
     id: username,
     created: overrides.created ?? timestamp,
     karma: overrides.karma ?? Math.floor(Math.random() * 10000),
     about: overrides.about || `Mock user ${username}`,
     submitted: overrides.submitted || generateMockStoryIds(10),
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -69,8 +72,9 @@ export function generateMockUser(username: string, overrides: Partial<HNUser> = 
  * Generate array of mock story IDs
  */
 export function generateMockStoryIds(count: number): number[] {
-  return Array.from({ length: count }, () => 
-    Math.floor(Math.random() * 1000000) + 30000000
+  return Array.from(
+    { length: count },
+    () => Math.floor(Math.random() * 1000000) + 30000000,
   );
 }
 
@@ -78,32 +82,37 @@ export function generateMockStoryIds(count: number): number[] {
  * Generate array of mock comment IDs
  */
 export function generateMockCommentIds(count: number): number[] {
-  return Array.from({ length: count }, () => 
-    Math.floor(Math.random() * 1000000) + 31000000
+  return Array.from(
+    { length: count },
+    () => Math.floor(Math.random() * 1000000) + 31000000,
   );
 }
 
 /**
  * Get mock story list based on type
  */
-export function getMockStoryList(type: StoryListType, limit: number = 500): number[] {
+export function getMockStoryList(
+  type: StoryListType,
+  limit: number = 500,
+): number[] {
   const baseId = 30000000;
   const stories: number[] = [];
-  
+
   // Generate different IDs for different story types to simulate variety
-  const offset = {
-    topstories: 0,
-    newstories: 1000,
-    beststories: 2000,
-    askstories: 3000,
-    showstories: 4000,
-    jobstories: 5000
-  }[type] || 0;
-  
+  const offset =
+    {
+      topstories: 0,
+      newstories: 1000,
+      beststories: 2000,
+      askstories: 3000,
+      showstories: 4000,
+      jobstories: 5000,
+    }[type] || 0;
+
   for (let i = 0; i < limit; i++) {
     stories.push(baseId + offset + i);
   }
-  
+
   return stories;
 }
 
@@ -111,12 +120,14 @@ export function getMockStoryList(type: StoryListType, limit: number = 500): numb
  * Get mock stories with full data
  */
 export function getMockStories(ids: number[]): HNItem[] {
-  return ids.map(id => generateMockStory({
-    id,
-    title: `Mock Story ${id}`,
-    score: Math.floor(Math.random() * 1000),
-    descendants: Math.floor(Math.random() * 200)
-  }));
+  return ids.map((id) =>
+    generateMockStory({
+      id,
+      title: `Mock Story ${id}`,
+      score: Math.floor(Math.random() * 1000),
+      descendants: Math.floor(Math.random() * 200),
+    }),
+  );
 }
 
 /**
@@ -131,7 +142,7 @@ export function getMockItem(id: number): HNItem | null {
     // Story range
     return generateMockStory({ id });
   }
-  
+
   return null;
 }
 
@@ -154,21 +165,21 @@ export const MOCK_TEST_DATA = {
     score: 100,
     descendants: 50,
     url: "https://example.com/test",
-    kids: [31000001, 31000002, 31000003]
+    kids: [31000001, 31000002, 31000003],
   }),
-  
+
   // Common test comment
   testComment: generateMockComment({
     id: 31000001,
     parent: 30000001,
     by: "testcommenter",
-    text: "<p>This is a test comment</p>"
+    text: "<p>This is a test comment</p>",
   }),
-  
+
   // Common test user
   testUser: generateMockUser("testuser", {
     karma: 1000,
     created: Math.floor(Date.now() / 1000) - 86400 * 30, // 30 days ago
-    about: "Test user for E2E tests"
-  })
+    about: "Test user for E2E tests",
+  }),
 };

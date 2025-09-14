@@ -19,7 +19,7 @@ describe("AnomalyDetector", () => {
       const result = detector.detect(values);
 
       expect(result.anomalies.length).toBeGreaterThan(0);
-      expect(result.anomalies.some(a => a.value === 100)).toBe(true);
+      expect(result.anomalies.some((a) => a.value === 100)).toBe(true);
       expect(result.statistics.totalPoints).toBe(9);
     });
 
@@ -52,7 +52,7 @@ describe("AnomalyDetector", () => {
       const result = detector.detect(values);
 
       expect(result.anomalies.length).toBeGreaterThan(0);
-      const anomaly = result.anomalies.find(a => a.value === 50);
+      const anomaly = result.anomalies.find((a) => a.value === 50);
       expect(anomaly).toBeDefined();
       expect(anomaly?.method).toBe("zscore");
       expect(anomaly?.score).toBeGreaterThan(2);
@@ -61,11 +61,11 @@ describe("AnomalyDetector", () => {
     it("should adjust threshold based on sensitivity", () => {
       const lowSensitivity = new AnomalyDetector({
         methods: ["zscore"],
-        sensitivity: 0.2
+        sensitivity: 0.2,
       });
       const highSensitivity = new AnomalyDetector({
         methods: ["zscore"],
-        sensitivity: 0.9
+        sensitivity: 0.9,
       });
 
       const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 15];
@@ -74,7 +74,7 @@ describe("AnomalyDetector", () => {
       const highResult = highSensitivity.detect(values);
 
       expect(highResult.anomalies.length).toBeGreaterThanOrEqual(
-        lowResult.anomalies.length
+        lowResult.anomalies.length,
       );
     });
   });
@@ -90,7 +90,7 @@ describe("AnomalyDetector", () => {
       const result = detector.detect(values);
 
       expect(result.anomalies.length).toBeGreaterThan(0);
-      const anomaly = result.anomalies.find(a => a.value === 100);
+      const anomaly = result.anomalies.find((a) => a.value === 100);
       expect(anomaly).toBeDefined();
       expect(anomaly?.method).toBe("iqr");
     });
@@ -105,8 +105,8 @@ describe("AnomalyDetector", () => {
       const result = detector.detect(values);
 
       expect(result.anomalies.length).toBe(2);
-      expect(result.anomalies.some(a => a.value === -50)).toBe(true);
-      expect(result.anomalies.some(a => a.value === 100)).toBe(true);
+      expect(result.anomalies.some((a) => a.value === -50)).toBe(true);
+      expect(result.anomalies.some((a) => a.value === 100)).toBe(true);
     });
   });
 
@@ -117,14 +117,16 @@ describe("AnomalyDetector", () => {
       };
       const detector = new AnomalyDetector(config);
 
-      const values = Array(50).fill(0).map(() => Math.random() * 10 + 10);
+      const values = Array(50)
+        .fill(0)
+        .map(() => Math.random() * 10 + 10);
       values.push(100); // Add clear outlier
       values.push(-20); // Add another outlier
 
       const result = detector.detect(values);
 
       expect(result.anomalies.length).toBeGreaterThan(0);
-      expect(result.anomalies.some(a => a.value === 100)).toBe(true);
+      expect(result.anomalies.some((a) => a.value === 100)).toBe(true);
     });
   });
 
@@ -139,7 +141,7 @@ describe("AnomalyDetector", () => {
       const result = detector.detect(values);
 
       expect(result.anomalies.length).toBeGreaterThan(0);
-      expect(result.anomalies.some(a => a.value === 50)).toBe(true);
+      expect(result.anomalies.some((a) => a.value === 50)).toBe(true);
       expect(result.anomalies[0].method).toBe("mad");
     });
   });
@@ -155,8 +157,8 @@ describe("AnomalyDetector", () => {
       const result = detector.detect(values);
 
       // 100 should be detected by majority of methods
-      expect(result.anomalies.some(a => a.value === 100)).toBe(true);
-      const anomaly = result.anomalies.find(a => a.value === 100);
+      expect(result.anomalies.some((a) => a.value === 100)).toBe(true);
+      const anomaly = result.anomalies.find((a) => a.value === 100);
       expect(anomaly?.method).toBe("ensemble");
     });
 
@@ -186,14 +188,14 @@ describe("AnomalyDetector", () => {
       for (let i = 0; i < 30; i++) {
         timeSeries.push({
           timestamp: new Date(now.getTime() + i * 86400000),
-          value: 100 + Math.sin(i * Math.PI / 7) * 10 + (i === 15 ? 50 : 0),
+          value: 100 + Math.sin((i * Math.PI) / 7) * 10 + (i === 15 ? 50 : 0),
         });
       }
 
       const result = detector.detectTimeSeries(timeSeries);
 
       expect(result.anomalies.length).toBeGreaterThan(0);
-      expect(result.anomalies.some(a => a.index === 15)).toBe(true);
+      expect(result.anomalies.some((a) => a.index === 15)).toBe(true);
     });
 
     it("should handle seasonal patterns", () => {
@@ -217,7 +219,7 @@ describe("AnomalyDetector", () => {
 
       const result = detector.detectTimeSeries(timeSeries);
 
-      expect(result.anomalies.some(a => a.index === 20)).toBe(true);
+      expect(result.anomalies.some((a) => a.index === 20)).toBe(true);
     });
   });
 
@@ -288,7 +290,7 @@ describe("AnomalyDetector", () => {
       const values = [10, 11, 12, 50, 11, 12, 10]; // Spike at index 3
       const result = detector.detect(values);
 
-      const anomaly = result.anomalies.find(a => a.value === 50);
+      const anomaly = result.anomalies.find((a) => a.value === 50);
       expect(anomaly?.type).toBe("spike");
     });
 
@@ -296,7 +298,7 @@ describe("AnomalyDetector", () => {
       const values = [10, 11, 12, 2, 11, 12, 10]; // Dip at index 3
       const result = detector.detect(values);
 
-      const anomaly = result.anomalies.find(a => a.value === 2);
+      const anomaly = result.anomalies.find((a) => a.value === 2);
       expect(anomaly?.type).toBe("dip");
     });
 
@@ -311,7 +313,7 @@ describe("AnomalyDetector", () => {
 
       if (result.anomalies.length > 0) {
         expect(["trend_break", "spike", "outlier"]).toContain(
-          result.anomalies[0].type
+          result.anomalies[0].type,
         );
       }
     });
@@ -355,7 +357,9 @@ describe("AnomalyDetector", () => {
       };
       const detector = new AnomalyDetector(config);
 
-      const values = Array(20).fill(0).map((_, i) => 10 + i * 0.5);
+      const values = Array(20)
+        .fill(0)
+        .map((_, i) => 10 + i * 0.5);
       values[15] = 30; // Anomaly
 
       const result = detector.detect(values);
@@ -372,8 +376,13 @@ describe("AnomalyDetector", () => {
       const clearResult = detector.detect(clearAnomalies);
       const unclearResult = detector.detect(unclearAnomalies);
 
-      if (clearResult.anomalies.length > 0 && unclearResult.anomalies.length > 0) {
-        expect(clearResult.confidence).toBeGreaterThan(unclearResult.confidence);
+      if (
+        clearResult.anomalies.length > 0 &&
+        unclearResult.anomalies.length > 0
+      ) {
+        expect(clearResult.confidence).toBeGreaterThan(
+          unclearResult.confidence,
+        );
       }
     });
   });

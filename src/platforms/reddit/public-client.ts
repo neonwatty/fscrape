@@ -141,7 +141,7 @@ export class RedditPublicClient {
     const response = await fetch(url, {
       headers: {
         "User-Agent": this.config.userAgent!,
-        "Accept": "application/json",
+        Accept: "application/json",
       },
       signal: AbortSignal.timeout(this.config.requestTimeout!),
     });

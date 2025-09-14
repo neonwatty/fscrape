@@ -463,16 +463,16 @@ export class BatchProcessor {
     try {
       if (operation.platform === "reddit" || operation.platform === "both") {
         const scraper = new RedditScraper({
-          clientId: 'mock',
-          clientSecret: 'mock',
-          userAgent: 'fscrape-batch',
+          clientId: "mock",
+          clientSecret: "mock",
+          userAgent: "fscrape-batch",
         });
 
         for (const item of operation.items || []) {
           if (item.includes("/r/")) {
             // Keep the full /r/subreddit path for the scraper
             // Remove /r/ prefix if present
-            const subreddit = item.replace(/^\/r\//, '');
+            const subreddit = item.replace(/^\/r\//, "");
             const posts = await scraper.scrapeCategory(subreddit, {
               limit: operation.options?.limit || 100,
             });
@@ -496,14 +496,14 @@ export class BatchProcessor {
         if (operation.items && operation.items.length > 0) {
           for (const item of operation.items) {
             const post = await scraper.scrapePost(item);
-            
+
             if (post) {
               await dbManager.upsertPost(post);
               results.posts++;
             }
           }
         } else {
-          const posts = await scraper.scrapePosts('topstories', {
+          const posts = await scraper.scrapePosts("topstories", {
             limit: operation.options?.limit || 100,
           });
 
@@ -541,7 +541,7 @@ export class BatchProcessor {
       // Create ExportManager with appropriate format
       const exportConfig: any = {
         format: format as "json" | "csv",
-        outputDirectory: './',
+        outputDirectory: "./",
         defaultFormat: format as "json" | "csv",
         csvOptions: format === "csv" ? {} : undefined,
         jsonOptions: format === "json" ? { pretty: true } : undefined,
@@ -555,7 +555,7 @@ export class BatchProcessor {
         const filePath = await exporter.exportData(
           { posts, comments: [], users: [] },
           `export-posts-${Date.now()}`,
-          format as "json" | "csv"
+          format as "json" | "csv",
         );
         results.posts = { count: posts.length, file: filePath };
       }
@@ -565,7 +565,7 @@ export class BatchProcessor {
         const filePath = await exporter.exportData(
           { posts: [], comments, users: [] },
           `export-comments-${Date.now()}`,
-          format as "json" | "csv"
+          format as "json" | "csv",
         );
         results.comments = { count: comments.length, file: filePath };
       }
@@ -575,7 +575,7 @@ export class BatchProcessor {
         const filePath = await exporter.exportData(
           { posts: [], comments: [], users },
           `export-users-${Date.now()}`,
-          format as "json" | "csv"
+          format as "json" | "csv",
         );
         results.users = { count: users.length, file: filePath };
       }

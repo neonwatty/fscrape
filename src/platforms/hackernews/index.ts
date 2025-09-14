@@ -70,7 +70,7 @@ export const HackerNewsPlatform: PlatformConstructor = class
       limit: options?.limit || 10,
       includeComments: options?.includeComments || false,
     });
-    
+
     return {
       posts,
       metadata: {

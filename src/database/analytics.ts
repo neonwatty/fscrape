@@ -1177,36 +1177,40 @@ export class DatabaseAnalytics {
    */
   getMovingAverage(
     platform: Platform,
-    metric: 'score' | 'comments' | 'engagement',
+    metric: "score" | "comments" | "engagement",
     windowDays: number,
-    periodDays: number = 30
+    periodDays: number = 30,
   ): Array<{ date: string; value: number; movingAvg: number }> {
     const endTime = Date.now();
-    const startTime = endTime - (periodDays * 24 * 60 * 60 * 1000);
+    const startTime = endTime - periodDays * 24 * 60 * 60 * 1000;
 
     // Get daily aggregated data
     const query = this.db.prepare(`
       SELECT
         date(created_at / 1000, 'unixepoch') as date,
-        AVG(${metric === 'score' ? 'score' : metric === 'comments' ? 'comment_count' : 'engagement_rate'}) as value
+        AVG(${metric === "score" ? "score" : metric === "comments" ? "comment_count" : "engagement_rate"}) as value
       FROM posts
       WHERE platform = ? AND created_at >= ? AND created_at <= ?
       GROUP BY date
       ORDER BY date
     `);
 
-    const dailyData = query.all(platform, startTime, endTime) as Array<{ date: string; value: number }>;
+    const dailyData = query.all(platform, startTime, endTime) as Array<{
+      date: string;
+      value: number;
+    }>;
 
     // Calculate moving average
     return dailyData.map((item, index) => {
       const windowStart = Math.max(0, index - windowDays + 1);
       const windowData = dailyData.slice(windowStart, index + 1);
-      const movingAvg = windowData.reduce((sum, d) => sum + d.value, 0) / windowData.length;
+      const movingAvg =
+        windowData.reduce((sum, d) => sum + d.value, 0) / windowData.length;
 
       return {
         date: item.date,
         value: item.value,
-        movingAvg: Math.round(movingAvg * 100) / 100
+        movingAvg: Math.round(movingAvg * 100) / 100,
       };
     });
   }
@@ -1216,14 +1220,19 @@ export class DatabaseAnalytics {
    */
   getTrendSlope(
     platform: Platform,
-    metric: 'score' | 'posts' | 'users',
-    periodDays: number = 30
-  ): { slope: number; intercept: number; r2: number; trend: 'increasing' | 'decreasing' | 'stable' } {
+    metric: "score" | "posts" | "users",
+    periodDays: number = 30,
+  ): {
+    slope: number;
+    intercept: number;
+    r2: number;
+    trend: "increasing" | "decreasing" | "stable";
+  } {
     const endTime = Date.now();
-    const startTime = endTime - (periodDays * 24 * 60 * 60 * 1000);
+    const startTime = endTime - periodDays * 24 * 60 * 60 * 1000;
 
     let query;
-    if (metric === 'posts') {
+    if (metric === "posts") {
       query = this.db.prepare(`
         SELECT
           julianday(date(created_at / 1000, 'unixepoch')) as x,
@@ -1233,7 +1242,7 @@ export class DatabaseAnalytics {
         GROUP BY date(created_at / 1000, 'unixepoch')
         ORDER BY x
       `);
-    } else if (metric === 'users') {
+    } else if (metric === "users") {
       query = this.db.prepare(`
         SELECT
           julianday(date(created_at / 1000, 'unixepoch')) as x,
@@ -1255,19 +1264,22 @@ export class DatabaseAnalytics {
       `);
     }
 
-    const data = query.all(platform, startTime, endTime) as Array<{ x: number; y: number }>;
+    const data = query.all(platform, startTime, endTime) as Array<{
+      x: number;
+      y: number;
+    }>;
 
     if (data.length < 2) {
-      return { slope: 0, intercept: 0, r2: 0, trend: 'stable' };
+      return { slope: 0, intercept: 0, r2: 0, trend: "stable" };
     }
 
     // Calculate linear regression
     const n = data.length;
     const sumX = data.reduce((sum, d) => sum + d.x, 0);
     const sumY = data.reduce((sum, d) => sum + d.y, 0);
-    const sumXY = data.reduce((sum, d) => sum + (d.x * d.y), 0);
-    const sumX2 = data.reduce((sum, d) => sum + (d.x * d.x), 0);
-    const sumY2 = data.reduce((sum, d) => sum + (d.y * d.y), 0);
+    const sumXY = data.reduce((sum, d) => sum + d.x * d.y, 0);
+    const sumX2 = data.reduce((sum, d) => sum + d.x * d.x, 0);
+    const sumY2 = data.reduce((sum, d) => sum + d.y * d.y, 0);
 
     const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
@@ -1279,24 +1291,24 @@ export class DatabaseAnalytics {
       const predicted = slope * d.x + intercept;
       return sum + Math.pow(d.y - predicted, 2);
     }, 0);
-    const r2 = 1 - (ssResidual / ssTotal);
+    const r2 = 1 - ssResidual / ssTotal;
 
     // Determine trend based on slope significance and R-squared
     const avgY = sumY / n;
     const normalizedSlope = slope / avgY;
-    let trend: 'increasing' | 'decreasing' | 'stable';
+    let trend: "increasing" | "decreasing" | "stable";
 
     // Use combination of normalized slope and R-squared for trend detection
     // Lower threshold for better sensitivity to trends
-    if (normalizedSlope > 0.01 && r2 > 0.3) trend = 'increasing';
-    else if (normalizedSlope < -0.01 && r2 > 0.3) trend = 'decreasing';
-    else trend = 'stable';
+    if (normalizedSlope > 0.01 && r2 > 0.3) trend = "increasing";
+    else if (normalizedSlope < -0.01 && r2 > 0.3) trend = "decreasing";
+    else trend = "stable";
 
     return {
       slope: Math.round(slope * 1000) / 1000,
       intercept: Math.round(intercept * 100) / 100,
       r2: Math.round(r2 * 1000) / 1000,
-      trend
+      trend,
     };
   }
 
@@ -1305,17 +1317,21 @@ export class DatabaseAnalytics {
    */
   getCorrelation(
     platform: Platform,
-    metric1: 'score' | 'comments' | 'length',
-    metric2: 'score' | 'comments' | 'length',
-    periodDays: number = 30
-  ): { correlation: number; pValue: number; strength: 'strong' | 'moderate' | 'weak' | 'none' } {
+    metric1: "score" | "comments" | "length",
+    metric2: "score" | "comments" | "length",
+    periodDays: number = 30,
+  ): {
+    correlation: number;
+    pValue: number;
+    strength: "strong" | "moderate" | "weak" | "none";
+  } {
     const endTime = Date.now();
-    const startTime = endTime - (periodDays * 24 * 60 * 60 * 1000);
+    const startTime = endTime - periodDays * 24 * 60 * 60 * 1000;
 
     const metricMap = {
-      score: 'score',
-      comments: 'comment_count',
-      length: 'LENGTH(content)'
+      score: "score",
+      comments: "comment_count",
+      length: "LENGTH(content)",
     };
 
     const query = this.db.prepare(`
@@ -1328,27 +1344,33 @@ export class DatabaseAnalytics {
         AND ${metricMap[metric2]} IS NOT NULL
     `);
 
-    const data = query.all(platform, startTime, endTime) as Array<{ x: number; y: number }>;
+    const data = query.all(platform, startTime, endTime) as Array<{
+      x: number;
+      y: number;
+    }>;
 
     if (data.length < 3) {
-      return { correlation: 0, pValue: 1, strength: 'none' };
+      return { correlation: 0, pValue: 1, strength: "none" };
     }
 
     // Calculate Pearson correlation coefficient
     const n = data.length;
     const sumX = data.reduce((sum, d) => sum + d.x, 0);
     const sumY = data.reduce((sum, d) => sum + d.y, 0);
-    const sumXY = data.reduce((sum, d) => sum + (d.x * d.y), 0);
-    const sumX2 = data.reduce((sum, d) => sum + (d.x * d.x), 0);
-    const sumY2 = data.reduce((sum, d) => sum + (d.y * d.y), 0);
+    const sumXY = data.reduce((sum, d) => sum + d.x * d.y, 0);
+    const sumX2 = data.reduce((sum, d) => sum + d.x * d.x, 0);
+    const sumY2 = data.reduce((sum, d) => sum + d.y * d.y, 0);
 
     const numerator = n * sumXY - sumX * sumY;
-    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+    const denominator = Math.sqrt(
+      (n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY),
+    );
 
     const correlation = denominator === 0 ? 0 : numerator / denominator;
 
     // Calculate t-statistic for p-value
-    const tStat = correlation * Math.sqrt((n - 2) / (1 - correlation * correlation));
+    const tStat =
+      correlation * Math.sqrt((n - 2) / (1 - correlation * correlation));
     const degreesOfFreedom = n - 2;
 
     // Simplified p-value calculation (would need statistical library for accurate value)
@@ -1356,16 +1378,16 @@ export class DatabaseAnalytics {
 
     // Determine strength
     const absCorr = Math.abs(correlation);
-    let strength: 'strong' | 'moderate' | 'weak' | 'none';
-    if (absCorr >= 0.7) strength = 'strong';
-    else if (absCorr >= 0.4) strength = 'moderate';
-    else if (absCorr >= 0.2) strength = 'weak';
-    else strength = 'none';
+    let strength: "strong" | "moderate" | "weak" | "none";
+    if (absCorr >= 0.7) strength = "strong";
+    else if (absCorr >= 0.4) strength = "moderate";
+    else if (absCorr >= 0.2) strength = "weak";
+    else strength = "none";
 
     return {
       correlation: Math.round(correlation * 1000) / 1000,
       pValue: Math.round(pValue * 1000) / 1000,
-      strength
+      strength,
     };
   }
 
@@ -1374,21 +1396,21 @@ export class DatabaseAnalytics {
    */
   detectAnomalies(
     platform: Platform,
-    metric: 'score' | 'comments' | 'activity',
+    metric: "score" | "comments" | "activity",
     threshold: number = 2.5,
-    periodDays: number = 30
+    periodDays: number = 30,
   ): Array<{
     date: string;
     value: number;
     zScore: number;
     isAnomaly: boolean;
-    type: 'high' | 'low' | 'normal';
+    type: "high" | "low" | "normal";
   }> {
     const endTime = Date.now();
-    const startTime = endTime - (periodDays * 24 * 60 * 60 * 1000);
+    const startTime = endTime - periodDays * 24 * 60 * 60 * 1000;
 
     let query;
-    if (metric === 'activity') {
+    if (metric === "activity") {
       query = this.db.prepare(`
         SELECT
           date(created_at / 1000, 'unixepoch') as date,
@@ -1399,7 +1421,7 @@ export class DatabaseAnalytics {
         ORDER BY date
       `);
     } else {
-      const column = metric === 'score' ? 'AVG(score)' : 'AVG(comment_count)';
+      const column = metric === "score" ? "AVG(score)" : "AVG(comment_count)";
       query = this.db.prepare(`
         SELECT
           date(created_at / 1000, 'unixepoch') as date,
@@ -1411,39 +1433,43 @@ export class DatabaseAnalytics {
       `);
     }
 
-    const data = query.all(platform, startTime, endTime) as Array<{ date: string; value: number }>;
+    const data = query.all(platform, startTime, endTime) as Array<{
+      date: string;
+      value: number;
+    }>;
 
     if (data.length < 3) {
-      return data.map(d => ({
+      return data.map((d) => ({
         ...d,
         zScore: 0,
         isAnomaly: false,
-        type: 'normal' as const
+        type: "normal" as const,
       }));
     }
 
     // Calculate mean and standard deviation
-    const values = data.map(d => d.value);
+    const values = data.map((d) => d.value);
     const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
-    const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+    const variance =
+      values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
     const stdDev = Math.sqrt(variance);
 
     // Calculate z-scores and detect anomalies
-    return data.map(item => {
+    return data.map((item) => {
       const zScore = stdDev === 0 ? 0 : (item.value - mean) / stdDev;
       const isAnomaly = Math.abs(zScore) > threshold;
-      let type: 'high' | 'low' | 'normal';
+      let type: "high" | "low" | "normal";
 
-      if (zScore > threshold) type = 'high';
-      else if (zScore < -threshold) type = 'low';
-      else type = 'normal';
+      if (zScore > threshold) type = "high";
+      else if (zScore < -threshold) type = "low";
+      else type = "normal";
 
       return {
         date: item.date,
         value: Math.round(item.value * 100) / 100,
         zScore: Math.round(zScore * 100) / 100,
         isAnomaly,
-        type
+        type,
       };
     });
   }
@@ -1453,8 +1479,8 @@ export class DatabaseAnalytics {
    */
   getSeasonalPatterns(
     platform: Platform,
-    metric: 'posts' | 'engagement' | 'score',
-    periodDays: number = 90
+    metric: "posts" | "engagement" | "score",
+    periodDays: number = 90,
   ): Array<{
     dayOfWeek: number;
     dayName: string;
@@ -1462,10 +1488,10 @@ export class DatabaseAnalytics {
     relativeStrength: number;
   }> {
     const endTime = Date.now();
-    const startTime = endTime - (periodDays * 24 * 60 * 60 * 1000);
+    const startTime = endTime - periodDays * 24 * 60 * 60 * 1000;
 
     let query;
-    if (metric === 'posts') {
+    if (metric === "posts") {
       query = this.db.prepare(`
         SELECT
           CAST(strftime('%w', datetime(created_at / 1000, 'unixepoch')) AS INTEGER) as day_of_week,
@@ -1475,7 +1501,7 @@ export class DatabaseAnalytics {
         WHERE platform = ? AND created_at >= ? AND created_at <= ?
         GROUP BY day_of_week
       `);
-    } else if (metric === 'engagement') {
+    } else if (metric === "engagement") {
       query = this.db.prepare(`
         SELECT
           CAST(strftime('%w', datetime(created_at / 1000, 'unixepoch')) AS INTEGER) as day_of_week,
@@ -1497,27 +1523,38 @@ export class DatabaseAnalytics {
 
     const results = query.all(platform, startTime, endTime) as any[];
 
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayNames = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
 
     // Process results
-    const processed = results.map(row => {
-      const avgValue = metric === 'posts'
-        ? row.total_count / (row.day_count || 1)
-        : row.avg_value;
+    const processed = results.map((row) => {
+      const avgValue =
+        metric === "posts"
+          ? row.total_count / (row.day_count || 1)
+          : row.avg_value;
 
       return {
         dayOfWeek: row.day_of_week,
         dayName: dayNames[row.day_of_week],
-        avgValue: Math.round(avgValue * 100) / 100
+        avgValue: Math.round(avgValue * 100) / 100,
       };
     });
 
     // Calculate relative strength
-    const overallAvg = processed.reduce((sum, d) => sum + d.avgValue, 0) / (processed.length || 1);
+    const overallAvg =
+      processed.reduce((sum, d) => sum + d.avgValue, 0) /
+      (processed.length || 1);
 
-    return processed.map(item => ({
+    return processed.map((item) => ({
       ...item,
-      relativeStrength: Math.round((item.avgValue / overallAvg) * 100) / 100
+      relativeStrength: Math.round((item.avgValue / overallAvg) * 100) / 100,
     }));
   }
 
@@ -1527,16 +1564,24 @@ export class DatabaseAnalytics {
   refreshDailyAggregations(daysBack: number = 30): void {
     const transaction = this.db.transaction(() => {
       const endDate = new Date();
-      const startDate = new Date(endDate.getTime() - (daysBack * 24 * 60 * 60 * 1000));
+      const startDate = new Date(
+        endDate.getTime() - daysBack * 24 * 60 * 60 * 1000,
+      );
 
       // Clear old data for the refresh period
-      this.db.prepare(`
+      this.db
+        .prepare(
+          `
         DELETE FROM mv_daily_aggregations
         WHERE date >= date(?) AND date <= date(?)
-      `).run(startDate.toISOString(), endDate.toISOString());
+      `,
+        )
+        .run(startDate.toISOString(), endDate.toISOString());
 
       // Insert refreshed data with simplified aggregations
-      this.db.prepare(`
+      this.db
+        .prepare(
+          `
         INSERT INTO mv_daily_aggregations (
           platform, date, posts_count, comments_count, unique_users, new_users,
           avg_post_score, median_post_score, avg_comment_score, total_engagement,
@@ -1602,11 +1647,16 @@ export class DatabaseAnalytics {
         LEFT JOIN daily_comments dc ON dc.platform = dp.platform AND dc.date = dp.date
         LEFT JOIN (SELECT DISTINCT platform, date, top_post_id, top_author FROM top_posts) tp
           ON tp.platform = dp.platform AND tp.date = dp.date
-      `).run(
-        startDate.toISOString(), endDate.toISOString(),
-        startDate.toISOString(), endDate.toISOString(),
-        startDate.toISOString(), endDate.toISOString()
-      );
+      `,
+        )
+        .run(
+          startDate.toISOString(),
+          endDate.toISOString(),
+          startDate.toISOString(),
+          endDate.toISOString(),
+          startDate.toISOString(),
+          endDate.toISOString(),
+        );
     });
 
     transaction();
@@ -1618,16 +1668,22 @@ export class DatabaseAnalytics {
   refreshHourlyAggregations(hoursBack: number = 168): void {
     const transaction = this.db.transaction(() => {
       const endTime = Date.now();
-      const startTime = endTime - (hoursBack * 60 * 60 * 1000);
+      const startTime = endTime - hoursBack * 60 * 60 * 1000;
 
       // Clear old data
-      this.db.prepare(`
+      this.db
+        .prepare(
+          `
         DELETE FROM mv_hourly_aggregations
         WHERE hour_bucket >= ? AND hour_bucket <= ?
-      `).run(Math.floor(startTime / 3600000), Math.floor(endTime / 3600000));
+      `,
+        )
+        .run(Math.floor(startTime / 3600000), Math.floor(endTime / 3600000));
 
       // Insert refreshed data
-      this.db.prepare(`
+      this.db
+        .prepare(
+          `
         INSERT INTO mv_hourly_aggregations (
           platform, hour_bucket, posts_count, comments_count, unique_users,
           avg_score, max_score, min_score, total_engagement,
@@ -1650,7 +1706,9 @@ export class DatabaseAnalytics {
         LEFT JOIN comments c ON c.post_id = p.id
         WHERE p.created_at >= ? AND p.created_at <= ?
         GROUP BY p.platform, CAST(p.created_at / 3600000 AS INTEGER)
-      `).run(startTime, endTime);
+      `,
+        )
+        .run(startTime, endTime);
     });
 
     transaction();
@@ -1665,7 +1723,9 @@ export class DatabaseAnalytics {
       this.db.prepare(`DELETE FROM mv_user_engagement_scores`).run();
 
       // Insert refreshed data
-      this.db.prepare(`
+      this.db
+        .prepare(
+          `
         INSERT INTO mv_user_engagement_scores (
           user_id, username, platform, total_posts, total_comments, total_score,
           avg_post_score, avg_comment_score, post_engagement_rate,
@@ -1722,7 +1782,9 @@ export class DatabaseAnalytics {
         FROM user_stats us
         JOIN percentiles p ON p.user_id = us.user_id AND p.platform = us.platform
         WHERE us.total_posts > 0 OR us.total_comments > 0
-      `).run();
+      `,
+        )
+        .run();
     });
 
     transaction();
@@ -1733,13 +1795,15 @@ export class DatabaseAnalytics {
    */
   refreshTrendingContent(hoursWindow: number = 24): void {
     const transaction = this.db.transaction(() => {
-      const cutoffTime = Date.now() - (hoursWindow * 60 * 60 * 1000);
+      const cutoffTime = Date.now() - hoursWindow * 60 * 60 * 1000;
 
       // Clear existing data
       this.db.prepare(`DELETE FROM mv_trending_content`).run();
 
       // Insert refreshed data
-      this.db.prepare(`
+      this.db
+        .prepare(
+          `
         INSERT INTO mv_trending_content (
           post_id, platform, title, author, url, score, comment_count,
           created_at, age_hours, velocity_score, hotness_score,
@@ -1776,7 +1840,9 @@ export class DatabaseAnalytics {
         )
         SELECT * FROM ranked
         WHERE rank_overall <= 1000 OR rank_platform <= 100
-      `).run(cutoffTime);
+      `,
+        )
+        .run(cutoffTime);
     });
 
     transaction();
@@ -1786,26 +1852,26 @@ export class DatabaseAnalytics {
    * Refresh all materialized views
    */
   refreshAllMaterializedViews(): void {
-    console.log('Refreshing all materialized views...');
+    console.log("Refreshing all materialized views...");
     const startTime = Date.now();
 
     try {
       this.refreshDailyAggregations(30);
-      console.log('✓ Daily aggregations refreshed');
+      console.log("✓ Daily aggregations refreshed");
 
       this.refreshHourlyAggregations(168);
-      console.log('✓ Hourly aggregations refreshed');
+      console.log("✓ Hourly aggregations refreshed");
 
       this.refreshUserEngagementScores();
-      console.log('✓ User engagement scores refreshed');
+      console.log("✓ User engagement scores refreshed");
 
       this.refreshTrendingContent(48);
-      console.log('✓ Trending content refreshed');
+      console.log("✓ Trending content refreshed");
 
       const duration = Date.now() - startTime;
       console.log(`All materialized views refreshed in ${duration}ms`);
     } catch (error) {
-      console.error('Error refreshing materialized views:', error);
+      console.error("Error refreshing materialized views:", error);
       throw error;
     }
   }
@@ -1820,30 +1886,42 @@ export class DatabaseAnalytics {
     sizeKB: number;
   }> {
     const views = [
-      'mv_daily_aggregations',
-      'mv_hourly_aggregations',
-      'mv_user_engagement_scores',
-      'mv_trending_content',
-      'mv_platform_comparison'
+      "mv_daily_aggregations",
+      "mv_hourly_aggregations",
+      "mv_user_engagement_scores",
+      "mv_trending_content",
+      "mv_platform_comparison",
     ];
 
-    return views.map(viewName => {
+    return views.map((viewName) => {
       try {
-        const countResult = this.db.prepare(`SELECT COUNT(*) as count FROM ${viewName}`).get() as any;
-        const refreshResult = this.db.prepare(`SELECT MAX(last_refreshed) as last_refreshed FROM ${viewName}`).get() as any;
+        const countResult = this.db
+          .prepare(`SELECT COUNT(*) as count FROM ${viewName}`)
+          .get() as any;
+        const refreshResult = this.db
+          .prepare(
+            `SELECT MAX(last_refreshed) as last_refreshed FROM ${viewName}`,
+          )
+          .get() as any;
 
         // Estimate size (rough approximation)
-        const sizeResult = this.db.prepare(`
+        const sizeResult = this.db
+          .prepare(
+            `
           SELECT
             COUNT(*) * AVG(LENGTH(CAST(rowid AS TEXT))) as estimated_size
           FROM ${viewName}
-        `).get() as any;
+        `,
+          )
+          .get() as any;
 
         return {
           viewName,
           rowCount: countResult?.count || 0,
-          lastRefreshed: refreshResult?.last_refreshed ? new Date(refreshResult.last_refreshed) : null,
-          sizeKB: Math.round((sizeResult?.estimated_size || 0) / 1024)
+          lastRefreshed: refreshResult?.last_refreshed
+            ? new Date(refreshResult.last_refreshed)
+            : null,
+          sizeKB: Math.round((sizeResult?.estimated_size || 0) / 1024),
         };
       } catch (error) {
         // View might not exist yet
@@ -1851,7 +1929,7 @@ export class DatabaseAnalytics {
           viewName,
           rowCount: 0,
           lastRefreshed: null,
-          sizeKB: 0
+          sizeKB: 0,
         };
       }
     });
