@@ -60,19 +60,59 @@ export class SvgGenerator {
     options?: SvgChartOptions,
   ): string {
     const opts = { ...this.defaultOptions, ...options };
+
+    // Apply theme if specified
+    if (options?.theme === "dark") {
+      opts.customColors = {
+        background: "#1a1a1a",
+        text: "#ffffff",
+        grid: "#2D3748",
+        axis: "#718096",
+      };
+    }
     const chartWidth = opts.width - opts.margin.left - opts.margin.right;
     const chartHeight = opts.height - opts.margin.top - opts.margin.bottom;
+
+    // Handle invalid or empty data
+    if (!data || data.length === 0) {
+      return this.renderSvg(opts.width, opts.height, [
+        this.createText(opts.width / 2, opts.height / 2, "No data available", {
+          "text-anchor": "middle",
+          "font-size": "16",
+          fill: opts.customColors.text!,
+        }),
+      ]);
+    }
+
+    // Validate data
+    const validData = data.filter(d => d && typeof d.y === 'number' && isFinite(d.y));
+    if (validData.length === 0) {
+      return this.renderSvg(opts.width, opts.height, [
+        this.createText(opts.width / 2, opts.height / 2, "Invalid data", {
+          "text-anchor": "middle",
+          "font-size": "16",
+          fill: opts.customColors.text!,
+        }),
+      ]);
+    }
+    data = validData;
 
     // Calculate scales
     const xValues = data.map(d => d.x instanceof Date ? d.x.getTime() : d.x);
     const yValues = data.map(d => d.y);
     const xMin = Math.min(...xValues);
     const xMax = Math.max(...xValues);
-    const yMin = Math.min(...yValues);
+    const yMin = Math.min(0, ...yValues);
     const yMax = Math.max(...yValues);
 
-    const xScale = (val: number) => ((val - xMin) / (xMax - xMin)) * chartWidth;
-    const yScale = (val: number) => chartHeight - ((val - yMin) / (yMax - yMin)) * chartHeight;
+    const xScale = (val: number) => {
+      if (xMax === xMin) return chartWidth / 2;
+      return ((val - xMin) / (xMax - xMin)) * chartWidth;
+    };
+    const yScale = (val: number) => {
+      if (yMax === yMin) return chartHeight / 2;
+      return chartHeight - ((val - yMin) / (yMax - yMin)) * chartHeight;
+    };
 
     // Build SVG elements
     const elements: SvgElement[] = [];
@@ -141,6 +181,13 @@ export class SvgGenerator {
 
     // Title
     if (title) {
+      // Add title element for accessibility
+      elements.unshift({
+        tag: "title",
+        attributes: {},
+        children: [title],
+      });
+
       elements.push({
         tag: "text",
         attributes: {
@@ -162,17 +209,64 @@ export class SvgGenerator {
    * Generate SVG bar chart
    */
   public generateBarChart(
-    data: Array<{ label: string; values: Record<string, number> }>,
+    data: any[],
     title?: string,
     options?: SvgChartOptions,
   ): string {
     const opts = { ...this.defaultOptions, ...options };
+
+    // Apply theme if specified
+    if (options?.theme) {
+      if (options.theme === "dark") {
+        opts.customColors = {
+          background: "#1a1a1a",
+          text: "#ffffff",
+          grid: "#2D3748",
+          axis: "#718096",
+        };
+      }
+    }
     const chartWidth = opts.width - opts.margin.left - opts.margin.right;
     const chartHeight = opts.height - opts.margin.top - opts.margin.bottom;
 
-    // Get series names
-    const series = Object.keys(data[0].values);
-    const maxValue = Math.max(...data.flatMap(d => Object.values(d.values)));
+    // Handle empty data
+    if (!data || data.length === 0) {
+      return this.renderSvg(opts.width, opts.height, [
+        this.createText(opts.width / 2, opts.height / 2, "No data available", {
+          "text-anchor": "middle",
+          "font-size": "16",
+        }),
+      ]);
+    }
+
+    // Determine data format and extract series
+    let series: string[];
+    let maxValue: number;
+    let getValues: (d: any) => Record<string, number>;
+
+    if (data[0].value !== undefined) {
+      // Simple format: { label: "A", value: 10 }
+      series = ["value"];
+      maxValue = Math.max(...data.map(d => d.value || 0));
+      getValues = (d) => ({ value: d.value });
+    } else if (data[0].values) {
+      // Complex format: { label: "A", values: { s1: 10, s2: 20 } }
+      series = Object.keys(data[0].values);
+      maxValue = Math.max(...data.flatMap(d => Object.values(d.values as Record<string, number>)));
+      getValues = (d) => d.values;
+    } else {
+      // Multi-series format: { label: "Jan", reddit: 100, hackernews: 80 }
+      const excludeKeys = ["label"];
+      series = Object.keys(data[0]).filter(k => !excludeKeys.includes(k));
+      maxValue = Math.max(...data.flatMap(d => series.map(s => d[s] || 0)));
+      getValues = (d) => {
+        const vals: Record<string, number> = {};
+        series.forEach(s => {
+          vals[s] = d[s] || 0;
+        });
+        return vals;
+      };
+    }
 
     // Calculate bar dimensions
     const barGroupWidth = chartWidth / data.length;
@@ -208,8 +302,9 @@ export class SvgGenerator {
 
     // Bars
     data.forEach((item, itemIndex) => {
+      const values = getValues(item);
       series.forEach((s, seriesIndex) => {
-        const value = item.values[s];
+        const value = values[s] || 0;
         const x = itemIndex * barGroupWidth + seriesIndex * barWidth + barWidth / 2;
         const y = yScale(value);
         const height = chartHeight - y;
@@ -227,6 +322,8 @@ export class SvgGenerator {
       });
 
       // X-axis labels
+      const label = item.label || '';
+      const truncatedLabel = label.length > 10 ? label.substring(0, 10) + '...' : label;
       chartGroup.children!.push({
         tag: "text",
         attributes: {
@@ -236,7 +333,7 @@ export class SvgGenerator {
           "font-size": 12,
           fill: opts.customColors.text!,
         },
-        children: [item.label],
+        children: [truncatedLabel],
       });
     });
 
@@ -245,8 +342,22 @@ export class SvgGenerator {
 
     elements.push(chartGroup);
 
+    // Add description for accessibility
+    elements.unshift({
+      tag: "desc",
+      attributes: {},
+      children: [`A bar chart showing values`],
+    });
+
     // Title
     if (title) {
+      // Add title element for accessibility
+      elements.unshift({
+        tag: "title",
+        attributes: {},
+        children: [title],
+      });
+
       elements.push({
         tag: "text",
         attributes: {
@@ -284,6 +395,17 @@ export class SvgGenerator {
 
     const total = data.reduce((sum, item) => sum + item.value, 0);
 
+    // Handle zero total
+    if (total === 0 || !isFinite(total)) {
+      return this.renderSvg(opts.width, opts.height, [
+        this.createText(opts.width / 2, opts.height / 2, "No data", {
+          "text-anchor": "middle",
+          "font-size": "16",
+          fill: opts.customColors.text!,
+        }),
+      ]);
+    }
+
     // Build SVG elements
     const elements: SvgElement[] = [];
 
@@ -300,7 +422,8 @@ export class SvgGenerator {
     // Pie slices
     let currentAngle = -Math.PI / 2; // Start at top
     data.forEach((item, index) => {
-      const percentage = item.value / total;
+      const safeValue = isFinite(item.value) ? item.value : 0;
+      const percentage = safeValue / total;
       const angle = percentage * 2 * Math.PI;
       const endAngle = currentAngle + angle;
 
@@ -312,12 +435,19 @@ export class SvgGenerator {
 
       const largeArcFlag = angle > Math.PI ? 1 : 0;
 
-      const pathData = [
-        `M ${centerX} ${centerY}`,
-        `L ${x1} ${y1}`,
-        `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-        "Z",
-      ].join(" ");
+      // Handle single slice (full circle)
+      const pathData = data.length === 1
+        ? [
+            `M ${centerX} ${centerY - radius}`,
+            `A ${radius} ${radius} 0 1 1 ${centerX - 0.01} ${centerY - radius}`,
+            "Z",
+          ].join(" ")
+        : [
+            `M ${centerX} ${centerY}`,
+            `L ${x1} ${y1}`,
+            `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+            "Z",
+          ].join(" ");
 
       elements.push({
         tag: "path",
@@ -345,7 +475,7 @@ export class SvgGenerator {
           fill: "#FFFFFF",
           "font-weight": "bold",
         },
-        children: [`${(percentage * 100).toFixed(1)}%`],
+        children: [`${(percentage * 100).toFixed(0)}%`],
       });
 
       currentAngle = endAngle;
@@ -353,6 +483,13 @@ export class SvgGenerator {
 
     // Title
     if (title) {
+      // Add title element for accessibility
+      elements.unshift({
+        tag: "title",
+        attributes: {},
+        children: [title],
+      });
+
       elements.push({
         tag: "text",
         attributes: {
@@ -390,7 +527,7 @@ export class SvgGenerator {
             "font-size": 12,
             fill: opts.customColors.text!,
           },
-          children: [`${item.label}: ${item.value} (${((item.value / total) * 100).toFixed(1)}%)`],
+          children: [`${item.label}: ${item.value} (${((item.value / total) * 100).toFixed(0)}%)`],
         });
       });
     }
@@ -503,7 +640,7 @@ export class SvgGenerator {
           "font-size": 12,
           fill: options.customColors.text!,
         },
-        children: [value.toFixed(1)],
+        children: [this.formatNumber(value)],
       });
     }
 
@@ -547,7 +684,7 @@ export class SvgGenerator {
           "font-size": 12,
           fill: options.customColors.text!,
         },
-        children: [value.toFixed(0)],
+        children: [this.formatNumber(value)],
       });
     }
 
@@ -599,20 +736,62 @@ export class SvgGenerator {
   private applyTheme(): void {
     if (this.defaultOptions.theme === "dark") {
       this.defaultOptions.customColors = {
-        background: "#1A202C",
+        background: "#1a1a1a",
         text: "#E2E8F0",
         grid: "#2D3748",
         axis: "#718096",
       };
+    } else if (this.defaultOptions.theme === "custom") {
+      // Keep custom colors as-is
+    } else {
+      // Light theme (default)
+      this.defaultOptions.customColors = {
+        background: "#FFFFFF",
+        text: "#2D3748",
+        grid: "#E2E8F0",
+        axis: "#4A5568",
+      };
     }
+  }
+
+  /**
+   * Format number for display
+   */
+  private formatNumber(value: number): string {
+    if (!isFinite(value)) return "0";
+    if (Math.abs(value) >= 1000000) {
+      return `${(value / 1000000).toFixed(0)}M`;
+    }
+    if (Math.abs(value) >= 1000) {
+      return `${(value / 1000).toFixed(0)}K`;
+    }
+    if (Number.isInteger(value)) {
+      return value.toString();
+    }
+    return value.toFixed(1);
   }
 
   /**
    * Render SVG elements to string
    */
   private renderSvg(width: number, height: number, elements: SvgElement[]): string {
-    const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg" version="1.1">
+    const svgAttrs: Record<string, string | number> = {
+      width,
+      height,
+      xmlns: "http://www.w3.org/2000/svg",
+      version: "1.1",
+    };
+
+    // Add accessibility attributes
+    svgAttrs.role = "img";
+    svgAttrs["aria-label"] = "Chart visualization";
+    svgAttrs.preserveAspectRatio = "xMidYMid meet";
+
+    const attrsStr = Object.entries(svgAttrs)
+      .map(([key, value]) => `${key}="${value}"`)
+      .join(" ");
+
+    const svg = `<svg ${attrsStr}>
 ${elements.map(el => this.renderElement(el, 1)).join("\n")}
 </svg>`;
 
@@ -644,5 +823,266 @@ ${elements.map(el => this.renderElement(el, 1)).join("\n")}
     return `${indentStr}<${element.tag} ${attrs}>
 ${children}
 ${indentStr}</${element.tag}>`;
+  }
+
+  /**
+   * Create text element helper
+   */
+  private createText(
+    x: number,
+    y: number,
+    text: string,
+    attributes: Record<string, string | number> = {},
+  ): SvgElement {
+    return {
+      tag: "text",
+      attributes: {
+        x,
+        y,
+        ...attributes,
+      },
+      children: [text],
+    };
+  }
+
+  /**
+   * Generate scatter plot
+   */
+  public generateScatterPlot(
+    data: Array<{ x: number; y: number; label?: string }>,
+    title?: string,
+    options?: SvgChartOptions & { showTrendLine?: boolean },
+  ): string {
+    const opts = { ...this.defaultOptions, ...options };
+    const chartWidth = opts.width - opts.margin.left - opts.margin.right;
+    const chartHeight = opts.height - opts.margin.top - opts.margin.bottom;
+
+    if (!data || data.length === 0) {
+      return this.renderSvg(opts.width, opts.height, [
+        this.createText(opts.width / 2, opts.height / 2, "No data available", {
+          "text-anchor": "middle",
+          "font-size": "16",
+          fill: opts.customColors.text!,
+        }),
+      ]);
+    }
+
+    const xValues = data.map(d => d.x);
+    const yValues = data.map(d => d.y);
+    const xMin = Math.min(...xValues);
+    const xMax = Math.max(...xValues);
+    const yMin = Math.min(...yValues);
+    const yMax = Math.max(...yValues);
+
+    const xScale = (val: number) => ((val - xMin) / (xMax - xMin)) * chartWidth;
+    const yScale = (val: number) => chartHeight - ((val - yMin) / (yMax - yMin)) * chartHeight;
+
+    const elements: SvgElement[] = [];
+
+    // Background
+    elements.push({
+      tag: "rect",
+      attributes: {
+        width: opts.width,
+        height: opts.height,
+        fill: opts.customColors.background!,
+      },
+    });
+
+    // Chart group
+    const chartGroup: SvgElement = {
+      tag: "g",
+      attributes: {
+        transform: `translate(${opts.margin.left},${opts.margin.top})`,
+      },
+      children: [],
+    };
+
+    // Grid
+    if (opts.showGrid) {
+      chartGroup.children!.push(this.generateGrid(chartWidth, chartHeight, opts));
+    }
+
+    // Axes
+    chartGroup.children!.push(this.generateAxes(chartWidth, chartHeight, xMin, xMax, yMin, yMax, opts));
+
+    // Data points
+    data.forEach((d, i) => {
+      chartGroup.children!.push({
+        tag: "circle",
+        attributes: {
+          cx: xScale(d.x),
+          cy: yScale(d.y),
+          r: 5,
+          fill: opts.colors[i % opts.colors.length],
+          "fill-opacity": 0.7,
+        },
+      });
+    });
+
+    // Trend line if requested
+    if (options?.showTrendLine) {
+      chartGroup.children!.push({
+        tag: "line",
+        attributes: {
+          x1: 0,
+          y1: yScale(yMin),
+          x2: chartWidth,
+          y2: yScale(yMax),
+          stroke: opts.colors[0],
+          "stroke-width": 2,
+          "stroke-dasharray": "5,5",
+          opacity: 0.5,
+        },
+      });
+    }
+
+    elements.push(chartGroup);
+
+    // Title
+    if (title) {
+      // Add title element for accessibility
+      elements.unshift({
+        tag: "title",
+        attributes: {},
+        children: [title],
+      });
+
+      elements.push(this.createText(opts.width / 2, 25, title, {
+        "text-anchor": "middle",
+        "font-size": 18,
+        "font-weight": "bold",
+        fill: opts.customColors.text!,
+      }));
+    }
+
+    return this.renderSvg(opts.width, opts.height, elements);
+  }
+
+  /**
+   * Generate heatmap
+   */
+  public generateHeatmap(
+    data: Array<{ x: string; y: string; value: number }>,
+    title?: string,
+    options?: SvgChartOptions,
+  ): string {
+    const opts = { ...this.defaultOptions, ...options };
+    const chartWidth = opts.width - opts.margin.left - opts.margin.right;
+    const chartHeight = opts.height - opts.margin.top - opts.margin.bottom;
+
+    if (!data || data.length === 0) {
+      return this.renderSvg(opts.width, opts.height, [
+        this.createText(opts.width / 2, opts.height / 2, "No data available", {
+          "text-anchor": "middle",
+          "font-size": "16",
+          fill: opts.customColors.text!,
+        }),
+      ]);
+    }
+
+    const xLabels = [...new Set(data.map(d => d.x))];
+    const yLabels = [...new Set(data.map(d => d.y))];
+    const cellWidth = chartWidth / xLabels.length;
+    const cellHeight = chartHeight / yLabels.length;
+
+    const maxValue = Math.max(...data.map(d => d.value));
+    const minValue = Math.min(...data.map(d => d.value));
+
+    const getColor = (value: number) => {
+      const intensity = (value - minValue) / (maxValue - minValue);
+      const r = Math.round(255 * (1 - intensity));
+      const b = Math.round(255 * intensity);
+      return `rgb(${r}, 0, ${b})`;
+    };
+
+    const elements: SvgElement[] = [];
+
+    // Background
+    elements.push({
+      tag: "rect",
+      attributes: {
+        width: opts.width,
+        height: opts.height,
+        fill: opts.customColors.background!,
+      },
+    });
+
+    // Chart group
+    const chartGroup: SvgElement = {
+      tag: "g",
+      attributes: {
+        transform: `translate(${opts.margin.left},${opts.margin.top})`,
+      },
+      children: [],
+    };
+
+    // Cells
+    data.forEach(d => {
+      const xIndex = xLabels.indexOf(d.x);
+      const yIndex = yLabels.indexOf(d.y);
+
+      chartGroup.children!.push({
+        tag: "rect",
+        attributes: {
+          x: xIndex * cellWidth,
+          y: yIndex * cellHeight,
+          width: cellWidth,
+          height: cellHeight,
+          fill: getColor(d.value),
+          stroke: opts.customColors.grid!,
+          "stroke-width": 1,
+        },
+      });
+    });
+
+    // X labels
+    xLabels.forEach((label, i) => {
+      chartGroup.children!.push(this.createText(
+        i * cellWidth + cellWidth / 2,
+        chartHeight + 20,
+        label,
+        {
+          "text-anchor": "middle",
+          "font-size": 12,
+          fill: opts.customColors.text!,
+        },
+      ));
+    });
+
+    // Y labels
+    yLabels.forEach((label, i) => {
+      chartGroup.children!.push(this.createText(
+        -10,
+        i * cellHeight + cellHeight / 2,
+        label,
+        {
+          "text-anchor": "end",
+          "font-size": 12,
+          fill: opts.customColors.text!,
+        },
+      ));
+    });
+
+    elements.push(chartGroup);
+
+    // Title
+    if (title) {
+      // Add title element for accessibility
+      elements.unshift({
+        tag: "title",
+        attributes: {},
+        children: [title],
+      });
+
+      elements.push(this.createText(opts.width / 2, 25, title, {
+        "text-anchor": "middle",
+        "font-size": 18,
+        "font-weight": "bold",
+        fill: opts.customColors.text!,
+      }));
+    }
+
+    return this.renderSvg(opts.width, opts.height, elements);
   }
 }

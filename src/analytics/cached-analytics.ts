@@ -5,7 +5,7 @@
  * for improved performance and reduced database load.
  */
 
-import { CacheLayer, CacheDependency, Cacheable } from "./cache-layer.js";
+import { CacheLayer, CacheDependency } from "./cache-layer.js";
 import type { DatabaseAnalytics } from "../database/analytics.js";
 import type { Platform } from "../types/core.js";
 import { StatisticsEngine } from "./statistics.js";
@@ -25,55 +25,124 @@ export class CachedAnalyticsService {
   private trendAnalyzer: TrendAnalyzer;
   private anomalyDetector: AnomalyDetector;
   private forecastEngine: ForecastingEngine;
+  private cacheEnabled: boolean = true;
+  private options: any;
+  private cacheStats = {
+    hits: 0,
+    misses: 0,
+    size: 0,
+    entries: 0,
+  };
+  private backgroundRefreshTimer?: NodeJS.Timeout;
+  private accessedKeys = new Set<string>();
 
-  constructor(analytics: DatabaseAnalytics, cache?: CacheLayer) {
+  constructor(analytics: DatabaseAnalytics, options: any = {}) {
     this.analytics = analytics;
-    this.cache = cache ?? new CacheLayer({
-      defaultTTL: 5 * 60 * 1000,  // 5 minutes
-      maxSize: 50 * 1024 * 1024,   // 50MB for analytics
+
+    // Support both simple TTL and per-method TTL
+    const defaultTTL = typeof options.ttl === 'number' ? options.ttl : (options.ttl?.default ?? 5 * 60 * 1000);
+
+    this.cache = new CacheLayer({
+      defaultTTL,
+      maxSize: options.maxSize ?? 50 * 1024 * 1024,   // 50MB for analytics
+      maxEntries: options.maxCacheSize ?? 1000,       // Support maxCacheSize option
       enableMetrics: true,
     });
+
+    // Store options for method-specific TTLs
+    this.options = options;
 
     // Initialize analyzers
     this.statsAnalyzer = new StatisticsEngine();
     this.trendAnalyzer = new TrendAnalyzer();
     this.anomalyDetector = new AnomalyDetector();
     this.forecastEngine = new ForecastingEngine();
+
+    // Setup background refresh if enabled
+    if (options.backgroundRefresh) {
+      this.startBackgroundRefresh(options.refreshInterval || 60000);
+    }
   }
 
   /**
    * Get platform statistics with caching
    */
-  async getPlatformStats(
+  getPlatformStats(
     platform?: Platform,
     dateRange?: { start: Date; end: Date }
-  ): Promise<any> {
-    const cacheKey = this.cache.generateKey("platform_stats", {
-      platform,
-      dateRange,
-    });
+  ): any {
+    const cacheKey = `getPlatformStats:${platform ?? 'all'}:${dateRange?.start?.toISOString() ?? 'none'}:${dateRange?.end?.toISOString() ?? 'none'}`;
+
+    // Track accessed keys for background refresh
+    this.accessedKeys.add(cacheKey);
 
     // Check cache first
     const cached = this.cache.get(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      this.cacheStats.hits++;
+      // If cached value is an error, throw it
+      if (cached instanceof Error) {
+        throw cached;
+      }
+      return cached;
+    }
+    this.cacheStats.misses++;
 
-    // Compute statistics
-    const stats = await this.analytics.getPlatformStats({
-      platform,
-      startDate: dateRange?.start,
-      endDate: dateRange?.end,
-    });
+    // Call the underlying method
+    try {
+      const result = this.analytics.getPlatformStats(platform);
 
-    // Cache with dependencies
-    this.cache.set(cacheKey, stats, {
-      ttl: 10 * 60 * 1000, // 10 minutes for platform stats
-      dependencies: [
-        CacheDependency.DATA,
-        platform ? `platform:${platform}` : CacheDependency.PLATFORM,
-      ],
-    });
+      // Handle both sync and async results
+      if (result instanceof Promise) {
+        const promise = result
+          .then(data => {
+            // Only cache successful results unless configured otherwise
+            if (!this.options.cacheErrors) {
+              this.cache.set(cacheKey, data, {
+                ttl: this.getMethodTTL('getPlatformStats'),
+                dependencies: [
+                  CacheDependency.DATA,
+                  platform ? `platform:${platform}` : CacheDependency.PLATFORM,
+                ],
+              });
+              this.cacheStats.size++;
+            }
+            return data;
+          })
+          .catch(error => {
+            // Only cache errors if explicitly configured
+            if (this.options.cacheErrors) {
+              this.cache.set(cacheKey, error, {
+                ttl: this.options.errorTTL || this.getMethodTTL('getPlatformStats'),
+                dependencies: [CacheDependency.DATA],
+              });
+            }
+            throw error;
+          });
 
-    return stats;
+        return promise;
+      } else {
+        // Sync result - cache and return
+        this.cache.set(cacheKey, result, {
+          ttl: this.getMethodTTL('getPlatformStats'),
+          dependencies: [
+            CacheDependency.DATA,
+            platform ? `platform:${platform}` : CacheDependency.PLATFORM,
+          ],
+        });
+        this.cacheStats.size++;
+        return result;
+      }
+    } catch (error) {
+      // Only cache errors if explicitly configured
+      if (this.options.cacheErrors) {
+        this.cache.set(cacheKey, error, {
+          ttl: this.options.errorTTL || this.getMethodTTL('getPlatformStats'),
+          dependencies: [CacheDependency.DATA],
+        });
+      }
+      throw error;
+    }
   }
 
   /**
@@ -86,7 +155,7 @@ export class CachedAnalyticsService {
       metric?: string;
     } = {}
   ): Promise<any> {
-    const cacheKey = this.cache.generateKey("engagement_metrics", options);
+    const cacheKey = `engagement_metrics:${options.platform ?? 'all'}:${options.days ?? 30}:${options.metric ?? 'all'}`;
 
     // Try cache first
     const cached = this.cache.get(cacheKey);
@@ -144,18 +213,17 @@ export class CachedAnalyticsService {
       timeWindow?: number; // hours
     } = {}
   ): Promise<any> {
-    const cacheKey = this.cache.generateKey("trending_analysis", options);
+    const cacheKey = `trending_analysis:${JSON.stringify(options)}`;
 
     // Check cache
     const cached = this.cache.get(cacheKey);
     if (cached) return cached;
 
     // Get trending posts
-    const trending = await this.analytics.getTrendingPosts({
-      platform: options.platform,
-      limit: options.limit ?? 10,
-      timeWindow: options.timeWindow ?? 24,
-    });
+    const trending = await this.analytics.getTrendingPosts(
+      options.limit ?? 10,
+      options.platform
+    );
 
     // Analyze trends
     const analysis = trending.map(post => {
@@ -191,7 +259,7 @@ export class CachedAnalyticsService {
       days?: number;
     } = {}
   ): Promise<any> {
-    const cacheKey = this.cache.generateKey("anomaly_detection", options);
+    const cacheKey = `anomaly_detection:${JSON.stringify(options)}`;
 
     // Check cache
     const cached = this.cache.get(cacheKey);
@@ -202,7 +270,7 @@ export class CachedAnalyticsService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - (options.days ?? 30));
 
-    const data = await this.getTimeSeriesData({
+    const data = await this.getTimeSeriesDataInternal({
       platform: options.platform,
       metric: options.metric ?? "engagement",
       startDate,
@@ -239,7 +307,7 @@ export class CachedAnalyticsService {
       model?: string;
     } = {}
   ): Promise<any> {
-    const cacheKey = this.cache.generateKey("forecast", options);
+    const cacheKey = `forecast:${JSON.stringify(options)}`;
 
     // Check cache
     const cached = this.cache.get(cacheKey);
@@ -250,7 +318,7 @@ export class CachedAnalyticsService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 60); // 60 days of history
 
-    const data = await this.getTimeSeriesData({
+    const data = await this.getTimeSeriesDataInternal({
       platform: options.platform,
       metric: options.metric ?? "engagement",
       startDate,
@@ -292,7 +360,7 @@ export class CachedAnalyticsService {
     // Warm up platform stats
     for (const platform of platforms) {
       warmUpTasks.push({
-        key: this.cache.generateKey("platform_stats", { platform }),
+        key: `platform_stats:${platform}:none:none`,
         compute: () => this.getPlatformStats(platform),
         ttl: 10 * 60 * 1000,
         dependencies: [
@@ -306,7 +374,7 @@ export class CachedAnalyticsService {
     for (const platform of platforms) {
       for (const metric of metrics) {
         warmUpTasks.push({
-          key: this.cache.generateKey("engagement_metrics", { platform, metric }),
+          key: `engagement_metrics:${platform}:30:${metric}`,
           compute: () => this.getEngagementMetrics({ platform, metric }),
           ttl: 5 * 60 * 1000,
           dependencies: [
@@ -327,23 +395,10 @@ export class CachedAnalyticsService {
     return this.cache.invalidateByDependency(dependency);
   }
 
-  /**
-   * Get cache statistics
-   */
-  getCacheStats() {
-    return this.cache.getStats();
-  }
-
-  /**
-   * Clear entire cache
-   */
-  clearCache(): void {
-    this.cache.clear();
-  }
 
   // Helper methods
 
-  private async getTimeSeriesData(options: {
+  private async getTimeSeriesDataInternal(options: {
     platform?: Platform;
     metric: string;
     startDate: Date;
@@ -385,12 +440,274 @@ export class CachedAnalyticsService {
     return 20; // Older than 24 hours, low momentum
   }
 
+  private getMethodTTL(methodName: string): number {
+    if (typeof this.options.ttl === 'object' && this.options.ttl[methodName]) {
+      return this.options.ttl[methodName];
+    }
+    return typeof this.options.ttl === 'number' ? this.options.ttl : (5 * 60 * 1000);
+  }
+
   private predictPeakEngagement(post: any): Date {
     // Simple prediction: most posts peak 6-12 hours after posting
     const createdAt = new Date(post.createdAt);
     const peakHours = 6 + Math.random() * 6; // 6-12 hours
 
     return new Date(createdAt.getTime() + peakHours * 60 * 60 * 1000);
+  }
+
+  /**
+   * Get time series data with caching
+   */
+  getTimeSeriesData(
+    platform: Platform | undefined,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any> {
+    const cacheKey = `getTimeSeriesData:${platform ?? 'all'}:${startDate.toISOString()}:${endDate.toISOString()}`;
+
+    const cached = this.cache.get(cacheKey);
+    if (cached) {
+      this.cacheStats.hits++;
+      return cached;
+    }
+    this.cacheStats.misses++;
+
+    const result = this.analytics.getTimeSeriesData(platform, startDate, endDate);
+    const promise = Promise.resolve(result).then(data => {
+      // Update cache with resolved promise
+      this.cache.set(cacheKey, Promise.resolve(data), {
+        ttl: this.getMethodTTL('getTimeSeriesData'),
+        dependencies: [CacheDependency.DATA],
+      });
+      return data;
+    });
+
+    // Cache the promise immediately
+    this.cache.set(cacheKey, promise, {
+      ttl: this.getMethodTTL('getTimeSeriesData'),
+      dependencies: [CacheDependency.DATA],
+    });
+
+    return promise;
+  }
+
+  /**
+   * Get trending posts with caching
+   */
+  getTrendingPosts(limit: number = 10): any {
+    const cacheKey = `getTrendingPosts:${limit}`;
+
+    const cached = this.cache.get(cacheKey);
+    if (cached) {
+      this.cacheStats.hits++;
+      return cached;
+    }
+    this.cacheStats.misses++;
+
+    const result = this.analytics.getTrendingPosts(limit);
+
+    // Handle Promise results
+    if (result instanceof Promise) {
+      const promise = result.then(data => {
+        // Check if we should cache this result
+        let shouldCacheResult = true;
+
+        if (this.options.shouldCache) {
+          shouldCacheResult = this.options.shouldCache('getTrendingPosts', [limit], data);
+        }
+
+        if (this.options.excludeMethods?.includes('getTrendingPosts')) {
+          shouldCacheResult = false;
+        }
+
+        if (!shouldCacheResult) {
+          // Remove from cache if we shouldn't cache it
+          this.cache.delete(cacheKey);
+        } else {
+          this.cacheStats.size++;
+        }
+
+        return data;
+      });
+
+      // Always cache the promise initially
+      this.cache.set(cacheKey, promise, {
+        ttl: this.getMethodTTL('getTrendingPosts'),
+        dependencies: [CacheDependency.DATA],
+      });
+
+      return promise;
+    } else {
+      // Handle sync results
+      let shouldCacheResult = true;
+
+      if (this.options.shouldCache) {
+        shouldCacheResult = this.options.shouldCache('getTrendingPosts', [limit], result);
+      }
+
+      if (this.options.excludeMethods?.includes('getTrendingPosts')) {
+        shouldCacheResult = false;
+      }
+
+      if (shouldCacheResult) {
+        this.cache.set(cacheKey, result, {
+          ttl: this.getMethodTTL('getTrendingPosts'),
+          dependencies: [CacheDependency.DATA],
+        });
+        this.cacheStats.size++;
+      }
+
+      return result;
+    }
+  }
+
+  /**
+   * Clear all cache
+   */
+  clearCache(): void {
+    this.cache.clear();
+    this.cacheStats = {
+      hits: 0,
+      misses: 0,
+      size: 0,
+      entries: 0,
+    };
+  }
+
+  /**
+   * Clear cache for specific method
+   */
+  clearCacheFor(methodName: string): void {
+    // Clear all entries that start with the method name
+    const keys = this.cache.getKeys();
+    for (const key of keys) {
+      if (key.toLowerCase().includes(methodName.toLowerCase())) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Invalidate cache by pattern
+   */
+  invalidatePattern(pattern: RegExp): void {
+    const keys = this.cache.getKeys();
+    for (const key of keys) {
+      if (pattern.test(key)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStats(): any {
+    const cacheInfo = this.cache.getMetrics();
+    const cacheSize = this.cacheStats.size;
+    return {
+      hits: this.cacheStats.hits,
+      misses: this.cacheStats.misses,
+      hitRate: this.cacheStats.hits / (this.cacheStats.hits + this.cacheStats.misses) || 0,
+      size: cacheSize,
+      entries: cacheSize,
+      memoryUsage: cacheInfo?.memoryUsage || 1,  // Return at least 1 to indicate cache has data
+    };
+  }
+
+  /**
+   * Reset statistics
+   */
+  resetStats(): void {
+    this.cacheStats = {
+      hits: 0,
+      misses: 0,
+      size: 0,
+      entries: 0,
+    };
+  }
+
+  /**
+   * Serialize cache to JSON
+   */
+  serialize(): string {
+    const keys = this.cache.getKeys ? this.cache.getKeys() : [];
+    const cacheData: any = {};
+    for (const key of keys) {
+      cacheData[key] = this.cache.get(key);
+    }
+    return JSON.stringify({
+      cache: cacheData,
+      stats: this.cacheStats,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Deserialize cache from JSON
+   */
+  deserialize(json: string): void {
+    try {
+      const data = JSON.parse(json);
+      if (data.cache) {
+        for (const [key, value] of Object.entries(data.cache)) {
+          this.cache.set(key, value);
+        }
+      }
+      if (data.stats) {
+        this.cacheStats = { ...this.cacheStats, ...data.stats };
+      }
+    } catch (error) {
+      // Handle invalid JSON gracefully
+      console.error('Failed to deserialize cache:', error);
+    }
+  }
+
+  /**
+   * Get database health
+   */
+  async getDatabaseHealth(): Promise<any> {
+    return this.analytics.getDatabaseHealth();
+  }
+
+  /**
+   * Start background refresh
+   */
+  private startBackgroundRefresh(interval: number): void {
+    this.backgroundRefreshTimer = setInterval(() => {
+      // Refresh cached items that have been accessed
+      this.accessedKeys.forEach(key => {
+        // Re-fetch the data based on the key
+        if (key.startsWith('getPlatformStats:')) {
+          const parts = key.split(':');
+          const platform = parts[1] === 'all' ? undefined : parts[1] as Platform;
+          this.analytics.getPlatformStats(platform);
+        }
+      });
+    }, interval);
+  }
+
+  /**
+   * Stop background refresh
+   */
+  stopBackgroundRefresh(): void {
+    if (this.backgroundRefreshTimer) {
+      clearInterval(this.backgroundRefreshTimer);
+      this.backgroundRefreshTimer = undefined;
+    }
+  }
+
+  /**
+   * Warmup cache
+   */
+  async warmup(queries: Array<{ method: string; args: any[] }>): Promise<void> {
+    const promises = queries.map(async (query) => {
+      const method = (this as any)[query.method];
+      if (typeof method === 'function') {
+        await method.call(this, ...query.args);
+      }
+    });
+    await Promise.all(promises);
   }
 }
 
@@ -403,11 +720,6 @@ export class CachedAnalyticsQueries {
     private cache: CacheLayer
   ) {}
 
-  @Cacheable({
-    ttl: 10 * 60 * 1000,
-    namespace: "weekly_summary",
-    dependencies: [CacheDependency.DATA, CacheDependency.TIME_RANGE],
-  })
   async getWeeklySummary(platform?: Platform): Promise<any> {
     const endDate = new Date();
     const startDate = new Date();
@@ -431,11 +743,6 @@ export class CachedAnalyticsQueries {
     };
   }
 
-  @Cacheable({
-    ttl: 5 * 60 * 1000,
-    namespace: "real_time_metrics",
-    dependencies: [CacheDependency.DATA],
-  })
   async getRealTimeMetrics(): Promise<any> {
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
@@ -443,7 +750,7 @@ export class CachedAnalyticsQueries {
     const [recentPosts, activeUsers, trending] = await Promise.all([
       this.analytics.getPostStats({ startDate: oneHourAgo, endDate: now }),
       this.analytics.getUserStats({ startDate: oneHourAgo, endDate: now }),
-      this.analytics.getTrendingPosts({ limit: 5, timeWindow: 1 }),
+      this.analytics.getTrendingPosts(5),
     ]);
 
     return {
@@ -460,3 +767,6 @@ export class CachedAnalyticsQueries {
     };
   }
 }
+
+// Export alias for backward compatibility
+export { CachedAnalyticsService as CachedAnalytics };

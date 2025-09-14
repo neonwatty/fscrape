@@ -259,6 +259,13 @@ export class CacheLayer {
   }
 
   /**
+   * Get all cache keys
+   */
+  public getKeys(): string[] {
+    return Array.from(this.cache.keys());
+  }
+
+  /**
    * Clear all cache entries
    */
   public clear(): void {
@@ -270,6 +277,13 @@ export class CacheLayer {
     this.stats.size = 0;
     this.stats.entries = 0;
     this.stats.evictions += entriesCleared;
+  }
+
+  /**
+   * Get cache metrics (alias for getStats)
+   */
+  public getMetrics(): CacheStats {
+    return this.getStats();
   }
 
   /**
@@ -505,10 +519,23 @@ export function Cacheable(options: {
     propertyKey: string,
     descriptor: TypedPropertyDescriptor<T>
   ): TypedPropertyDescriptor<T> | void {
-    const originalMethod = descriptor.value as any;
+    // Handle both method and property descriptors
+    if (!descriptor) {
+      return;
+    }
+
+    // Handle getter/setter vs regular method
+    const originalMethod = descriptor.value || descriptor.get;
+    if (!originalMethod || typeof originalMethod !== 'function') {
+      console.warn(`@Cacheable decorator: Cannot apply to non-method property: ${propertyKey}`);
+      return descriptor;
+    }
+
     const namespace = options.namespace ?? `${target.constructor.name}.${propertyKey}`;
 
-    descriptor.value = function (this: any, ...args: any[]): any {
+    // For regular methods
+    if (descriptor.value) {
+      descriptor.value = function (this: any, ...args: any[]): any {
       const key = globalCache.generateKey(namespace, args);
 
       // Check cache
@@ -538,7 +565,30 @@ export function Cacheable(options: {
       });
 
       return result;
-    } as any;
+      } as any;
+    }
+    // For getters
+    else if (descriptor.get) {
+      descriptor.get = function (this: any): any {
+        const key = globalCache.generateKey(namespace, []);
+
+        // Check cache
+        const cached = globalCache.get(key);
+        if (cached !== null) {
+          return cached;
+        }
+
+        // Execute original getter
+        const result = originalMethod.apply(this);
+
+        // Cache result
+        globalCache.set(key, result, {
+          ttl: options.ttl,
+          dependencies: options.dependencies,
+        });
+        return result;
+      };
+    }
 
     return descriptor;
   };
