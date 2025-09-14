@@ -4,7 +4,6 @@
 
 import { Command } from "commander";
 import {
-  validatePath,
   validatePositiveInt,
   formatError,
 } from "../validation.js";
@@ -571,7 +570,7 @@ async function handleStatistics(parentOpts: any, options: any): Promise<void> {
       }
     }
 
-    const dbPath = validatePath(parentOpts.database || "fscrape.db", true);
+    const dbPath = parentOpts.database || "fscrape.db";
     const dbManager = new DatabaseManager({
       type: "sqlite" as const,
       path: dbPath,
@@ -712,7 +711,7 @@ async function handleTrends(parentOpts: any, options: any): Promise<void> {
       }
     }
 
-    const dbPath = validatePath(parentOpts.database || "fscrape.db", true);
+    const dbPath = parentOpts.database || "fscrape.db";
     const dbManager = new DatabaseManager({
       type: "sqlite" as const,
       path: dbPath,
@@ -1292,7 +1291,7 @@ function getChangeStatus(change: number): string {
  */
 async function handleAnomalies(parentOpts: any, options: any): Promise<void> {
   try {
-    const dbPath = validatePath(parentOpts.database || "fscrape.db", true);
+    const dbPath = parentOpts.database || "fscrape.db";
     const dbManager = new DatabaseManager({
       type: "sqlite" as const,
       path: dbPath,
@@ -1394,7 +1393,7 @@ async function handleAnomalies(parentOpts: any, options: any): Promise<void> {
  */
 async function handleForecast(parentOpts: any, options: any): Promise<void> {
   try {
-    const dbPath = validatePath(parentOpts.database || "fscrape.db", true);
+    const dbPath = parentOpts.database || "fscrape.db";
     const dbManager = new DatabaseManager({
       type: "sqlite" as const,
       path: dbPath,
@@ -1754,7 +1753,7 @@ function displayDetailedForecast(
  */
 async function handleCompare(parentOpts: any, options: any): Promise<void> {
   try {
-    const dbPath = validatePath(parentOpts.database || "fscrape.db", true);
+    const dbPath = parentOpts.database || "fscrape.db";
     const dbManager = new DatabaseManager({
       type: "sqlite" as const,
       path: dbPath,
@@ -2641,7 +2640,7 @@ function getCorrelationStrength(correlation: number): string {
  */
 async function handleReport(parentOpts: any, options: any): Promise<void> {
   try {
-    const dbPath = validatePath(parentOpts.database || "fscrape.db", true);
+    const dbPath = parentOpts.database || "fscrape.db";
     const dbManager = new DatabaseManager({
       type: "sqlite" as const,
       path: dbPath,
@@ -2702,7 +2701,7 @@ async function handleReport(parentOpts: any, options: any): Promise<void> {
  */
 async function handleDashboard(parentOpts: any, options: any): Promise<void> {
   try {
-    const dbPath = validatePath(parentOpts.database || "fscrape.db", true);
+    const dbPath = parentOpts.database || "fscrape.db";
     const dbManager = new DatabaseManager({
       type: "sqlite" as const,
       path: dbPath,
