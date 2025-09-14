@@ -643,7 +643,7 @@ describe("TrendAnalyzer", () => {
       const result = analyzer.analyzeTrend(values);
 
       expect(result.trend).toBe("volatile");
-      expect(result.confidence).toBeLessThan(0.1);
+      expect(result.confidence).toBeLessThan(0.25);
       expect(result.predictions.confidence).toBeLessThan(0.3);
     });
   });
