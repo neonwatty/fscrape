@@ -14,6 +14,7 @@ import type { StatusCommandOptions } from "../../types/cli.js";
 import { DatabaseManager } from "../../database/database.js";
 import chalk from "chalk";
 import Table from "cli-table3";
+import * as fs from "fs";
 
 /**
  * Create the status command
@@ -68,11 +69,8 @@ async function handleStatus(options: StatusCommandOptions): Promise<void> {
   });
   await dbManager.initialize();
 
-  // Get analytics from database manager
-  const analytics = dbManager.getAnalytics();
-
   // Gather statistics
-  const stats = await gatherStatistics(analytics, statusOptions, dbManager);
+  const stats = await gatherStatistics(statusOptions, dbManager);
 
   // Display based on format
   switch (statusOptions.format) {
@@ -84,7 +82,7 @@ async function handleStatus(options: StatusCommandOptions): Promise<void> {
       break;
     case "table":
     default:
-      displayTable(stats, options.verbose);
+      displayTable(stats, options.verbose || false);
       break;
   }
 }
@@ -93,174 +91,151 @@ async function handleStatus(options: StatusCommandOptions): Promise<void> {
  * Gather statistics from database
  */
 async function gatherStatistics(
-  analytics: any,
   options: StatusOptions,
-  dbManager?: any,
+  dbManager: DatabaseManager,
 ): Promise<any> {
   const stats: any = {
     overview: {},
     platforms: {},
     recent: {},
-    trends: {},
     activeSessions: [],
     recentSessions: [],
     systemHealth: {},
   };
 
-  // Get overall platform stats
-  const allPlatformStats = analytics.getPlatformStatistics();
-  if (allPlatformStats && allPlatformStats.length > 0) {
-    // Aggregate overall stats
-    stats.overview = {
-      totalPosts: allPlatformStats.reduce(
-        (sum: number, p: any) => sum + p.totalPosts,
-        0,
-      ),
-      totalComments: allPlatformStats.reduce(
-        (sum: number, p: any) => sum + p.totalComments,
-        0,
-      ),
-      totalUsers: allPlatformStats.reduce(
-        (sum: number, p: any) => sum + p.totalUsers,
-        0,
-      ),
-      databaseSize: 0, // Will be set from health metrics
-      lastActivity: Math.max(
-        ...allPlatformStats.map((p: any) => p.lastUpdateTime?.getTime() || 0),
-      ),
-    };
-  }
+  // Get basic database counts using existing methods
+  const allPosts = dbManager.getPosts(undefined, 999999, 0); // Get all posts with high limit
+  const redditPosts = dbManager.getPosts("reddit", 999999, 0);
+  const hackernewsPosts = dbManager.getPosts("hackernews", 999999, 0);
+
+  // Calculate totals from posts
+  const totalPosts = allPosts.total;
+  const totalComments = allPosts.posts.reduce((sum, post) => sum + (post.commentCount || 0), 0);
+
+  // Find latest activity
+  const lastActivity = Math.max(
+    ...allPosts.posts.map(post => post.updatedAt?.getTime() || post.createdAt.getTime() || 0)
+  );
+
+  // Set overview stats
+  stats.overview = {
+    totalPosts,
+    totalComments,
+    totalUsers: 0, // Will calculate from posts
+    databaseSize: 0, // Will be set from file size
+    lastActivity,
+  };
 
   // Get platform-specific stats
   if (options.platform) {
-    const platformStats = analytics.getPlatformStats(options.platform);
-    if (platformStats) {
-      stats.platforms[options.platform] = {
-        postCount: platformStats.totalPosts,
-        commentCount: platformStats.totalComments,
-        userCount: platformStats.totalUsers,
-        avgScore: platformStats.avgPostScore,
-      };
-    }
+    // Get stats for specific platform
+    const platformPosts = dbManager.getPosts(options.platform, 999999, 0);
+    const platformCommentCount = platformPosts.posts.reduce((sum, post) => sum + (post.commentCount || 0), 0);
+    const avgScore = platformPosts.posts.length > 0
+      ? platformPosts.posts.reduce((sum, post) => sum + (post.score || 0), 0) / platformPosts.posts.length
+      : 0;
+
+    stats.platforms[options.platform] = {
+      postCount: platformPosts.total,
+      commentCount: platformCommentCount,
+      userCount: new Set(platformPosts.posts.map(post => post.author)).size,
+      avgScore,
+    };
   } else {
     // Get stats for all platforms
     const platforms = ["reddit", "hackernews"] as const;
     for (const platform of platforms) {
-      const platformStats = analytics.getPlatformStats(platform);
-      if (platformStats) {
+      const platformPosts = dbManager.getPosts(platform, 999999, 0);
+      if (platformPosts.total > 0) {
+        const platformCommentCount = platformPosts.posts.reduce((sum, post) => sum + (post.commentCount || 0), 0);
+        const avgScore = platformPosts.posts.length > 0
+          ? platformPosts.posts.reduce((sum, post) => sum + (post.score || 0), 0) / platformPosts.posts.length
+          : 0;
+
         stats.platforms[platform] = {
-          postCount: platformStats.totalPosts,
-          commentCount: platformStats.totalComments,
-          userCount: platformStats.totalUsers,
-          avgScore: platformStats.avgPostScore,
+          postCount: platformPosts.total,
+          commentCount: platformCommentCount,
+          userCount: new Set(platformPosts.posts.map(post => post.author)).size,
+          avgScore,
         };
       }
     }
   }
 
-  // Get recent activity data
+  // Get recent activity data (simplified - just recent counts, no daily breakdown)
   const days = options.days || 7;
+  const cutoffDate = Date.now() - (days * 24 * 60 * 60 * 1000);
 
-  // Get engagement over time
-  const engagementData = analytics.getEngagementOverTime(
-    days,
-    options.platform,
-  );
-  if (engagementData && engagementData.length > 0) {
-    // Process engagement data into daily stats
-    const dailyStats: { [date: string]: { posts: number; comments: number } } =
-      {};
+  // Filter posts by date from the already fetched data
+  const recentPosts = options.platform
+    ? dbManager.getPosts(options.platform, 999999, 0).posts.filter(post =>
+        (post.createdAt?.getTime() || 0) > cutoffDate)
+    : allPosts.posts.filter(post =>
+        (post.createdAt?.getTime() || 0) > cutoffDate);
 
-    engagementData.forEach((item: any) => {
-      const dateStr = item.date
-        ? new Date(item.date).toISOString().split("T")[0]
-        : "";
-      if (dateStr) {
-        if (!dailyStats[dateStr]) {
-          dailyStats[dateStr] = { posts: 0, comments: 0 };
-        }
-        dailyStats[dateStr].posts += item.post_count || 0;
-        dailyStats[dateStr].comments += item.comment_count || 0;
-      }
-    });
+  const recentCommentCount = recentPosts.reduce((sum, post) => sum + (post.commentCount || 0), 0);
 
-    stats.recent.posts = {
-      data: Object.entries(dailyStats).map(([date, data]) => ({
-        date,
-        count: data.posts,
-      })),
-    };
-    stats.recent.comments = {
-      data: Object.entries(dailyStats).map(([date, data]) => ({
-        date,
-        count: data.comments,
-      })),
-    };
-  }
+  stats.recent = {
+    posts: {
+      data: [{ date: new Date().toISOString().split('T')[0], count: recentPosts.length }]
+    },
+    comments: {
+      data: [{ date: new Date().toISOString().split('T')[0], count: recentCommentCount }]
+    }
+  };
 
-  // Get top content
-  const trendingPosts = analytics.getTrendingPosts
-    ? analytics.getTrendingPosts(5)
-    : [];
-  const topUsers = analytics.getTopUsersByKarma(5, options.platform);
+  // Get top posts (simplified)
+  const topPostsData = options.platform
+    ? dbManager.getPosts(options.platform, 999999, 0).posts
+    : allPosts.posts;
+
+  const topPosts = topPostsData
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .slice(0, 5);
 
   stats.topContent = {
-    posts: trendingPosts.map((post: any) => ({
+    posts: topPosts.map((post) => ({
       id: post.id,
       title: post.title,
       score: post.score,
-      commentCount: post.commentCount || post.comment_count || 0,
+      commentCount: post.commentCount || 0,
       author: post.author,
       platform: post.platform,
     })),
-    users: topUsers.map((user: any) => ({
-      id: user.id,
-      username: user.username,
-      karma: user.karma,
-      platform: user.platform,
-      postCount: 0, // Would need additional query
-      commentCount: 0, // Would need additional query
-    })),
+    users: [], // Simplified - no user stats for now
   };
 
-  // Get active and recent sessions if dbManager provided
-  if (dbManager) {
-    stats.activeSessions = dbManager.getActiveSessions
-      ? dbManager.getActiveSessions(5)
-      : [];
-    stats.recentSessions = dbManager.getRecentSessions
-      ? dbManager.getRecentSessions(10, options.platform)
-      : [];
+  // Get active sessions (if available)
+  try {
+    const activeSessions = dbManager.getActiveSessions ? dbManager.getActiveSessions(5) : [];
+    stats.activeSessions = activeSessions;
+  } catch (error) {
+    // Sessions methods might not exist
+    stats.activeSessions = [];
   }
 
-  // Get system health metrics
-  const healthDetailed = analytics.getDatabaseHealthDetailed
-    ? analytics.getDatabaseHealthDetailed()
-    : null;
-  if (healthDetailed && healthDetailed.size) {
+  // Get basic system health (database file size)
+  try {
+    // Try to get database path from options or use default
+    const dbPath = options.database || 'fscrape.db';
+    const stat = fs.statSync(dbPath);
     stats.systemHealth = {
-      databaseSize: healthDetailed.size.totalSize || 0,
-      tableCount: healthDetailed.tables?.length || 0,
-      indexCount: healthDetailed.indexes?.total || 0,
-      cacheHitRate: healthDetailed.performance?.cacheHitRate,
-      queryCount: healthDetailed.performance?.queryCount,
-      fragmentation: healthDetailed.fragmentation,
+      databaseSize: stat.size,
+      tableCount: 0, // Would need to query sqlite_master
     };
-    // Update overview with actual database size
-    stats.overview.databaseSize = healthDetailed.size.totalSize || 0;
-  } else {
-    // Provide basic health metrics if detailed not available
-    const health = analytics.getDatabaseHealth
-      ? analytics.getDatabaseHealth()
-      : null;
-    if (health) {
-      stats.systemHealth = {
-        databaseSize: health.size || 0,
-        tableCount: health.tables || 0,
-      };
-      stats.overview.databaseSize = health.size || 0;
-    }
+    stats.overview.databaseSize = stat.size;
+  } catch (error) {
+    stats.systemHealth = {
+      databaseSize: 0,
+      tableCount: 0,
+    };
   }
+
+  // Update total users count from platform stats
+  stats.overview.totalUsers = Object.values(stats.platforms).reduce(
+    (sum: number, platform: any) => sum + (platform.userCount || 0),
+    0
+  );
 
   return stats;
 }

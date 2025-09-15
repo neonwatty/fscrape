@@ -12,7 +12,7 @@ PRAGMA journal_mode = WAL;
 -- Core Tables
 -- ============================================================================
 
--- Forum posts table with generated columns for analytics
+-- Forum posts table with computed columns
 CREATE TABLE IF NOT EXISTS posts (
     -- Primary identifiers
     id TEXT NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS posts (
     -- Metadata (JSON)
     metadata TEXT,
     
-    -- Generated columns for analytics
+    -- Generated columns for performance
     score_normalized REAL GENERATED ALWAYS AS (
         CASE 
             WHEN score < 0 THEN 0.0
@@ -313,7 +313,7 @@ BEGIN
 END;
 
 -- ============================================================================
--- Views for Analytics
+-- Views for Statistics and Performance
 -- ============================================================================
 
 -- Hot posts view

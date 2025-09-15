@@ -146,12 +146,31 @@ export class RedditScraper extends BasePlatform {
 
   /**
    * Scrape posts from Reddit front page
+   * Automatically uses pagination for limits > 100
    */
   async scrapePosts(options?: ScrapeOptions): Promise<ForumPost[]> {
     await this.ensureAuthenticated();
 
-    const sort = this.mapSortOption(options?.sortBy);
     const limit = options?.limit || 25;
+
+    // Use pagination for limits > 100
+    if (limit > 100) {
+      this.logger.info(
+        `Limit ${limit} > 100, using automatic pagination for r/all`,
+      );
+
+      const maxPages = Math.ceil(limit / 100);
+      const result = await this.scrapeCategoryWithPagination("all", {
+        ...options,
+        limit,
+        maxPages,
+      });
+
+      return result.posts;
+    }
+
+    // For limits <= 100, use single request
+    const sort = this.mapSortOption(options?.sortBy);
 
     try {
       const listing = await this.retryOperation(
@@ -171,6 +190,7 @@ export class RedditScraper extends BasePlatform {
 
   /**
    * Scrape posts from a specific subreddit
+   * Automatically uses pagination for limits > 100
    */
   async scrapeCategory(
     category: string,
@@ -178,8 +198,27 @@ export class RedditScraper extends BasePlatform {
   ): Promise<ForumPost[]> {
     await this.ensureAuthenticated();
 
-    const sort = this.mapSortOption(options?.sortBy);
     const limit = options?.limit || 25;
+
+    // Reddit's API max is 100 per request
+    // If requesting more than 100, automatically use pagination
+    if (limit > 100) {
+      this.logger.info(
+        `Limit ${limit} > 100, using automatic pagination for ${category}`,
+      );
+
+      const maxPages = Math.ceil(limit / 100);
+      const result = await this.scrapeCategoryWithPagination(category, {
+        ...options,
+        limit,
+        maxPages,
+      });
+
+      return result.posts;
+    }
+
+    // For limits <= 100, use single request (original logic)
+    const sort = this.mapSortOption(options?.sortBy);
 
     try {
       const listing = await this.retryOperation(

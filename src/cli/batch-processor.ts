@@ -503,10 +503,12 @@ export class BatchProcessor {
             }
           }
         } else {
-          const posts = await scraper.scrapePosts("topstories", {
+          const scrapeResult = await scraper.scrapePosts("topstories", {
             limit: operation.options?.limit || 100,
           });
 
+          // Handle both array and ScrapeResult format
+          const posts = Array.isArray(scrapeResult) ? scrapeResult : scrapeResult.posts;
           for (const post of posts) {
             await dbManager.upsertPost(post);
             results.posts++;
@@ -553,7 +555,16 @@ export class BatchProcessor {
       if (dataType === "posts" || dataType === "all") {
         const posts = await dbManager.queryPosts({ limit: 10000 });
         const filePath = await exporter.exportData(
-          { posts, comments: [], users: [] },
+          {
+            posts,
+            comments: [],
+            users: [],
+            metadata: {
+              platform: "mixed" as any,
+              totalPosts: posts.length,
+              scrapedAt: new Date()
+            }
+          },
           `export-posts-${Date.now()}`,
           format as "json" | "csv",
         );
@@ -563,7 +574,17 @@ export class BatchProcessor {
       if (dataType === "comments" || dataType === "all") {
         const comments = await dbManager.queryComments({ limit: 10000 });
         const filePath = await exporter.exportData(
-          { posts: [], comments, users: [] },
+          {
+            posts: [],
+            comments,
+            users: [],
+            metadata: {
+              platform: "mixed" as any,
+              totalPosts: 0,
+              totalComments: comments.length,
+              scrapedAt: new Date()
+            }
+          },
           `export-comments-${Date.now()}`,
           format as "json" | "csv",
         );
@@ -573,7 +594,16 @@ export class BatchProcessor {
       if (dataType === "users" || dataType === "all") {
         const users = await dbManager.queryUsers({ limit: 10000 });
         const filePath = await exporter.exportData(
-          { posts: [], comments: [], users },
+          {
+            posts: [],
+            comments: [],
+            users,
+            metadata: {
+              platform: "mixed" as any,
+              totalPosts: 0,
+              scrapedAt: new Date()
+            }
+          },
           `export-users-${Date.now()}`,
           format as "json" | "csv",
         );

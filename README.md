@@ -22,6 +22,15 @@ fscrape scrape <url>
 
 # Scrape with options
 fscrape scrape <url> --limit 100 --include-comments
+
+# Scrape large datasets with automatic pagination
+# Reddit automatically paginates when limit > 100 (max 100 per request)
+fscrape scrape https://reddit.com/r/programming --limit 500
+
+# Note: When using limits > 100 for Reddit:
+# - Automatically fetches multiple pages (100 posts per page)
+# - Includes 600ms delay between requests for rate limiting
+# - Shows progress as pages are fetched
 ```
 
 ### View statistics
@@ -39,22 +48,14 @@ fscrape export --format json --output data.json
 fscrape clean --older-than 30
 ```
 
-### Analytics and Insights
+### List scraped data
 ```bash
-# Analyze trends in your data
-fscrape analyze trends --days 30
+fscrape list
+```
 
-# Detect anomalies
-fscrape analyze anomalies --sensitivity 0.95
-
-# Generate forecasts
-fscrape analyze forecast --horizon 7
-
-# Compare platforms or time periods
-fscrape analyze compare --platforms reddit,hackernews
-
-# Generate comprehensive report
-fscrape analyze report --export html --output report.html
+### Batch operations
+```bash
+fscrape batch --config batch.json
 ```
 
 ## Commands
@@ -63,14 +64,10 @@ fscrape analyze report --export html --output report.html
 - `scrape` - Scrape content from forums
 - `status` - View database statistics
 - `export` - Export scraped data
-- `clean` - Clean old data
+- `list` - List scraped data
 - `config` - Manage configuration
-- `analyze` - Advanced analytics and insights
-  - `trends` - Identify patterns and trends
-  - `anomalies` - Detect unusual activity
-  - `forecast` - Predict future values
-  - `compare` - Compare platforms/periods
-  - `report` - Generate analytics reports
+- `clean` - Clean old data
+- `batch` - Execute batch operations
 
 Run `fscrape --help` for more information.
 

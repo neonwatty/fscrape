@@ -17,8 +17,7 @@
     "test:e2e": "playwright test",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist",
-    "prepare": "npm run build"
+    "clean": "rm -rf dist"
   },
   "keywords": [
     "scraper",
@@ -40,7 +39,6 @@
     "cli-table3": "^0.6.5",
     "commander": "^12.1.0",
     "csv-writer": "^1.6.0",
-    "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
     "inquirer": "^9.3.2",
     "lru-cache": "^10.4.3",

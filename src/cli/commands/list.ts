@@ -495,13 +495,7 @@ async function handleStats(options: any): Promise<void> {
       console.log(table(platformTable));
     }
 
-    if (stats.dateRange) {
-      console.log(
-        chalk.gray(
-          `\nDate range: ${stats.dateRange.earliest.toLocaleDateString()} - ${stats.dateRange.latest.toLocaleDateString()}`,
-        ),
-      );
-    }
+    // Date range information removed as part of analytics simplification
 
     await dbManager.close();
   } catch (error) {

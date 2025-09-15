@@ -195,7 +195,7 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
 
       if (userIds.size > 0) {
         users = dbManager.queryUsers({
-          userIds: Array.from(userIds).slice(0, 1000),
+          limit: 1000,
         });
       }
     }
@@ -206,18 +206,16 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
       filterOptions.minScore = options.minScore;
     }
     if (options.author) {
-      filterOptions.author = options.author;
+      filterOptions.authors = [options.author];
     }
     if (options.query) {
-      filterOptions.searchQuery = options.query;
+      filterOptions.searchTerms = [options.query];
     }
 
     // Build transform options
     const transformOptions: TransformOptions = {
-      sortBy: options.sortBy as any,
-      sortOrder: options.sortOrder,
-      groupBy: options.groupBy as any,
-      aggregate: options.aggregate,
+      addTimestamps: true,
+      addStatistics: true,
     };
 
     // Determine output path
@@ -273,7 +271,7 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
         totalPosts: posts.length,
         totalComments: comments.length,
         totalUsers: users.length,
-        platform: options.platform || "all",
+        platform: (options.platform as any) || "reddit",
         query: queryOptions,
       },
     };
@@ -356,7 +354,17 @@ async function handleExportComments(options: any): Promise<void> {
     });
 
     const resultPath = await exportManager.exportData(
-      { comments, metadata: { totalComments: comments.length } },
+      {
+        posts: [],
+        comments,
+        users: [],
+        metadata: {
+          platform: (options.platform as any) || "reddit",
+          totalPosts: 0,
+          totalComments: comments.length,
+          scrapedAt: new Date()
+        }
+      },
       options.format || "json",
       outputPath,
     );
@@ -416,7 +424,16 @@ async function handleExportUsers(options: any): Promise<void> {
     });
 
     const resultPath = await exportManager.exportData(
-      { users, metadata: { totalUsers: users.length } },
+      {
+        posts: [],
+        comments: [],
+        users,
+        metadata: {
+          platform: (options.platform as any) || "reddit",
+          totalPosts: 0,
+          scrapedAt: new Date()
+        }
+      },
       options.format || "json",
       outputPath,
     );

@@ -34,7 +34,7 @@ export function createScrapeCommand(): Command {
     )
     .option(
       "-l, --limit <number>",
-      "Maximum number of items to scrape",
+      "Maximum number of items to scrape (Reddit: auto-paginates for limits > 100)",
       (value) => validatePositiveInt(value, "Limit"),
     )
     .option(

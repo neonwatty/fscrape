@@ -95,6 +95,51 @@ export const RedditPlatform: PlatformConstructor = class
     const limit = options?.limit || 25;
     const sort = options?.sortBy || "hot";
 
+    // If limit > 100, we need to paginate
+    if (limit > 100) {
+      const allPosts: any[] = [];
+      let after: string | undefined = undefined;
+      const pageSize = 100;
+      const totalPages = Math.ceil(limit / pageSize);
+
+      for (let page = 0; page < totalPages; page++) {
+        const currentLimit = Math.min(pageSize, limit - allPosts.length);
+        const listing = await this.client.getSubredditPosts(
+          category,
+          sort,
+          currentLimit,
+          after,
+        );
+
+        if (!listing.data?.children || listing.data.children.length === 0) {
+          break; // No more posts
+        }
+
+        const posts = listing.data.children.map((child: any) =>
+          this.client.convertPost(child.data),
+        );
+        allPosts.push(...posts);
+
+        // Get the 'after' token for next page
+        after = listing.data.after;
+        if (!after) {
+          break; // No more pages
+        }
+
+        console.log(
+          `Fetched page ${page + 1}/${totalPages}: ${posts.length} posts (total: ${allPosts.length})`,
+        );
+
+        // Add delay between requests to respect rate limiting
+        if (page < totalPages - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 600)); // 600ms delay
+        }
+      }
+
+      return allPosts.slice(0, limit);
+    }
+
+    // For limits <= 100, single request
     const listing = await this.client.getSubredditPosts(category, sort, limit);
     console.log("DEBUG: scrapeCategory listing:", listing);
     console.log("DEBUG: listing.data:", listing.data);
@@ -211,15 +256,29 @@ export const RedditPlatform: PlatformConstructor = class
   async scrape(options?: any) {
     // Generic scrape method - delegate to appropriate specific method
     if (options?.subreddit) {
+      const posts = await this.scrapeCategory(options.subreddit, options);
       return {
-        posts: await this.scrapeCategory(options.subreddit, options),
+        posts,
         comments: [],
+        metadata: {
+          platform: "reddit" as any,
+          totalPosts: posts.length,
+          scrapedAt: new Date(),
+          subreddit: options.subreddit
+        }
       };
     } else {
       // Default to r/popular if no specific target
+      const posts = await this.scrapeCategory("popular", options);
       return {
-        posts: await this.scrapeCategory("popular", options),
+        posts,
         comments: [],
+        metadata: {
+          platform: "reddit" as any,
+          totalPosts: posts.length,
+          scrapedAt: new Date(),
+          subreddit: "popular"
+        }
       };
     }
   }

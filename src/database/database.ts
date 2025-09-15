@@ -2,7 +2,6 @@ import Database from "better-sqlite3";
 import winston from "winston";
 import { DatabaseConnection } from "./connection.js";
 import { PreparedQueries } from "./queries.js";
-import { DatabaseAnalytics } from "./analytics.js";
 import { initializeDatabase } from "./migrations.js";
 import type {
   ForumPost,
@@ -19,7 +18,7 @@ export interface SessionInfo {
   platform: Platform;
   queryType?: string;
   queryValue?: string;
-  status: "pending" | "running" | "completed" | "failed" | "cancelled";
+  status: "pending" | "running" | "paused" | "completed" | "failed" | "cancelled";
   totalItemsTarget?: number;
   totalItemsScraped: number;
   totalPosts?: number;
@@ -43,8 +42,7 @@ export interface UpsertResult {
 export class DatabaseManager {
   private db: Database.Database;
   private connection?: DatabaseConnection;
-  private queries: PreparedQueries;
-  private analytics: DatabaseAnalytics;
+  private queries!: PreparedQueries;
   private logger: winston.Logger;
   private sessionNumericId?: number;
 
@@ -71,8 +69,6 @@ export class DatabaseManager {
       this.db = this.connection.connect();
     }
 
-    // Initialize analytics (doesn't depend on migrations)
-    this.analytics = new DatabaseAnalytics(this.db);
   }
 
   async initialize(): Promise<void> {
@@ -585,12 +581,154 @@ export class DatabaseManager {
     return results;
   }
 
-  // ============================================================================
-  // Analytics & Metrics
-  // ============================================================================
+  /**
+   * Get basic database statistics
+   */
+  async getStatistics(options: {
+    platform?: string;
+    startDate?: Date;
+    endDate?: Date;
+  } = {}): Promise<{
+    totalPosts: number;
+    totalComments: number;
+    totalUsers: number;
+    platformBreakdown: Record<string, number>;
+    recentActivity: number;
+  }> {
+    let whereClause = "1=1";
+    const params: any[] = [];
 
-  getAnalytics() {
-    return this.analytics;
+    if (options.platform) {
+      whereClause += " AND platform = ?";
+      params.push(options.platform);
+    }
+
+    if (options.startDate) {
+      whereClause += " AND created_at >= ?";
+      params.push(options.startDate.getTime());
+    }
+
+    if (options.endDate) {
+      whereClause += " AND created_at <= ?";
+      params.push(options.endDate.getTime());
+    }
+
+    const totalPosts = (this.db
+      .prepare(`SELECT COUNT(*) as count FROM posts WHERE ${whereClause}`)
+      .get(...params) as { count: number } | undefined)?.count || 0;
+
+    const totalComments = (this.db
+      .prepare(`SELECT COUNT(*) as count FROM comments WHERE ${whereClause}`)
+      .get(...params) as { count: number } | undefined)?.count || 0;
+
+    const totalUsers = (this.db
+      .prepare(`SELECT COUNT(DISTINCT author) as count FROM posts WHERE ${whereClause}`)
+      .get(...params) as { count: number } | undefined)?.count || 0;
+
+    const platformStats = this.db
+      .prepare(`SELECT platform, COUNT(*) as count FROM posts WHERE ${whereClause} GROUP BY platform`)
+      .all(...params) as Array<{ platform: string; count: number }>;
+
+    const platformBreakdown: Record<string, number> = {};
+    platformStats.forEach(stat => {
+      platformBreakdown[stat.platform] = stat.count;
+    });
+
+    // Get recent activity (last 24 hours)
+    const recentDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentActivity = (this.db
+      .prepare("SELECT COUNT(*) as count FROM posts WHERE created_at >= ?")
+      .get(recentDate.getTime()) as { count: number } | undefined)?.count || 0;
+
+    return {
+      totalPosts,
+      totalComments,
+      totalUsers,
+      platformBreakdown,
+      recentActivity,
+    };
+  }
+
+  /**
+   * Search content in posts and comments
+   */
+  async searchContent(options: {
+    query?: string;
+    platform?: string;
+    limit?: number;
+  }): Promise<{
+    posts: any[];
+    comments: any[];
+  }> {
+    const limit = options.limit || 20;
+    let posts: any[] = [];
+    let comments: any[] = [];
+
+    if (options.query) {
+      // Search posts by title or content
+      let postQuery = `
+        SELECT * FROM posts
+        WHERE (title LIKE ? OR content LIKE ?)
+      `;
+      const searchPattern = `%${options.query}%`;
+      const params: any[] = [searchPattern, searchPattern];
+
+      if (options.platform) {
+        postQuery += " AND platform = ?";
+        params.push(options.platform);
+      }
+
+      postQuery += " ORDER BY created_at DESC LIMIT ?";
+      params.push(limit);
+
+      posts = this.db.prepare(postQuery).all(...params);
+
+      // Search comments by content
+      let commentQuery = `
+        SELECT * FROM comments
+        WHERE content LIKE ?
+      `;
+      const commentParams: any[] = [searchPattern];
+
+      if (options.platform) {
+        commentQuery += " AND platform = ?";
+        commentParams.push(options.platform);
+      }
+
+      commentQuery += " ORDER BY created_at DESC LIMIT ?";
+      commentParams.push(limit);
+
+      comments = this.db.prepare(commentQuery).all(...commentParams);
+    } else {
+      // Return recent posts and comments
+      let postQuery = "SELECT * FROM posts";
+      const params: any[] = [];
+
+      if (options.platform) {
+        postQuery += " WHERE platform = ?";
+        params.push(options.platform);
+      }
+
+      postQuery += " ORDER BY created_at DESC LIMIT ?";
+      params.push(limit);
+
+      posts = this.db.prepare(postQuery).all(...params);
+
+      let commentQuery = "SELECT * FROM comments";
+      const commentParams: any[] = [];
+
+      if (options.platform) {
+        commentQuery += " WHERE platform = ?";
+        commentParams.push(options.platform);
+      }
+
+      commentQuery += " ORDER BY created_at DESC LIMIT ?";
+      commentParams.push(limit);
+
+      comments = this.db.prepare(commentQuery).all(...commentParams);
+    }
+
+    return { posts, comments };
   }
 
   recordMetric(
@@ -702,6 +840,17 @@ export class DatabaseManager {
     }
 
     return session;
+  }
+
+  private mapRowToUser(row: any): User {
+    return {
+      id: row.id,
+      username: row.username,
+      platform: row.platform as Platform,
+      createdAt: row.created_at ? new Date(row.created_at) : undefined,
+      karma: row.karma,
+      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+    };
   }
 
   // ============================================================================

@@ -232,7 +232,7 @@ export class RedditPublicClient {
       score: redditPost.score,
       commentCount: redditPost.num_comments,
       createdAt: new Date(redditPost.created_utc * 1000),
-      updatedAt: null,
+      updatedAt: undefined,
       metadata: {
         name: redditPost.name, // Keep the full name (t3_xxx) in metadata
         permalink: redditPost.permalink,
@@ -264,7 +264,7 @@ export class RedditPublicClient {
       score: redditComment.score,
       depth: redditComment.depth || 0,
       createdAt: new Date(redditComment.created_utc * 1000),
-      updatedAt: null,
+      updatedAt: undefined,
     };
   }
 

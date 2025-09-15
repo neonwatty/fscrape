@@ -530,7 +530,7 @@ export class SessionManager extends EventEmitter {
    * Get all sessions
    */
   getAllSessions(): SessionState[] {
-    return this.stateManager.getAllSessions();
+    return this.stateManager.exportSessions();
   }
 
   /**

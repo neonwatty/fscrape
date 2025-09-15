@@ -116,107 +116,14 @@ const DevelopmentConfigSchema = z.object({
   mockApi: z.boolean().default(false),
 });
 
-// Analytics cache configuration schema
-const AnalyticsCacheSchema = z.object({
-  enabled: z.boolean().default(true),
-  defaultTTL: z.number().positive().default(300000),
-  maxSize: z.number().positive().default(52428800),
-  maxEntries: z.number().positive().default(1000),
-  cleanupInterval: z.number().positive().default(60000),
-  compressionThreshold: z.number().positive().default(1024),
-  strategy: z.enum(["lru", "fifo", "lfu"]).default("lru"),
-  backgroundRefresh: z.boolean().default(false),
-  ttlVariation: z.number().min(0).max(1).default(0.1),
-});
 
-// Analytics computation configuration schema
-const AnalyticsComputationSchema = z.object({
-  maxDataPoints: z.number().positive().default(100000),
-  samplingThreshold: z.number().positive().default(10000),
-  parallelProcessing: z.boolean().default(true),
-  workerThreads: z.number().positive().default(4),
-  timeoutMs: z.number().positive().default(30000),
-  precision: z.number().positive().default(4),
-  optimizationLevel: z.number().min(0).max(2).default(2),
-});
 
-// Analytics visualization configuration schema
-const AnalyticsVisualizationSchema = z.object({
-  defaultChartType: z
-    .enum(["line", "bar", "pie", "scatter", "heatmap"])
-    .default("line"),
-  maxSeriesPoints: z.number().positive().default(1000),
-  enableInteractive: z.boolean().default(true),
-  colorScheme: z
-    .enum(["default", "dark", "colorblind", "monochrome"])
-    .default("default"),
-  exportFormats: z
-    .array(z.enum(["png", "svg", "json", "csv"]))
-    .default(["png", "svg", "json"]),
-  animationDuration: z.number().positive().default(750),
-  responsiveResize: z.boolean().default(true),
-});
 
-// Analytics performance configuration schema
-const AnalyticsPerformanceSchema = z.object({
-  enableProfiling: z.boolean().default(false),
-  metricsInterval: z.number().positive().default(5000),
-  slowQueryThreshold: z.number().positive().default(1000),
-  enableOptimizations: z.boolean().default(true),
-  memoryLimit: z.number().positive().default(512),
-  gcInterval: z.number().positive().default(300000),
-});
 
-// Analytics statistics configuration schema
-const AnalyticsStatisticsSchema = z.object({
-  confidenceLevel: z.number().min(0).max(1).default(0.95),
-  significanceLevel: z.number().min(0).max(1).default(0.05),
-  bootstrapSamples: z.number().positive().default(1000),
-  outlierMethod: z.enum(["iqr", "zscore", "isolation"]).default("iqr"),
-  outlierThreshold: z.number().positive().default(1.5),
-});
 
-// Analytics trends configuration schema
-const AnalyticsTrendsSchema = z.object({
-  minDataPoints: z.number().positive().default(10),
-  smoothingWindow: z.number().positive().default(7),
-  seasonalityDetection: z.boolean().default(true),
-  trendStrengthThreshold: z.number().min(0).max(1).default(0.7),
-});
 
-// Analytics anomalies configuration schema
-const AnalyticsAnomaliesSchema = z.object({
-  enabled: z.boolean().default(true),
-  method: z
-    .enum(["isolation", "zscore", "mad", "ensemble"])
-    .default("isolation"),
-  sensitivity: z.number().min(0).max(1).default(0.5),
-  minSamples: z.number().positive().default(30),
-  lookbackWindow: z.number().positive().default(100),
-});
 
-// Analytics forecasting configuration schema
-const AnalyticsForecastingSchema = z.object({
-  defaultMethod: z
-    .enum(["auto", "arima", "exponential", "linear"])
-    .default("auto"),
-  horizonDays: z.number().positive().default(7),
-  confidenceIntervals: z.array(z.number().min(0).max(1)).default([0.8, 0.95]),
-  maxModelComplexity: z.number().min(1).max(5).default(3),
-});
 
-// Complete analytics configuration schema
-const AnalyticsConfigSchema = z.object({
-  enabled: z.boolean().default(true),
-  cache: AnalyticsCacheSchema,
-  computation: AnalyticsComputationSchema,
-  visualization: AnalyticsVisualizationSchema,
-  performance: AnalyticsPerformanceSchema,
-  statistics: AnalyticsStatisticsSchema,
-  trends: AnalyticsTrendsSchema,
-  anomalies: AnalyticsAnomaliesSchema,
-  forecasting: AnalyticsForecastingSchema,
-});
 
 // Base schemas without defaults for partial validation
 const DevelopmentConfigSchemaBase = z.object({
@@ -312,72 +219,6 @@ export const ConfigSchema = z.object({
     dryRun: false,
     mockApi: false,
   }),
-  analytics: AnalyticsConfigSchema.default({
-    enabled: true,
-    cache: {
-      enabled: true,
-      defaultTTL: 300000,
-      maxSize: 52428800,
-      maxEntries: 1000,
-      cleanupInterval: 60000,
-      compressionThreshold: 1024,
-      strategy: "lru",
-      backgroundRefresh: false,
-      ttlVariation: 0.1,
-    },
-    computation: {
-      maxDataPoints: 100000,
-      samplingThreshold: 10000,
-      parallelProcessing: true,
-      workerThreads: 4,
-      timeoutMs: 30000,
-      precision: 4,
-      optimizationLevel: 2,
-    },
-    visualization: {
-      defaultChartType: "line",
-      maxSeriesPoints: 1000,
-      enableInteractive: true,
-      colorScheme: "default",
-      exportFormats: ["png", "svg", "json"],
-      animationDuration: 750,
-      responsiveResize: true,
-    },
-    performance: {
-      enableProfiling: false,
-      metricsInterval: 5000,
-      slowQueryThreshold: 1000,
-      enableOptimizations: true,
-      memoryLimit: 512,
-      gcInterval: 300000,
-    },
-    statistics: {
-      confidenceLevel: 0.95,
-      significanceLevel: 0.05,
-      bootstrapSamples: 1000,
-      outlierMethod: "iqr",
-      outlierThreshold: 1.5,
-    },
-    trends: {
-      minDataPoints: 10,
-      smoothingWindow: 7,
-      seasonalityDetection: true,
-      trendStrengthThreshold: 0.7,
-    },
-    anomalies: {
-      enabled: true,
-      method: "isolation",
-      sensitivity: 0.5,
-      minSamples: 30,
-      lookbackWindow: 100,
-    },
-    forecasting: {
-      defaultMethod: "auto",
-      horizonDays: 7,
-      confidenceIntervals: [0.8, 0.95],
-      maxModelComplexity: 3,
-    },
-  }),
 });
 
 /**
@@ -461,72 +302,6 @@ const ConfigSchemaBase = z.object({
     confirmDestructive: z.boolean(),
   }),
   development: DevelopmentConfigSchemaBase,
-  analytics: z.object({
-    enabled: z.boolean(),
-    cache: z.object({
-      enabled: z.boolean(),
-      defaultTTL: z.number().positive(),
-      maxSize: z.number().positive(),
-      maxEntries: z.number().positive(),
-      cleanupInterval: z.number().positive(),
-      compressionThreshold: z.number().positive(),
-      strategy: z.enum(["lru", "fifo", "lfu"]),
-      backgroundRefresh: z.boolean(),
-      ttlVariation: z.number().min(0).max(1),
-    }),
-    computation: z.object({
-      maxDataPoints: z.number().positive(),
-      samplingThreshold: z.number().positive(),
-      parallelProcessing: z.boolean(),
-      workerThreads: z.number().positive(),
-      timeoutMs: z.number().positive(),
-      precision: z.number().positive(),
-      optimizationLevel: z.number().min(0).max(2),
-    }),
-    visualization: z.object({
-      defaultChartType: z.enum(["line", "bar", "pie", "scatter", "heatmap"]),
-      maxSeriesPoints: z.number().positive(),
-      enableInteractive: z.boolean(),
-      colorScheme: z.enum(["default", "dark", "colorblind", "monochrome"]),
-      exportFormats: z.array(z.enum(["png", "svg", "json", "csv"])),
-      animationDuration: z.number().positive(),
-      responsiveResize: z.boolean(),
-    }),
-    performance: z.object({
-      enableProfiling: z.boolean(),
-      metricsInterval: z.number().positive(),
-      slowQueryThreshold: z.number().positive(),
-      enableOptimizations: z.boolean(),
-      memoryLimit: z.number().positive(),
-      gcInterval: z.number().positive(),
-    }),
-    statistics: z.object({
-      confidenceLevel: z.number().min(0).max(1),
-      significanceLevel: z.number().min(0).max(1),
-      bootstrapSamples: z.number().positive(),
-      outlierMethod: z.enum(["iqr", "zscore", "isolation"]),
-      outlierThreshold: z.number().positive(),
-    }),
-    trends: z.object({
-      minDataPoints: z.number().positive(),
-      smoothingWindow: z.number().positive(),
-      seasonalityDetection: z.boolean(),
-      trendStrengthThreshold: z.number().min(0).max(1),
-    }),
-    anomalies: z.object({
-      enabled: z.boolean(),
-      method: z.enum(["isolation", "zscore", "mad", "ensemble"]),
-      sensitivity: z.number().min(0).max(1),
-      minSamples: z.number().positive(),
-      lookbackWindow: z.number().positive(),
-    }),
-    forecasting: z.object({
-      defaultMethod: z.enum(["auto", "arima", "exponential", "linear"]),
-      horizonDays: z.number().positive(),
-      confidenceIntervals: z.array(z.number().min(0).max(1)),
-      maxModelComplexity: z.number().min(1).max(5),
-    }),
-  }),
 });
 
 /**
@@ -656,72 +431,6 @@ const configDefaults = {
     verbose: false,
     dryRun: false,
     mockApi: false,
-  },
-  analytics: {
-    enabled: true,
-    cache: {
-      enabled: true,
-      defaultTTL: 300000,
-      maxSize: 52428800,
-      maxEntries: 1000,
-      cleanupInterval: 60000,
-      compressionThreshold: 1024,
-      strategy: "lru" as const,
-      backgroundRefresh: false,
-      ttlVariation: 0.1,
-    },
-    computation: {
-      maxDataPoints: 100000,
-      samplingThreshold: 10000,
-      parallelProcessing: true,
-      workerThreads: 4,
-      timeoutMs: 30000,
-      precision: 4,
-      optimizationLevel: 2,
-    },
-    visualization: {
-      defaultChartType: "line" as const,
-      maxSeriesPoints: 1000,
-      enableInteractive: true,
-      colorScheme: "default" as const,
-      exportFormats: ["png", "svg", "json"] as const,
-      animationDuration: 750,
-      responsiveResize: true,
-    },
-    performance: {
-      enableProfiling: false,
-      metricsInterval: 5000,
-      slowQueryThreshold: 1000,
-      enableOptimizations: true,
-      memoryLimit: 512,
-      gcInterval: 300000,
-    },
-    statistics: {
-      confidenceLevel: 0.95,
-      significanceLevel: 0.05,
-      bootstrapSamples: 1000,
-      outlierMethod: "iqr" as const,
-      outlierThreshold: 1.5,
-    },
-    trends: {
-      minDataPoints: 10,
-      smoothingWindow: 7,
-      seasonalityDetection: true,
-      trendStrengthThreshold: 0.7,
-    },
-    anomalies: {
-      enabled: true,
-      method: "isolation" as const,
-      sensitivity: 0.5,
-      minSamples: 30,
-      lookbackWindow: 100,
-    },
-    forecasting: {
-      defaultMethod: "auto" as const,
-      horizonDays: 7,
-      confidenceIntervals: [0.8, 0.95],
-      maxModelComplexity: 3,
-    },
   },
 };
 
