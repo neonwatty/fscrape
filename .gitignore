@@ -72,3 +72,29 @@ pnpm-lock.yaml
 
 # TFQ test failure queue database
 .tfq/
+
+# Test output and temporary files
+test-*.db
+test-*.db-shm
+test-*.db-wal
+*.db
+*.db-shm
+*.db-wal
+output.json
+output.csv
+output.html
+output.md
+results.json
+latest-scrape.json
+test-output.json
+test-batch.json
+test-export.json
+test-standalone.json
+test.json
+
+# Test directories
+test-results/
+test_project/
+
+# Keep the main database
+!fscrape.db
