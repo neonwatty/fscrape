@@ -328,8 +328,8 @@ describe('SessionManager', () => {
 
     it('should list all sessions', async () => {
       await sessionManager.createSession({ platform: 'reddit' });
-      
-      mockSessionState.getAllSessions.mockReturnValue([
+
+      mockSessionState.exportSessions.mockReturnValue([
         {
           id: 'session-1',
           platform: 'reddit',
@@ -347,13 +347,13 @@ describe('SessionManager', () => {
           startedAt: new Date(),
         },
       ]);
-      
+
       const sessions = sessionManager.getAllSessions();
       expect(sessions).toHaveLength(2);
     });
 
     it('should filter sessions by platform', async () => {
-      mockSessionState.getAllSessions.mockReturnValue([
+      mockSessionState.exportSessions.mockReturnValue([
         {
           id: 'session-1',
           platform: 'reddit',
@@ -363,14 +363,14 @@ describe('SessionManager', () => {
           startedAt: new Date(),
         },
       ]);
-      
+
       const sessions = sessionManager.getAllSessions();
       const redditSessions = sessions.filter(s => s.platform === 'reddit');
       expect(redditSessions).toHaveLength(1);
     });
 
     it('should filter sessions by status', async () => {
-      mockSessionState.getAllSessions.mockReturnValue([
+      mockSessionState.exportSessions.mockReturnValue([
         {
           id: 'session-1',
           platform: 'reddit',
@@ -380,7 +380,7 @@ describe('SessionManager', () => {
           startedAt: new Date(),
         },
       ]);
-      
+
       const sessions = sessionManager.getAllSessions();
       const completedSessions = sessions.filter(s => s.status === 'completed');
       expect(completedSessions).toHaveLength(1);
@@ -389,8 +389,8 @@ describe('SessionManager', () => {
     it('should filter sessions by date range', async () => {
       const startDate = new Date('2024-01-01');
       const endDate = new Date('2024-12-31');
-      
-      mockSessionState.getAllSessions.mockReturnValue([
+
+      mockSessionState.exportSessions.mockReturnValue([
         {
           id: 'session-1',
           platform: 'reddit',
@@ -400,7 +400,7 @@ describe('SessionManager', () => {
           startedAt: new Date('2024-06-15'),
         },
       ]);
-      
+
       const sessions = sessionManager.getAllSessions();
       const filteredSessions = sessions.filter(s => {
         const sessionDate = new Date(s.startedAt);
@@ -522,7 +522,7 @@ describe('SessionManager', () => {
     });
 
     it('should aggregate platform metrics', async () => {
-      mockSessionState.getAllSessions.mockReturnValue([
+      mockSessionState.exportSessions.mockReturnValue([
         {
           id: 'session-1',
           platform: 'reddit',
@@ -540,7 +540,7 @@ describe('SessionManager', () => {
           startedAt: new Date(),
         },
       ]);
-      
+
       const sessions = sessionManager.getAllSessions();
       const redditMetrics = sessions
         .filter(s => s.platform === 'reddit')
@@ -548,7 +548,7 @@ describe('SessionManager', () => {
           totalItems: acc.totalItems + s.progress.totalItems,
           itemsScraped: acc.itemsScraped + s.progress.itemsScraped,
         }), { totalItems: 0, itemsScraped: 0 });
-      
+
       expect(redditMetrics.itemsScraped).toBe(300);
       expect(redditMetrics.totalItems).toBe(300);
     });

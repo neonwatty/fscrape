@@ -67,17 +67,6 @@ describe('CLI Commands', () => {
       getCommentsByPost: vi.fn().mockResolvedValue([]),
       getUsersByPlatform: vi.fn().mockResolvedValue([]),
       getStats: vi.fn().mockResolvedValue({ totalPosts: 0, totalComments: 0, totalUsers: 0 }),
-      getAnalytics: vi.fn().mockReturnValue({
-        getPlatformStatistics: vi.fn().mockReturnValue([
-          { totalPosts: 100, totalComments: 500, totalUsers: 50, lastUpdateTime: new Date() }
-        ]),
-        getPlatformStats: vi.fn().mockReturnValue(null),
-        getEngagementOverTime: vi.fn().mockReturnValue([]),
-        getTrendingPosts: vi.fn().mockReturnValue([]),
-        getTopUsersByKarma: vi.fn().mockReturnValue([]),
-        getDatabaseHealthDetailed: vi.fn().mockReturnValue(null),
-        getDatabaseHealth: vi.fn().mockReturnValue({ size: 1024, tables: 5 })
-      })
     };
     (DatabaseManager as any).mockImplementation(() => mockDatabase);
     
@@ -658,16 +647,29 @@ describe('CLI Commands', () => {
       program.exitOverride();
       const statusCommand = createStatusCommand();
       program.addCommand(statusCommand);
-      
-      // Mock database stats
-      mockDatabase.getStats.mockResolvedValue({
-        totalPosts: 100,
-        totalComments: 500,
-        totalUsers: 50
+
+      // Mock database stats with proper return structure
+      mockDatabase.getPosts = vi.fn().mockReturnValue({
+        posts: [
+          {
+            id: '1',
+            title: 'Test Post',
+            author: 'testuser',
+            score: 100,
+            commentCount: 5,
+            platform: 'reddit',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        ],
+        total: 1
       });
-      
-      // Parse status command
-      await program.parseAsync(['status'], { from: 'user' });
+
+      mockDatabase.getActiveSessions = vi.fn().mockReturnValue([]);
+
+      // Parse status command - this will actually execute the command action
+      await program.parseAsync(['node', 'test', 'status'], { from: 'node' });
+
       // Console output should have been called
       expect(consoleLogSpy).toHaveBeenCalled();
     });
@@ -825,17 +827,25 @@ describe('CLI Commands', () => {
       program.exitOverride();
       const scrapeCommand = createScrapeCommand();
       program.addCommand(scrapeCommand);
-      
-      // Force an error
+
+      // Force an error during platform initialization
       mockPlatform.initialize.mockRejectedValue(new Error('Init failed'));
-      
-      try {
-        await program.parseAsync(['scrape', 'https://reddit.com/r/test', '-p', 'reddit'], { from: 'user' });
-      } catch (error: any) {
-        // Should have logged error
-        expect(consoleErrorSpy).toHaveBeenCalled();
-      }
-    });
+
+      // Mock process.exit to prevent actual exit and track the call
+      let exitCode: number | undefined;
+      processExitSpy.mockImplementation((code?: number) => {
+        exitCode = code;
+        // Don't throw here to avoid unhandled rejection
+        return undefined as never;
+      });
+
+      await program.parseAsync(['scrape', 'https://reddit.com/r/test', '-p', 'reddit'], { from: 'user' });
+
+      // Check that error was logged and process.exit was called with code 1
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(processExitSpy).toHaveBeenCalledWith(1);
+      expect(exitCode).toBe(1);
+    }, 15000);
 
     it('should display progress indicators', async () => {
       const program = new Command();
