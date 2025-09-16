@@ -106,7 +106,6 @@ export const defaultConfig = {
     dryRun: false,
     mockApi: false,
   },
-
 };
 
 export type Config = typeof defaultConfig;

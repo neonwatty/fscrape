@@ -177,14 +177,14 @@ export function getMockResponseForUrl(url: string): any {
   // Parse URL to determine what to return
   if (url.includes("/r/") && url.includes(".json")) {
     // Subreddit listing (handle URLs like /r/programming/hot.json?limit=5)
-    const subredditMatch = url.match(/\/r\/([^\/]+)\//);
+    const subredditMatch = url.match(/\/r\/([^/]+)\//);
     const subreddit = subredditMatch ? subredditMatch[1] : "programming";
     return generateMockSubredditListing(subreddit, 5);
   }
 
   if (url.includes("/comments/") && url.endsWith(".json")) {
     // Post with comments
-    const postIdMatch = url.match(/\/comments\/([^\/]+)/);
+    const postIdMatch = url.match(/\/comments\/([^/]+)/);
     const postId = postIdMatch ? postIdMatch[1] : "mockpost";
     return generateMockPostWithComments(postId);
   }

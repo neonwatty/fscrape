@@ -362,8 +362,8 @@ async function handleExportComments(options: any): Promise<void> {
           platform: (options.platform as any) || "reddit",
           totalPosts: 0,
           totalComments: comments.length,
-          scrapedAt: new Date()
-        }
+          scrapedAt: new Date(),
+        },
       },
       options.format || "json",
       outputPath,
@@ -431,8 +431,8 @@ async function handleExportUsers(options: any): Promise<void> {
         metadata: {
           platform: (options.platform as any) || "reddit",
           totalPosts: 0,
-          scrapedAt: new Date()
-        }
+          scrapedAt: new Date(),
+        },
       },
       options.format || "json",
       outputPath,

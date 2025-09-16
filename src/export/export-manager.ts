@@ -199,7 +199,6 @@ export class ExportManager {
     this.dataTransformer = new DataTransformer(transformOptions);
   }
 
-
   /**
    * Get supported export formats
    */

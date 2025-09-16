@@ -105,16 +105,21 @@ async function gatherStatistics(
 
   // Get basic database counts using existing methods
   const allPosts = dbManager.getPosts(undefined, 999999, 0); // Get all posts with high limit
-  const redditPosts = dbManager.getPosts("reddit", 999999, 0);
-  const hackernewsPosts = dbManager.getPosts("hackernews", 999999, 0);
+  const _redditPosts = dbManager.getPosts("reddit", 999999, 0);
+  const _hackernewsPosts = dbManager.getPosts("hackernews", 999999, 0);
 
   // Calculate totals from posts
   const totalPosts = allPosts.total;
-  const totalComments = allPosts.posts.reduce((sum, post) => sum + (post.commentCount || 0), 0);
+  const totalComments = allPosts.posts.reduce(
+    (sum, post) => sum + (post.commentCount || 0),
+    0,
+  );
 
   // Find latest activity
   const lastActivity = Math.max(
-    ...allPosts.posts.map(post => post.updatedAt?.getTime() || post.createdAt.getTime() || 0)
+    ...allPosts.posts.map(
+      (post) => post.updatedAt?.getTime() || post.createdAt.getTime() || 0,
+    ),
   );
 
   // Set overview stats
@@ -130,15 +135,22 @@ async function gatherStatistics(
   if (options.platform) {
     // Get stats for specific platform
     const platformPosts = dbManager.getPosts(options.platform, 999999, 0);
-    const platformCommentCount = platformPosts.posts.reduce((sum, post) => sum + (post.commentCount || 0), 0);
-    const avgScore = platformPosts.posts.length > 0
-      ? platformPosts.posts.reduce((sum, post) => sum + (post.score || 0), 0) / platformPosts.posts.length
-      : 0;
+    const platformCommentCount = platformPosts.posts.reduce(
+      (sum, post) => sum + (post.commentCount || 0),
+      0,
+    );
+    const avgScore =
+      platformPosts.posts.length > 0
+        ? platformPosts.posts.reduce(
+            (sum, post) => sum + (post.score || 0),
+            0,
+          ) / platformPosts.posts.length
+        : 0;
 
     stats.platforms[options.platform] = {
       postCount: platformPosts.total,
       commentCount: platformCommentCount,
-      userCount: new Set(platformPosts.posts.map(post => post.author)).size,
+      userCount: new Set(platformPosts.posts.map((post) => post.author)).size,
       avgScore,
     };
   } else {
@@ -147,15 +159,23 @@ async function gatherStatistics(
     for (const platform of platforms) {
       const platformPosts = dbManager.getPosts(platform, 999999, 0);
       if (platformPosts.total > 0) {
-        const platformCommentCount = platformPosts.posts.reduce((sum, post) => sum + (post.commentCount || 0), 0);
-        const avgScore = platformPosts.posts.length > 0
-          ? platformPosts.posts.reduce((sum, post) => sum + (post.score || 0), 0) / platformPosts.posts.length
-          : 0;
+        const platformCommentCount = platformPosts.posts.reduce(
+          (sum, post) => sum + (post.commentCount || 0),
+          0,
+        );
+        const avgScore =
+          platformPosts.posts.length > 0
+            ? platformPosts.posts.reduce(
+                (sum, post) => sum + (post.score || 0),
+                0,
+              ) / platformPosts.posts.length
+            : 0;
 
         stats.platforms[platform] = {
           postCount: platformPosts.total,
           commentCount: platformCommentCount,
-          userCount: new Set(platformPosts.posts.map(post => post.author)).size,
+          userCount: new Set(platformPosts.posts.map((post) => post.author))
+            .size,
           avgScore,
         };
       }
@@ -164,24 +184,39 @@ async function gatherStatistics(
 
   // Get recent activity data (simplified - just recent counts, no daily breakdown)
   const days = options.days || 7;
-  const cutoffDate = Date.now() - (days * 24 * 60 * 60 * 1000);
+  const cutoffDate = Date.now() - days * 24 * 60 * 60 * 1000;
 
   // Filter posts by date from the already fetched data
   const recentPosts = options.platform
-    ? dbManager.getPosts(options.platform, 999999, 0).posts.filter(post =>
-        (post.createdAt?.getTime() || 0) > cutoffDate)
-    : allPosts.posts.filter(post =>
-        (post.createdAt?.getTime() || 0) > cutoffDate);
+    ? dbManager
+        .getPosts(options.platform, 999999, 0)
+        .posts.filter((post) => (post.createdAt?.getTime() || 0) > cutoffDate)
+    : allPosts.posts.filter(
+        (post) => (post.createdAt?.getTime() || 0) > cutoffDate,
+      );
 
-  const recentCommentCount = recentPosts.reduce((sum, post) => sum + (post.commentCount || 0), 0);
+  const recentCommentCount = recentPosts.reduce(
+    (sum, post) => sum + (post.commentCount || 0),
+    0,
+  );
 
   stats.recent = {
     posts: {
-      data: [{ date: new Date().toISOString().split('T')[0], count: recentPosts.length }]
+      data: [
+        {
+          date: new Date().toISOString().split("T")[0],
+          count: recentPosts.length,
+        },
+      ],
     },
     comments: {
-      data: [{ date: new Date().toISOString().split('T')[0], count: recentCommentCount }]
-    }
+      data: [
+        {
+          date: new Date().toISOString().split("T")[0],
+          count: recentCommentCount,
+        },
+      ],
+    },
   };
 
   // Get top posts (simplified)
@@ -207,9 +242,11 @@ async function gatherStatistics(
 
   // Get active sessions (if available)
   try {
-    const activeSessions = dbManager.getActiveSessions ? dbManager.getActiveSessions(5) : [];
+    const activeSessions = dbManager.getActiveSessions
+      ? dbManager.getActiveSessions(5)
+      : [];
     stats.activeSessions = activeSessions;
-  } catch (error) {
+  } catch (_error) {
     // Sessions methods might not exist
     stats.activeSessions = [];
   }
@@ -217,14 +254,14 @@ async function gatherStatistics(
   // Get basic system health (database file size)
   try {
     // Try to get database path from options or use default
-    const dbPath = options.database || 'fscrape.db';
+    const dbPath = options.database || "fscrape.db";
     const stat = fs.statSync(dbPath);
     stats.systemHealth = {
       databaseSize: stat.size,
       tableCount: 0, // Would need to query sqlite_master
     };
     stats.overview.databaseSize = stat.size;
-  } catch (error) {
+  } catch (_error) {
     stats.systemHealth = {
       databaseSize: 0,
       tableCount: 0,
@@ -234,7 +271,7 @@ async function gatherStatistics(
   // Update total users count from platform stats
   stats.overview.totalUsers = Object.values(stats.platforms).reduce(
     (sum: number, platform: any) => sum + (platform.userCount || 0),
-    0
+    0,
   );
 
   return stats;

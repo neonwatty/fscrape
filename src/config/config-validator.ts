@@ -116,15 +116,6 @@ const DevelopmentConfigSchema = z.object({
   mockApi: z.boolean().default(false),
 });
 
-
-
-
-
-
-
-
-
-
 // Base schemas without defaults for partial validation
 const DevelopmentConfigSchemaBase = z.object({
   debug: z.boolean(),

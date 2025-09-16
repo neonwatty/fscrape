@@ -18,7 +18,13 @@ export interface SessionInfo {
   platform: Platform;
   queryType?: string;
   queryValue?: string;
-  status: "pending" | "running" | "paused" | "completed" | "failed" | "cancelled";
+  status:
+    | "pending"
+    | "running"
+    | "paused"
+    | "completed"
+    | "failed"
+    | "cancelled";
   totalItemsTarget?: number;
   totalItemsScraped: number;
   totalPosts?: number;
@@ -68,7 +74,6 @@ export class DatabaseManager {
       this.connection = new DatabaseConnection(config, this.logger);
       this.db = this.connection.connect();
     }
-
   }
 
   async initialize(): Promise<void> {
@@ -584,11 +589,13 @@ export class DatabaseManager {
   /**
    * Get basic database statistics
    */
-  async getStatistics(options: {
-    platform?: string;
-    startDate?: Date;
-    endDate?: Date;
-  } = {}): Promise<{
+  async getStatistics(
+    options: {
+      platform?: string;
+      startDate?: Date;
+      endDate?: Date;
+    } = {},
+  ): Promise<{
     totalPosts: number;
     totalComments: number;
     totalUsers: number;
@@ -613,32 +620,50 @@ export class DatabaseManager {
       params.push(options.endDate.getTime());
     }
 
-    const totalPosts = (this.db
-      .prepare(`SELECT COUNT(*) as count FROM posts WHERE ${whereClause}`)
-      .get(...params) as { count: number } | undefined)?.count || 0;
+    const totalPosts =
+      (
+        this.db
+          .prepare(`SELECT COUNT(*) as count FROM posts WHERE ${whereClause}`)
+          .get(...params) as { count: number } | undefined
+      )?.count || 0;
 
-    const totalComments = (this.db
-      .prepare(`SELECT COUNT(*) as count FROM comments WHERE ${whereClause}`)
-      .get(...params) as { count: number } | undefined)?.count || 0;
+    const totalComments =
+      (
+        this.db
+          .prepare(
+            `SELECT COUNT(*) as count FROM comments WHERE ${whereClause}`,
+          )
+          .get(...params) as { count: number } | undefined
+      )?.count || 0;
 
-    const totalUsers = (this.db
-      .prepare(`SELECT COUNT(DISTINCT author) as count FROM posts WHERE ${whereClause}`)
-      .get(...params) as { count: number } | undefined)?.count || 0;
+    const totalUsers =
+      (
+        this.db
+          .prepare(
+            `SELECT COUNT(DISTINCT author) as count FROM posts WHERE ${whereClause}`,
+          )
+          .get(...params) as { count: number } | undefined
+      )?.count || 0;
 
     const platformStats = this.db
-      .prepare(`SELECT platform, COUNT(*) as count FROM posts WHERE ${whereClause} GROUP BY platform`)
+      .prepare(
+        `SELECT platform, COUNT(*) as count FROM posts WHERE ${whereClause} GROUP BY platform`,
+      )
       .all(...params) as Array<{ platform: string; count: number }>;
 
     const platformBreakdown: Record<string, number> = {};
-    platformStats.forEach(stat => {
+    platformStats.forEach((stat) => {
       platformBreakdown[stat.platform] = stat.count;
     });
 
     // Get recent activity (last 24 hours)
     const recentDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recentActivity = (this.db
-      .prepare("SELECT COUNT(*) as count FROM posts WHERE created_at >= ?")
-      .get(recentDate.getTime()) as { count: number } | undefined)?.count || 0;
+    const recentActivity =
+      (
+        this.db
+          .prepare("SELECT COUNT(*) as count FROM posts WHERE created_at >= ?")
+          .get(recentDate.getTime()) as { count: number } | undefined
+      )?.count || 0;
 
     return {
       totalPosts,

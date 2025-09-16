@@ -508,7 +508,9 @@ export class BatchProcessor {
           });
 
           // Handle both array and ScrapeResult format
-          const posts = Array.isArray(scrapeResult) ? scrapeResult : scrapeResult.posts;
+          const posts = Array.isArray(scrapeResult)
+            ? scrapeResult
+            : scrapeResult.posts;
           for (const post of posts) {
             await dbManager.upsertPost(post);
             results.posts++;
@@ -562,8 +564,8 @@ export class BatchProcessor {
             metadata: {
               platform: "mixed" as any,
               totalPosts: posts.length,
-              scrapedAt: new Date()
-            }
+              scrapedAt: new Date(),
+            },
           },
           `export-posts-${Date.now()}`,
           format as "json" | "csv",
@@ -582,8 +584,8 @@ export class BatchProcessor {
               platform: "mixed" as any,
               totalPosts: 0,
               totalComments: comments.length,
-              scrapedAt: new Date()
-            }
+              scrapedAt: new Date(),
+            },
           },
           `export-comments-${Date.now()}`,
           format as "json" | "csv",
@@ -601,8 +603,8 @@ export class BatchProcessor {
             metadata: {
               platform: "mixed" as any,
               totalPosts: 0,
-              scrapedAt: new Date()
-            }
+              scrapedAt: new Date(),
+            },
           },
           `export-users-${Date.now()}`,
           format as "json" | "csv",

@@ -319,11 +319,11 @@ export const migrations: Migration[] = [
           );
           console.log("Added comment_count column to users table");
         }
-      } catch (error) {
+      } catch (_error) {
         console.log("Note: user metrics columns might already exist");
       }
     },
-    down: (db: Database.Database) => {
+    down: (_db: Database.Database) => {
       // We don't remove columns in down migration to preserve data
       console.log("Preserving user metrics columns");
     },
@@ -343,7 +343,7 @@ export const migrations: Migration[] = [
           );
           console.log("Added platform_id column to posts table");
         }
-      } catch (error) {
+      } catch (_error) {
         console.log("Note: platform_id column might already exist");
       }
     },

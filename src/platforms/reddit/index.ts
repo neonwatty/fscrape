@@ -264,8 +264,8 @@ export const RedditPlatform: PlatformConstructor = class
           platform: "reddit" as any,
           totalPosts: posts.length,
           scrapedAt: new Date(),
-          subreddit: options.subreddit
-        }
+          subreddit: options.subreddit,
+        },
       };
     } else {
       // Default to r/popular if no specific target
@@ -277,8 +277,8 @@ export const RedditPlatform: PlatformConstructor = class
           platform: "reddit" as any,
           totalPosts: posts.length,
           scrapedAt: new Date(),
-          subreddit: "popular"
-        }
+          subreddit: "popular",
+        },
       };
     }
   }
