@@ -42,7 +42,7 @@ function createProgram(): Command {
       // Handle global options
       const opts = thisCommand.opts();
 
-      if (opts.noColor) {
+      if (opts.color === false) {
         chalk.level = 0;
       }
 

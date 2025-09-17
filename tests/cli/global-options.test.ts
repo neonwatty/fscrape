@@ -22,7 +22,7 @@ vi.mock('chalk', () => {
 });
 
 import chalk from 'chalk';
-// import { createProgram } from '../../src/cli/index'; // Not exported in current implementation
+import { createProgram } from '../../src/cli/index.js';
 
 // Get the mocked chalk object for testing
 const mockChalk = chalk as any;
@@ -77,13 +77,15 @@ describe('CLI Global Options', () => {
   });
 
   describe('Color Output Control', () => {
-    it('should disable colors with --no-color flag', () => {
+    it('should disable colors with --no-color flag', async () => {
       const program = createTestProgram();
 
       // Add a test command to trigger the hook
-      program.command('status').action(() => {});
+      program.command('status').action(() => {
+        // Command action
+      });
 
-      program.parse(['node', 'test', '--no-color', 'status'], { from: 'node' });
+      await program.parseAsync(['node', 'test', '--no-color', 'status'], { from: 'node' });
 
       expect(mockChalk.level).toBe(0);
     });
@@ -129,7 +131,7 @@ describe('CLI Global Options', () => {
       expect(mockChalk.level).toBe(3);
     });
 
-    it('should apply color settings before command execution', () => {
+    it('should apply color settings before command execution', async () => {
       const program = createTestProgram();
       let colorLevelDuringExecution: number | undefined;
 
@@ -140,7 +142,7 @@ describe('CLI Global Options', () => {
           colorLevelDuringExecution = mockChalk.level;
         });
 
-      program.parse(['node', 'test', '--no-color', 'test-command'], { from: 'node' });
+      await program.parseAsync(['node', 'test', '--no-color', 'test-command'], { from: 'node' });
 
       // The hook sets chalk.level to 0
       expect(mockChalk.level).toBe(0);
@@ -149,10 +151,13 @@ describe('CLI Global Options', () => {
   });
 
   describe('Output Control', () => {
-    it('should suppress output with --quiet flag', () => {
+    it('should suppress output with --quiet flag', async () => {
       const program = createTestProgram();
 
-      program.parse(['node', 'test', '--quiet', 'status'], { from: 'node' });
+      // Add a status command to execute
+      program.command('status').action(() => {});
+
+      await program.parseAsync(['node', 'test', '--quiet', 'status'], { from: 'node' });
 
       // After --quiet flag, console.log should be mocked
       const opts = program.opts();
@@ -169,7 +174,7 @@ describe('CLI Global Options', () => {
       expect(consoleLogSpy).not.toHaveBeenCalledWith('This should not appear');
     });
 
-    it('should only show errors in quiet mode', () => {
+    it('should only show errors in quiet mode', async () => {
       const program = createTestProgram();
       let logOutput: any[] = [];
       let errorOutput: any[] = [];
@@ -188,7 +193,7 @@ describe('CLI Global Options', () => {
       console.log = (...args: any[]) => logOutput.push(args);
       console.error = (...args: any[]) => errorOutput.push(args);
 
-      program.parse(['node', 'test', '--quiet', 'test-command'], { from: 'node' });
+      await program.parseAsync(['node', 'test', '--quiet', 'test-command'], { from: 'node' });
 
       console.log = originalLog;
       console.error = originalError;
@@ -198,10 +203,13 @@ describe('CLI Global Options', () => {
       expect(errorOutput.length).toBeGreaterThan(0);
     });
 
-    it('should enable debug output with --debug flag', () => {
+    it('should enable debug output with --debug flag', async () => {
       const program = createTestProgram();
 
-      program.parse(['node', 'test', '--debug', 'status'], { from: 'node' });
+      // Add a status command to execute
+      program.command('status').action(() => {});
+
+      await program.parseAsync(['node', 'test', '--debug', 'status'], { from: 'node' });
 
       const opts = program.opts();
       if (opts.debug) {
@@ -211,7 +219,7 @@ describe('CLI Global Options', () => {
       expect(process.env.DEBUG).toBe('fscrape:*');
     });
 
-    it('should set DEBUG env variable correctly', () => {
+    it('should set DEBUG env variable correctly', async () => {
       const program = createTestProgram();
       let debugValueDuringExecution: string | undefined;
 
@@ -221,18 +229,18 @@ describe('CLI Global Options', () => {
           debugValueDuringExecution = process.env.DEBUG;
         });
 
-      program.parse(['node', 'test', '--debug', 'test-command'], { from: 'node' });
+      await program.parseAsync(['node', 'test', '--debug', 'test-command'], { from: 'node' });
 
       expect(debugValueDuringExecution).toBe('fscrape:*');
     });
 
-    it('should allow combining quiet and debug modes', () => {
+    it('should allow combining quiet and debug modes', async () => {
       const program = createTestProgram();
 
       // Add a command to trigger hooks
       program.command('status').action(() => {});
 
-      program.parse(['node', 'test', '--quiet', '--debug', 'status'], { from: 'node' });
+      await program.parseAsync(['node', 'test', '--quiet', '--debug', 'status'], { from: 'node' });
 
       const opts = program.opts();
       expect(opts.quiet).toBe(true);
@@ -284,7 +292,8 @@ describe('CLI Global Options', () => {
       try {
         program.parse(['node', 'test', '--help'], { from: 'node' });
       } catch (error: any) {
-        helpShown = error.code === 'commander.help';
+        // Commander throws an error with code 'commander.help' or 'commander.helpDisplayed'
+        helpShown = error.code === 'commander.help' || error.code === 'commander.helpDisplayed';
       }
 
       expect(helpShown).toBe(true);
@@ -303,7 +312,8 @@ describe('CLI Global Options', () => {
       try {
         program.parse(['node', 'test', 'test', '--help'], { from: 'node' });
       } catch (error: any) {
-        helpShown = error.code === 'commander.help';
+        // Commander throws an error with code 'commander.help' or 'commander.helpDisplayed'
+        helpShown = error.code === 'commander.help' || error.code === 'commander.helpDisplayed';
       }
 
       expect(helpShown).toBe(true);
@@ -328,7 +338,7 @@ describe('CLI Global Options', () => {
   });
 
   describe('Hook System', () => {
-    it('should execute preAction hooks', () => {
+    it('should execute preAction hooks', async () => {
       const program = createTestProgram();
       let hookExecuted = false;
       let optionsInHook: any;
@@ -344,13 +354,13 @@ describe('CLI Global Options', () => {
           // Command action
         });
 
-      program.parse(['node', 'test', '--debug', 'test'], { from: 'node' });
+      await program.parseAsync(['node', 'test', '--debug', 'test'], { from: 'node' });
 
       expect(hookExecuted).toBe(true);
       expect(optionsInHook.debug).toBe(true);
     });
 
-    it('should handle hook errors gracefully', () => {
+    it('should handle hook errors gracefully', async () => {
       const program = createTestProgram();
       program.exitOverride();
 
@@ -365,14 +375,14 @@ describe('CLI Global Options', () => {
         });
 
       try {
-        program.parse(['node', 'test', 'test'], { from: 'node' });
+        await program.parseAsync(['node', 'test', 'test'], { from: 'node' });
         expect.fail('Should have thrown error');
       } catch (error: any) {
         expect(error.message).toContain('Hook error');
       }
     });
 
-    it('should pass options through hooks', () => {
+    it('should pass options through hooks', async () => {
       const program = createTestProgram();
       let globalOptions: any;
       let commandOptions: any;
@@ -389,13 +399,13 @@ describe('CLI Global Options', () => {
           // Command action
         });
 
-      program.parse(['node', 'test', '--debug', 'test', '--local'], { from: 'node' });
+      await program.parseAsync(['node', 'test', '--debug', 'test', '--local'], { from: 'node' });
 
       expect(globalOptions.debug).toBe(true);
       expect(commandOptions.local).toBe(true);
     });
 
-    it('should execute hooks in correct order', () => {
+    it('should execute hooks in correct order', async () => {
       const program = createTestProgram();
       const executionOrder: string[] = [];
 
@@ -412,12 +422,12 @@ describe('CLI Global Options', () => {
           executionOrder.push('action');
         });
 
-      program.parse(['node', 'test', 'test'], { from: 'node' });
+      await program.parseAsync(['node', 'test', 'test'], { from: 'node' });
 
       expect(executionOrder).toEqual(['global-pre', 'command-pre', 'action']);
     });
 
-    it('should apply global options in preAction hook', () => {
+    it('should apply global options in preAction hook', async () => {
       const program = createTestProgram();
       let hookCalled = false;
       let optionsReceived: any = {};
@@ -435,12 +445,12 @@ describe('CLI Global Options', () => {
           // Command action
         });
 
-      program.parse(['node', 'test', '--debug', '--quiet', '--no-color', 'test'], { from: 'node' });
+      await program.parseAsync(['node', 'test', '--debug', '--quiet', '--no-color', 'test'], { from: 'node' });
 
       expect(hookCalled).toBe(true);
       expect(optionsReceived.debug).toBe(true);
       expect(optionsReceived.quiet).toBe(true);
-      expect(optionsReceived.noColor).toBe(true);
+      expect(optionsReceived.color).toBe(false); // --no-color sets color: false
       // The first hook should have applied the settings
       expect(process.env.DEBUG).toBe('fscrape:*');
       expect(mockChalk.level).toBe(0);
@@ -484,12 +494,15 @@ describe('CLI Global Options', () => {
       expect(quietMode).toBe(true);
     });
 
-    it('should prioritize command-line flags over environment variables', () => {
+    it('should prioritize command-line flags over environment variables', async () => {
       process.env.FSCRAPE_DEBUG = 'false';
 
       const program = createTestProgram();
 
-      program.parse(['node', 'test', '--debug', 'status'], { from: 'node' });
+      // Add a status command to execute
+      program.command('status').action(() => {});
+
+      await program.parseAsync(['node', 'test', '--debug', 'status'], { from: 'node' });
 
       const opts = program.opts();
       // Command-line flag should override environment variable
@@ -498,7 +511,7 @@ describe('CLI Global Options', () => {
   });
 
   describe('Global Options Inheritance', () => {
-    it('should pass global options to subcommands', () => {
+    it('should pass global options to subcommands', async () => {
       const program = createTestProgram();
       let receivedGlobalOptions: any;
 
@@ -510,13 +523,13 @@ describe('CLI Global Options', () => {
           receivedGlobalOptions = this.parent?.parent?.opts();
         });
 
-      program.parse(['node', 'test', '--debug', '--quiet', 'parent', 'child'], { from: 'node' });
+      await program.parseAsync(['node', 'test', '--debug', '--quiet', 'parent', 'child'], { from: 'node' });
 
       expect(receivedGlobalOptions?.debug).toBe(true);
       expect(receivedGlobalOptions?.quiet).toBe(true);
     });
 
-    it('should apply global options to all commands', () => {
+    it('should apply global options to all commands', async () => {
       const program = createTestProgram();
       const executedCommands: string[] = [];
 
@@ -531,14 +544,14 @@ describe('CLI Global Options', () => {
           });
       });
 
-      program.parse(['node', 'test', '--debug', 'scrape'], { from: 'node' });
+      await program.parseAsync(['node', 'test', '--debug', 'scrape'], { from: 'node' });
 
       expect(executedCommands).toContain('scrape');
     });
   });
 
   describe('Option Validation', () => {
-    it('should reject conflicting global options', () => {
+    it('should reject conflicting global options', async () => {
       const program = new Command(); // Create new program to avoid conflicts
       program.exitOverride();
 
@@ -557,7 +570,7 @@ describe('CLI Global Options', () => {
 
       let errorMessage = '';
       try {
-        program.parse(['node', 'test', '--verbose', '--quiet', 'test'], { from: 'node' });
+        await program.parseAsync(['node', 'test', '--verbose', '--quiet', 'test'], { from: 'node' });
       } catch (error: any) {
         errorMessage = error.message;
       }
@@ -565,7 +578,7 @@ describe('CLI Global Options', () => {
       expect(errorMessage).toContain('Cannot use --verbose and --quiet together');
     });
 
-    it('should validate global option values', () => {
+    it('should validate global option values', async () => {
       const program = createTestProgram();
       program.exitOverride();
 
@@ -581,7 +594,7 @@ describe('CLI Global Options', () => {
       program.command('test').action(() => {});
 
       try {
-        program.parse(['node', 'test', '--log-level', 'invalid', 'test'], { from: 'node' });
+        await program.parseAsync(['node', 'test', '--log-level', 'invalid', 'test'], { from: 'node' });
         expect.fail('Should have thrown error');
       } catch (error: any) {
         expect(error.message).toContain('Invalid log level');
@@ -592,6 +605,7 @@ describe('CLI Global Options', () => {
 
 // Helper function to create a test program with basic global options
 function createTestProgram(): Command {
+  // Create a fresh Command instance to avoid interference
   const program = new Command();
 
   program
@@ -599,23 +613,26 @@ function createTestProgram(): Command {
     .description('Forum scraper CLI')
     .option('--no-color', 'Disable colored output')
     .option('--quiet', 'Suppress non-error output')
-    .option('--debug', 'Enable debug output')
-    .hook('preAction', (thisCommand) => {
-      const opts = thisCommand.opts();
+    .option('--debug', 'Enable debug output');
 
-      if (opts.noColor) {
-        mockChalk.level = 0;
-      }
+  // Clear any existing hooks and add our test hook
+  (program as any)._hooks = { preAction: [] };
+  program.hook('preAction', (thisCommand) => {
+    const opts = thisCommand.opts();
 
-      if (opts.debug) {
-        process.env.DEBUG = 'fscrape:*';
-      }
+    if (opts.color === false) {
+      mockChalk.level = 0;
+    }
 
-      if (opts.quiet) {
-        console.log = () => {};
-        console.info = () => {};
-      }
-    });
+    if (opts.debug) {
+      process.env.DEBUG = 'fscrape:*';
+    }
+
+    if (opts.quiet) {
+      console.log = () => {};
+      console.info = () => {};
+    }
+  });
 
   return program;
 }
