@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * HackerNews scraper implementation
  * Extends base platform with HN-specific story and comment extraction

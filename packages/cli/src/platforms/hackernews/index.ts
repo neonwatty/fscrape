@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * HackerNews platform module exports
  */

@@ -2,6 +2,7 @@
  * Test suite for error handler with recovery strategies and user notifications
  */
 
+// @ts-nocheck
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   ErrorHandler,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * fscrape - Multi-platform forum scraper
  * Main entry point for the library

@@ -19,7 +19,7 @@
     "export": "next build",
     "serve": "npx serve@latest out",
     "// Code Quality": "==================================================",
-    "lint": "next lint",
+    "lint": "next lint && npm run typecheck",
     "lint:fix": "next lint --fix",
     "lint:strict": "next lint --max-warnings 0",
     "typecheck": "tsc --noEmit",

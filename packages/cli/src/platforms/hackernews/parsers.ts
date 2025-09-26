@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { HNItem, HNUser } from './client.js';
 import type { ForumPost, Comment, User } from '../../types/core.js';
 

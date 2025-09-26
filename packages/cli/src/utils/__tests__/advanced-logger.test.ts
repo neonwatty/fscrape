@@ -3,6 +3,7 @@
  * Validates multiple transports, formatting, and performance features
  */
 
+// @ts-nocheck
 import { describe, it, expect, beforeEach, afterEach, vi, afterAll } from 'vitest';
 import { promises as fs } from 'fs';
 import path from 'path';

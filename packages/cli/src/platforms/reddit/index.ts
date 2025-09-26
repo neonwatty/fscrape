@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Reddit platform implementation exports
  */

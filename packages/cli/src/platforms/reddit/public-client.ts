@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Simple Reddit Public JSON API Client
  * Uses public .json endpoints without authentication

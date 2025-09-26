@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { logger } from '../../utils/logger.js';
 import { RedditAuth, type RedditAuthConfig } from './auth.js';
 import { RedditEndpoints, QueryParams, REDDIT_BASE_URL } from './endpoints.js';

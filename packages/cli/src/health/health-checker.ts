@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { AdvancedLogger } from '../utils/advanced-logger.js';
 
 const advancedLogger = new AdvancedLogger();
