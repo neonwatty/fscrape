@@ -1,7 +1,9 @@
 import * as os from "os";
 import * as fs from "fs/promises";
-import { advancedLogger } from "../utils/advanced-logger";
-import { HealthCheckResult, HealthCheckConfig } from "./health-checker";
+import { AdvancedLogger } from "../utils/advanced-logger.js";
+
+const advancedLogger = new AdvancedLogger();
+import { HealthCheckResult, HealthCheckConfig } from "./health-checker.js";
 
 export interface SystemMetrics {
   cpu: {
@@ -173,7 +175,7 @@ export class SystemMonitor {
           threshold,
         },
       };
-    } catch (_error) {
+    } catch (error) {
       return {
         name: "system:disk",
         status: "warning",

@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Database Test</title>
+  </head>
+  <body>
+    <h1>Testing Database Load</h1>
+    <div id="status">Loading...</div>
+    <div id="results"></div>
+
+    <script src="/sql-js/sql-wasm.js"></script>
+    <script>
+      async function testDatabase() {
+        const statusEl = document.getElementById('status');
+        const resultsEl = document.getElementById('results');
+
+        try {
+          // Initialize SQL.js
+          statusEl.textContent = 'Initializing SQL.js...';
+          const SQL = await initSqlJs({
+            locateFile: (file) => `/sql-js/${file}`,
+          });
+
+          // Fetch database
+          statusEl.textContent = 'Fetching database...';
+          const response = await fetch('/data/sample.db');
+          const buffer = await response.arrayBuffer();
+          const data = new Uint8Array(buffer);
+
+          // Load database
+          statusEl.textContent = 'Loading database...';
+          const db = new SQL.Database(data);
+
+          // Query data
+          statusEl.textContent = 'Querying data...';
+          const stmt = db.prepare(
+            'SELECT COUNT(*) as total, MIN(created_utc) as min_time, MAX(created_utc) as max_time FROM posts'
+          );
+          const result = stmt.getAsObject();
+
+          // Query some posts
+          const postsStmt = db.prepare(
+            'SELECT id, title, created_utc, num_comments, source FROM posts LIMIT 5'
+          );
+          const posts = [];
+          while (postsStmt.step()) {
+            posts.push(postsStmt.getAsObject());
+          }
+
+          // Display results
+          statusEl.textContent = '✅ Database loaded successfully!';
+          statusEl.style.color = 'green';
+
+          resultsEl.innerHTML = `
+                    <h2>Database Statistics:</h2>
+                    <ul>
+                        <li>Total Posts: ${result.total}</li>
+                        <li>Min Timestamp: ${result.min_time} (${new Date(result.min_time * 1000).toLocaleString()})</li>
+                        <li>Max Timestamp: ${result.max_time} (${new Date(result.max_time * 1000).toLocaleString()})</li>
+                    </ul>
+                    <h2>Sample Posts:</h2>
+                    <ul>
+                        ${posts
+                          .map(
+                            (p) => `
+                            <li>
+                                <strong>${p.title}</strong><br>
+                                Source: ${p.source}, Comments: ${p.num_comments},
+                                Time: ${new Date(p.created_utc * 1000).toLocaleString()}
+                            </li>
+                        `
+                          )
+                          .join('')}
+                    </ul>
+                `;
+
+          // Cleanup
+          stmt.free();
+          postsStmt.free();
+          db.close();
+        } catch (error) {
+          statusEl.textContent = '❌ Error: ' + error.message;
+          statusEl.style.color = 'red';
+          console.error('Database test failed:', error);
+        }
+      }
+
+      // Run test
+      testDatabase();
+    </script>
+  </body>
+</html>

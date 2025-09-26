@@ -1,5 +1,7 @@
-import { advancedLogger } from "../utils/advanced-logger";
-import { HealthCheckResult, HealthCheckConfig } from "./health-checker";
+import { AdvancedLogger } from "../utils/advanced-logger.js";
+
+const advancedLogger = new AdvancedLogger();
+import { HealthCheckResult, HealthCheckConfig } from "./health-checker.js";
 import fetch from "node-fetch";
 
 export interface ApiEndpoint {
@@ -12,7 +14,7 @@ export interface ApiEndpoint {
 }
 
 export class ApiMonitor {
-  private readonly logger = advancedLogger.child({ module: "ApiMonitor" });
+  private readonly logger = advancedLogger;
   private config: HealthCheckConfig;
   private endpointStats: Map<string, EndpointStats>;
 

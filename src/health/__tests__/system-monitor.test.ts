@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { SystemMonitor } from "../system-monitor";
-import { HealthCheckConfig } from "../health-checker";
+import { SystemMonitor } from "../system-monitor.js";
+import { HealthCheckConfig } from "../health-checker.js";
 import * as os from "os";
 import * as fs from "fs/promises";
 
@@ -94,10 +94,10 @@ describe("SystemMonitor", () => {
       const results = await systemMonitor.checkSystem();
 
       expect(results).toHaveLength(4); // cpu, memory, disk, process
-      expect(results.some((r) => r.name === "system:cpu")).toBe(true);
-      expect(results.some((r) => r.name === "system:memory")).toBe(true);
-      expect(results.some((r) => r.name === "system:disk")).toBe(true);
-      expect(results.some((r) => r.name === "system:process")).toBe(true);
+      expect(results.some((r: any) => r.name === "system:cpu")).toBe(true);
+      expect(results.some((r: any) => r.name === "system:memory")).toBe(true);
+      expect(results.some((r: any) => r.name === "system:disk")).toBe(true);
+      expect(results.some((r: any) => r.name === "system:process")).toBe(true);
     });
 
     it("should detect high CPU usage", async () => {
@@ -111,7 +111,7 @@ describe("SystemMonitor", () => {
       ] as any);
 
       const results = await systemMonitor.checkSystem();
-      const cpuCheck = results.find((r) => r.name === "system:cpu");
+      const cpuCheck = results.find((r: any) => r.name === "system:cpu");
 
       expect(cpuCheck?.status).toBe("warning");
       expect(cpuCheck?.message).toContain("CPU usage high");
@@ -123,7 +123,7 @@ describe("SystemMonitor", () => {
       vi.mocked(os.freemem).mockReturnValue(0.8 * 1024 * 1024 * 1024); // Only 5% free
 
       const results = await systemMonitor.checkSystem();
-      const memoryCheck = results.find((r) => r.name === "system:memory");
+      const memoryCheck = results.find((r: any) => r.name === "system:memory");
 
       expect(memoryCheck?.status).toBe("warning");
       expect(memoryCheck?.message).toContain("Memory usage high");
@@ -137,7 +137,7 @@ describe("SystemMonitor", () => {
       } as any);
 
       const results = await systemMonitor.checkSystem();
-      const diskCheck = results.find((r) => r.name === "system:disk");
+      const diskCheck = results.find((r: any) => r.name === "system:disk");
 
       expect(diskCheck?.status).toBe("warning");
       expect(diskCheck?.message).toContain("Disk usage high");
@@ -147,7 +147,7 @@ describe("SystemMonitor", () => {
       vi.mocked(fs.statfs).mockRejectedValue(new Error("Permission denied"));
 
       const results = await systemMonitor.checkSystem();
-      const diskCheck = results.find((r) => r.name === "system:disk");
+      const diskCheck = results.find((r: any) => r.name === "system:disk");
 
       // When statfs fails, it falls back to 0 values which is normal/pass
       expect(diskCheck?.status).toBe("pass");
@@ -156,7 +156,7 @@ describe("SystemMonitor", () => {
 
     it("should check process health", async () => {
       const results = await systemMonitor.checkSystem();
-      const processCheck = results.find((r) => r.name === "system:process");
+      const processCheck = results.find((r: any) => r.name === "system:process");
 
       expect(processCheck?.status).toBe("pass");
       expect(processCheck?.message).toBe("Process healthy");
@@ -173,7 +173,7 @@ describe("SystemMonitor", () => {
       });
 
       const results = await systemMonitor.checkSystem();
-      const processCheck = results.find((r) => r.name === "system:process");
+      const processCheck = results.find((r: any) => r.name === "system:process");
 
       expect(processCheck?.status).toBe("warning");
       expect(processCheck?.message).toContain("Process heap usage high");

@@ -1,0 +1,103 @@
+{
+  "platform": "reddit",
+  "description": "Example configuration for Reddit scraping",
+  "settings": {
+    "userAgent": "fscrape/1.0.0 (Example Reddit Scraper)",
+    "rateLimit": {
+      "requestsPerMinute": 60,
+      "requestsPerHour": 1000,
+      "concurrentRequests": 2
+    },
+    "timeout": 30000,
+    "retries": 3,
+    "retryDelay": 1000
+  },
+  "scraping": {
+    "defaultLimit": 25,
+    "maxLimit": 100,
+    "defaultSort": "hot",
+    "includeMetadata": true,
+    "includeDeletedPosts": false,
+    "includeRemovedPosts": false
+  },
+  "comments": {
+    "defaultDepth": 3,
+    "maxDepth": 10,
+    "minScore": -5,
+    "includeDeleted": false,
+    "sortBy": "best"
+  },
+  "subreddits": {
+    "favorites": [
+      "programming",
+      "javascript", 
+      "webdev",
+      "reactjs",
+      "node",
+      "typescript",
+      "golang",
+      "rust",
+      "python",
+      "machinelearning"
+    ],
+    "categories": {
+      "tech": [
+        "technology",
+        "programming",
+        "webdev",
+        "cscareerquestions"
+      ],
+      "science": [
+        "science",
+        "askscience",
+        "physics",
+        "space"
+      ],
+      "news": [
+        "worldnews",
+        "news",
+        "technews"
+      ]
+    }
+  },
+  "filters": {
+    "minScore": 10,
+    "minComments": 5,
+    "excludePromoted": true,
+    "excludeStickied": false,
+    "excludeNSFW": true,
+    "allowedDomains": [],
+    "blockedDomains": [
+      "example-spam.com"
+    ],
+    "keywords": {
+      "include": [],
+      "exclude": ["spam", "advertisement"]
+    }
+  },
+  "export": {
+    "defaultFormat": "json",
+    "jsonPrettyPrint": true,
+    "csvDelimiter": ",",
+    "includeComments": true,
+    "includeUserData": false,
+    "dateFormat": "ISO8601"
+  },
+  "storage": {
+    "database": {
+      "type": "sqlite",
+      "path": "./reddit-data.db"
+    },
+    "cache": {
+      "enabled": true,
+      "ttl": 3600,
+      "maxSize": 100
+    }
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "file": "./logs/reddit-scraper.log",
+    "console": true
+  }
+}

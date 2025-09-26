@@ -1,0 +1,89 @@
+{
+  "description": "Example batch configuration for scraping multiple sources",
+  "settings": {
+    "concurrent": false,
+    "delayBetweenTasks": 2000,
+    "stopOnError": false,
+    "database": "./batch-output.db"
+  },
+  "tasks": [
+    {
+      "name": "Reddit Programming Hot",
+      "url": "https://reddit.com/r/programming",
+      "platform": "reddit",
+      "limit": 10,
+      "sortBy": "hot",
+      "includeComments": false
+    },
+    {
+      "name": "Reddit JavaScript New",
+      "url": "https://reddit.com/r/javascript",
+      "platform": "reddit",
+      "limit": 10,
+      "sortBy": "new",
+      "includeComments": false
+    },
+    {
+      "name": "Reddit WebDev Top",
+      "url": "https://reddit.com/r/webdev",
+      "platform": "reddit",
+      "limit": 10,
+      "sortBy": "top",
+      "timeRange": "week",
+      "includeComments": true,
+      "maxDepth": 2
+    },
+    {
+      "name": "HackerNews Top Stories",
+      "url": "https://news.ycombinator.com",
+      "platform": "hackernews",
+      "limit": 15
+    },
+    {
+      "name": "HackerNews Ask",
+      "url": "https://news.ycombinator.com/ask",
+      "platform": "hackernews",
+      "limit": 10
+    },
+    {
+      "name": "HackerNews Show",
+      "url": "https://news.ycombinator.com/show",
+      "platform": "hackernews",
+      "limit": 10
+    },
+    {
+      "name": "Reddit Technology",
+      "url": "https://reddit.com/r/technology",
+      "platform": "reddit",
+      "limit": 5,
+      "sortBy": "hot",
+      "minScore": 100
+    },
+    {
+      "name": "Reddit DataScience",
+      "url": "https://reddit.com/r/datascience",
+      "platform": "reddit",
+      "limit": 5,
+      "sortBy": "top",
+      "timeRange": "day"
+    }
+  ],
+  "postProcessing": {
+    "export": {
+      "enabled": true,
+      "format": "json",
+      "output": "./batch-results.json",
+      "pretty": true
+    },
+    "analytics": {
+      "enabled": true,
+      "generateSummary": true,
+      "calculateStats": true
+    },
+    "notifications": {
+      "enabled": false,
+      "onComplete": "echo 'Batch scraping completed'",
+      "onError": "echo 'Batch scraping failed'"
+    }
+  }
+}

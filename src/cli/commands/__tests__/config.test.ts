@@ -46,9 +46,9 @@ const mockConsoleError = vi
 // Mock process.exit to prevent test runner from exiting
 const mockProcessExit = vi
   .spyOn(process, "exit")
-  .mockImplementation((code?: number) => {
+  .mockImplementation((code?: string | number | null | undefined) => {
     throw new Error(`process.exit called with code ${code}`);
-  });
+  }) as any;
 
 describe("Config Command", () => {
   let program: Command;

@@ -1,73 +1,54 @@
 {
-  "name": "fscrape",
-  "version": "0.1.0",
-  "description": "Multi-platform forum scraper CLI tool for Reddit and Hacker News",
-  "main": "dist/index.js",
-  "type": "module",
-  "bin": {
-    "fscrape": "./dist/cli.js"
-  },
+  "name": "fscrape-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo for fscrape CLI tool and web frontend",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "tsc && cp src/database/schema.sql dist/database/schema.sql",
-    "dev": "tsx src/cli.ts",
-    "start": "node dist/cli.js",
-    "test": "CI=true vitest run --pool=forks",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
-    "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "build": "npm run build --workspaces",
+    "build:cli": "npm run build --workspace=packages/cli",
+    "build:web": "npm run build --workspace=packages/web",
+    "dev:cli": "npm run dev --workspace=packages/cli",
+    "dev:web": "npm run dev --workspace=packages/web",
+    "test": "npm run test --workspaces",
+    "test:cli": "npm run test --workspace=packages/cli",
+    "test:web": "npm run test --workspace=packages/web",
+    "lint": "npm run lint --workspaces",
+    "lint:fix": "npm run lint:fix --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "clean": "npm run clean --workspaces && rm -rf node_modules",
+    "clean:cli": "npm run clean --workspace=packages/cli",
+    "clean:web": "npm run clean --workspace=packages/web"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/fscrape.git"
   },
   "keywords": [
+    "monorepo",
     "scraper",
     "reddit",
     "hackernews",
     "cli",
-    "forum",
-    "data-extraction"
+    "nextjs",
+    "forum"
   ],
   "author": "",
   "license": "MIT",
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "axios": "^1.11.0",
-    "better-sqlite3": "^11.1.2",
-    "chalk": "^5.3.0",
-    "cli-table3": "^0.6.5",
-    "commander": "^12.1.0",
-    "csv-writer": "^1.6.0",
-    "dotenv": "^16.4.5",
-    "inquirer": "^9.3.2",
-    "lru-cache": "^10.4.3",
-    "node-fetch": "^3.3.2",
-    "ora": "^8.0.1",
-    "p-queue": "^8.0.1",
-    "p-retry": "^6.2.0",
-    "table": "^6.9.0",
-    "uuid": "^13.0.0",
-    "winston": "^3.13.1",
-    "zod": "^3.23.8"
-  },
   "devDependencies": {
-    "@playwright/test": "^1.55.0",
-    "@types/better-sqlite3": "^7.6.11",
-    "@types/inquirer": "^9.0.9",
     "@types/node": "^20.14.12",
-    "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.15.0",
     "@typescript-eslint/parser": "^8.15.0",
-    "@vitest/coverage-v8": "^2.0.5",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
-    "msw": "^2.3.4",
-    "playwright": "^1.45.3",
     "prettier": "^3.3.3",
-    "tsx": "^4.16.2",
-    "typescript": "^5.5.4",
-    "vitest": "^2.0.5"
+    "typescript": "^5.5.4"
   }
 }
