@@ -24,6 +24,11 @@ const nextConfig = {
   basePath: process.env.NODE_ENV === 'production' ? '/fscrape' : '',
   assetPrefix: process.env.NODE_ENV === 'production' ? '/fscrape' : '',
 
+  // Environment variables
+  env: {
+    NEXT_PUBLIC_BASE_PATH: process.env.NODE_ENV === 'production' ? '/fscrape' : '',
+  },
+
   // Optimize package imports
   modularizeImports: {
     'lucide-react': {

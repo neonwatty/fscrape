@@ -14,10 +14,13 @@ export interface DatabaseConfig {
   schemaVersion?: number;
 }
 
+// Get base path from environment (for GitHub Pages)
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 // Default configuration
 const DEFAULT_CONFIG: Required<DatabaseConfig> = {
-  databasePath: '/data/sample.db',
-  wasmPath: '/sql-js/',
+  databasePath: `${BASE_PATH}/data/sample.db`,
+  wasmPath: `${BASE_PATH}/sql-js/`,
   validateSchema: true,
   schemaVersion: 1,
 };

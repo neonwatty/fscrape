@@ -58,7 +58,7 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  manifest: '/manifest.json',
+  manifest: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/manifest.json`,
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
