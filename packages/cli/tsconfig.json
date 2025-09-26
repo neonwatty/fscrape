@@ -1,6 +1,6 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    /* Base Options - Modern ES2022 target with Node.js compatibility */
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
@@ -10,19 +10,8 @@
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
-    
-    /* JavaScript Support */
     "allowJs": true,
     "checkJs": false,
-    
-    /* Interop Options */
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    
-    /* Type Checking - Strict Mode */
-    "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
@@ -30,32 +19,17 @@
     "strictPropertyInitialization": true,
     "noImplicitThis": true,
     "alwaysStrict": true,
-    
-    /* Additional Checks */
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": false,
     "noImplicitOverride": false,
     "noPropertyAccessFromIndexSignature": false,
-    
-    /* Module Detection */
     "moduleDetection": "force",
-    "isolatedModules": true,
     "verbatimModuleSyntax": false,
-    
-    /* Performance */
-    "skipLibCheck": true,
-    "incremental": true,
-    
-    /* Emit Options */
     "removeComments": true,
     "newLine": "lf",
     "preserveConstEnums": true,
     "inlineSourceMap": false,
-    
-    /* Advanced Options */
     "experimentalDecorators": false,
     "emitDecoratorMetadata": false,
     "allowUnreachableCode": false,

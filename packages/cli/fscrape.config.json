@@ -1,0 +1,13 @@
+{
+  "platform": "reddit",
+  "userAgent": "fscrape/1.0.0 (fscrape-1758910365756)",
+  "timeout": 30000,
+  "maxConcurrent": 5,
+  "followRedirects": true,
+  "validateSSL": true,
+  "database": {
+    "type": "sqlite",
+    "path": "fscrape.db",
+    "connectionPoolSize": 5
+  }
+}

@@ -560,7 +560,7 @@ async function handleSearch(query: string, options: any): Promise<void> {
             const excerpt = post.content.substring(0, 150);
             const highlighted = excerpt.replace(
               new RegExp(query, "gi"),
-              (match) => chalk.bgYellow.black(match),
+              (match: string) => chalk.bgYellow.black(match),
             );
             console.log(chalk.gray(`   ${highlighted}...`));
           }
@@ -580,7 +580,7 @@ async function handleSearch(query: string, options: any): Promise<void> {
           const excerpt = comment.content.substring(0, 150);
           const highlighted = excerpt.replace(
             new RegExp(query, "gi"),
-            (match) => chalk.bgYellow.black(match),
+            (match: string) => chalk.bgYellow.black(match),
           );
 
           console.log(chalk.yellow(`${index + 1}. ${comment.author}:`));

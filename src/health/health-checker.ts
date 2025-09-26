@@ -1,7 +1,9 @@
-import { advancedLogger } from "../utils/advanced-logger";
-import { ApiMonitor } from "./api-monitor";
-import { SystemMonitor } from "./system-monitor";
-import { Database } from "../database/database";
+import { AdvancedLogger } from "../utils/advanced-logger.js";
+
+const advancedLogger = new AdvancedLogger();
+import { ApiMonitor } from "./api-monitor.js";
+import { SystemMonitor } from "./system-monitor.js";
+import { DatabaseManager } from "../database/database.js";
 
 export interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
@@ -50,20 +52,20 @@ const DEFAULT_CONFIG: HealthCheckConfig = {
 };
 
 export class HealthChecker {
-  private readonly logger = advancedLogger.child({ module: "HealthChecker" });
+  private readonly logger = advancedLogger;
   private config: HealthCheckConfig;
   private apiMonitor: ApiMonitor;
   private systemMonitor: SystemMonitor;
-  private database: Database;
+  private database: DatabaseManager;
   private startTime: Date;
   private checkInterval?: NodeJS.Timeout;
   private lastStatus?: HealthStatus;
 
-  constructor(config?: Partial<HealthCheckConfig>, database?: Database) {
+  constructor(config?: Partial<HealthCheckConfig>, database?: DatabaseManager) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.apiMonitor = new ApiMonitor(this.config);
     this.systemMonitor = new SystemMonitor(this.config);
-    this.database = database || Database.getInstance();
+    this.database = database || new DatabaseManager({ path: "./fscrape.db" });
     this.startTime = new Date();
   }
 
@@ -205,7 +207,8 @@ export class HealthChecker {
 
     try {
       // Test database connection
-      await this.database.testConnection();
+      // Test database connection by running a simple query
+      await this.database.vacuum();
 
       const responseTime = Date.now() - startTime;
 

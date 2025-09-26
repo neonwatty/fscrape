@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline - Forum Scraper</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        text-align: center;
+        max-width: 500px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+      }
+
+      .icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 24px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+      }
+
+      h1 {
+        font-size: 28px;
+        margin-bottom: 16px;
+        font-weight: 600;
+      }
+
+      p {
+        font-size: 16px;
+        line-height: 1.6;
+        opacity: 0.9;
+        margin-bottom: 24px;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        font-size: 14px;
+        margin-bottom: 24px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ff6b6b;
+        animation: pulse 2s infinite;
+      }
+
+      .status.online .status-dot {
+        background: #51cf66;
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+        }
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      button {
+        padding: 12px 24px;
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      .cache-info {
+        margin-top: 32px;
+        padding-top: 32px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .cache-info h2 {
+        font-size: 18px;
+        margin-bottom: 12px;
+      }
+
+      .cache-list {
+        text-align: left;
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      .cache-list li {
+        margin-bottom: 8px;
+        list-style-position: inside;
+      }
+
+      @media (max-width: 480px) {
+        .container {
+          padding: 24px;
+        }
+
+        h1 {
+          font-size: 24px;
+        }
+
+        p {
+          font-size: 14px;
+        }
+      }
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon">📡</div>
+      <h1>You're Offline</h1>
+      <p>
+        It looks like you've lost your internet connection. Some features may be unavailable until
+        you're back online.
+      </p>
+
+      <div class="status" id="connection-status">
+        <span class="status-dot"></span>
+        <span id="status-text">Offline</span>
+      </div>
+
+      <div class="actions">
+        <button onclick="checkConnection()">Check Connection</button>
+        <button onclick="location.reload()">Retry</button>
+        <button onclick="goBack()">Go Back</button>
+      </div>
+
+      <div class="cache-info">
+        <h2>Available Offline</h2>
+        <ul class="cache-list">
+          <li>Previously viewed pages</li>
+          <li>Cached data and analytics</li>
+          <li>Downloaded reports</li>
+          <li>Basic app functionality</li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      // Check connection status
+      function updateConnectionStatus() {
+        const statusEl = document.getElementById('connection-status')
+        const statusText = document.getElementById('status-text')
+
+        if (navigator.onLine) {
+          statusEl.classList.add('online')
+          statusText.textContent = 'Online'
+          // Auto reload after connection restored
+          setTimeout(() => {
+            location.reload()
+          }, 2000)
+        } else {
+          statusEl.classList.remove('online')
+          statusText.textContent = 'Offline'
+        }
+      }
+
+      function checkConnection() {
+        // Try to fetch a small resource
+        fetch('/manifest.json', { method: 'HEAD' })
+          .then(() => {
+            updateConnectionStatus()
+          })
+          .catch(() => {
+            alert('Still offline. Please check your internet connection.')
+          })
+      }
+
+      function goBack() {
+        if (window.history.length > 1) {
+          window.history.back()
+        } else {
+          location.href = '/'
+        }
+      }
+
+      // Listen for connection changes
+      window.addEventListener('online', updateConnectionStatus)
+      window.addEventListener('offline', updateConnectionStatus)
+
+      // Check initial status
+      updateConnectionStatus()
+
+      // Periodically check connection
+      setInterval(updateConnectionStatus, 5000)
+    </script>
+  </body>
+</html>

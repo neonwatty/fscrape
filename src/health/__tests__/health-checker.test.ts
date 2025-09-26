@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { HealthChecker, HealthCheckConfig } from "../health-checker";
-import { ApiMonitor } from "../api-monitor";
-import { SystemMonitor } from "../system-monitor";
-import { Database } from "../../database/database";
+import { HealthChecker, HealthCheckConfig } from "../health-checker.js";
+import { ApiMonitor } from "../api-monitor.js";
+import { SystemMonitor } from "../system-monitor.js";
+import { Database } from "../../database/database.js";
 
 vi.mock("../api-monitor");
 vi.mock("../system-monitor");
@@ -116,7 +116,7 @@ describe("HealthChecker", () => {
 
     it("should check database connectivity", async () => {
       const result = await healthChecker.runHealthCheck();
-      const dbCheck = result.checks.find((c) => c.name === "database");
+      const dbCheck = result.checks.find((c: any) => c.name === "database");
 
       expect(dbCheck).toBeDefined();
       expect(dbCheck?.status).toBe("pass");
@@ -127,7 +127,7 @@ describe("HealthChecker", () => {
       mockDatabase.testConnection.mockRejectedValue(new Error("DB Error"));
 
       const result = await healthChecker.runHealthCheck();
-      const dbCheck = result.checks.find((c) => c.name === "database");
+      const dbCheck = result.checks.find((c: any) => c.name === "database");
 
       expect(dbCheck?.status).toBe("fail");
       expect(dbCheck?.message).toContain("Database connection failed");

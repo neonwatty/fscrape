@@ -1,0 +1,17 @@
+# fscrape
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+logs/
+exports/
+data/
+cache/
+.env
+.env.local
+node_modules/
+.DS_Store
+*.log
+*.pid
+*.seed
+*.pid.lock
