@@ -62,7 +62,7 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     if (!isDatabaseInitialized()) {
       return;
     }
@@ -79,7 +79,7 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to refresh data:', err);
       setError(err instanceof Error ? err.message : 'Failed to refresh data');
     }
-  };
+  }, []);
 
   // Initialize database on mount
   useEffect(() => {
