@@ -66,10 +66,18 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npm run dev -- -p 3001',
-    url: 'http://localhost:3001',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  webServer:
+    process.env.NODE_ENV === 'production'
+      ? {
+          command: 'npx serve out -l 3001',
+          url: 'http://localhost:3001',
+          reuseExistingServer: !process.env.CI,
+          timeout: 30 * 1000,
+        }
+      : {
+          command: 'npm run dev -- -p 3001',
+          url: 'http://localhost:3001',
+          reuseExistingServer: !process.env.CI,
+          timeout: 120 * 1000,
+        },
 });
