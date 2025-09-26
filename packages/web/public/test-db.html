@@ -11,45 +11,45 @@
     <script src="/sql-js/sql-wasm.js"></script>
     <script>
       async function testDatabase() {
-        const statusEl = document.getElementById('status')
-        const resultsEl = document.getElementById('results')
+        const statusEl = document.getElementById('status');
+        const resultsEl = document.getElementById('results');
 
         try {
           // Initialize SQL.js
-          statusEl.textContent = 'Initializing SQL.js...'
+          statusEl.textContent = 'Initializing SQL.js...';
           const SQL = await initSqlJs({
             locateFile: (file) => `/sql-js/${file}`,
-          })
+          });
 
           // Fetch database
-          statusEl.textContent = 'Fetching database...'
-          const response = await fetch('/data/sample.db')
-          const buffer = await response.arrayBuffer()
-          const data = new Uint8Array(buffer)
+          statusEl.textContent = 'Fetching database...';
+          const response = await fetch('/data/sample.db');
+          const buffer = await response.arrayBuffer();
+          const data = new Uint8Array(buffer);
 
           // Load database
-          statusEl.textContent = 'Loading database...'
-          const db = new SQL.Database(data)
+          statusEl.textContent = 'Loading database...';
+          const db = new SQL.Database(data);
 
           // Query data
-          statusEl.textContent = 'Querying data...'
+          statusEl.textContent = 'Querying data...';
           const stmt = db.prepare(
             'SELECT COUNT(*) as total, MIN(created_utc) as min_time, MAX(created_utc) as max_time FROM posts'
-          )
-          const result = stmt.getAsObject()
+          );
+          const result = stmt.getAsObject();
 
           // Query some posts
           const postsStmt = db.prepare(
             'SELECT id, title, created_utc, num_comments, source FROM posts LIMIT 5'
-          )
-          const posts = []
+          );
+          const posts = [];
           while (postsStmt.step()) {
-            posts.push(postsStmt.getAsObject())
+            posts.push(postsStmt.getAsObject());
           }
 
           // Display results
-          statusEl.textContent = '✅ Database loaded successfully!'
-          statusEl.style.color = 'green'
+          statusEl.textContent = '✅ Database loaded successfully!';
+          statusEl.style.color = 'green';
 
           resultsEl.innerHTML = `
                     <h2>Database Statistics:</h2>
@@ -72,21 +72,21 @@
                           )
                           .join('')}
                     </ul>
-                `
+                `;
 
           // Cleanup
-          stmt.free()
-          postsStmt.free()
-          db.close()
+          stmt.free();
+          postsStmt.free();
+          db.close();
         } catch (error) {
-          statusEl.textContent = '❌ Error: ' + error.message
-          statusEl.style.color = 'red'
-          console.error('Database test failed:', error)
+          statusEl.textContent = '❌ Error: ' + error.message;
+          statusEl.style.color = 'red';
+          console.error('Database test failed:', error);
         }
       }
 
       // Run test
-      testDatabase()
+      testDatabase();
     </script>
   </body>
 </html>

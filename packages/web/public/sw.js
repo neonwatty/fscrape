@@ -25,32 +25,33 @@ const CACHE_STRATEGIES = {
   // Cache first, fallback to network
   CACHE_FIRST: [
     /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i, // Images
-    /\.(?:woff|woff2|ttf|otf|eot)$/i,        // Fonts
-    /\.(?:css)$/i,                           // Stylesheets
+    /\.(?:woff|woff2|ttf|otf|eot)$/i, // Fonts
+    /\.(?:css)$/i, // Stylesheets
   ],
   // Network first, fallback to cache
   NETWORK_FIRST: [
-    /\/api\//,                                // API routes
-    /\.(?:json)$/i,                          // JSON data (except manifest)
-    /\/database\.db$/i,                      // Database file
+    /\/api\//, // API routes
+    /\.(?:json)$/i, // JSON data (except manifest)
+    /\/database\.db$/i, // Database file
   ],
   // Stale while revalidate
   STALE_WHILE_REVALIDATE: [
-    /\.(?:js)$/i,                            // JavaScript
-    /\/_next\//,                             // Next.js assets
+    /\.(?:js)$/i, // JavaScript
+    /\/_next\//, // Next.js assets
   ],
   // Cache only (for offline database)
   CACHE_ONLY: [
-    /\/offline-db\.json$/i,                  // Offline database snapshot
+    /\/offline-db\.json$/i, // Offline database snapshot
   ],
 };
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Install event');
-  
+
   event.waitUntil(
-    caches.open(CACHE_NAME)
+    caches
+      .open(CACHE_NAME)
       .then((cache) => {
         console.log('[Service Worker] Caching static assets');
         return cache.addAll(STATIC_ASSETS);
@@ -65,16 +66,19 @@ self.addEventListener('install', (event) => {
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activate event');
-  
+
   event.waitUntil(
-    caches.keys()
+    caches
+      .keys()
       .then((cacheNames) => {
         return Promise.all(
           cacheNames
             .filter((cacheName) => {
-              return cacheName !== CACHE_NAME && 
-                     cacheName !== RUNTIME_CACHE && 
-                     cacheName !== DATABASE_CACHE;
+              return (
+                cacheName !== CACHE_NAME &&
+                cacheName !== RUNTIME_CACHE &&
+                cacheName !== DATABASE_CACHE
+              );
             })
             .map((cacheName) => {
               console.log('[Service Worker] Deleting old cache:', cacheName);
@@ -93,37 +97,36 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  
+
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
   }
-  
+
   // Skip chrome-extension and other non-http(s) requests
   if (!request.url.startsWith('http')) {
     return;
   }
-  
+
   // Handle navigation requests (HTML pages)
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .catch(() => {
-          return caches.match(OFFLINE_URL);
-        })
+      fetch(request).catch(() => {
+        return caches.match(OFFLINE_URL);
+      })
     );
     return;
   }
-  
+
   // Handle database requests specially
   if (request.url.includes('database.db')) {
     event.respondWith(handleDatabaseRequest(request));
     return;
   }
-  
+
   // Determine caching strategy
   const strategy = getCacheStrategy(request.url);
-  
+
   switch (strategy) {
     case 'cache-first':
       event.respondWith(cacheFirst(request));
@@ -146,11 +149,11 @@ self.addEventListener('fetch', (event) => {
 async function cacheFirst(request) {
   const cache = await caches.open(RUNTIME_CACHE);
   const cached = await cache.match(request);
-  
+
   if (cached) {
     return cached;
   }
-  
+
   try {
     const response = await fetch(request);
     if (response.ok) {
@@ -169,7 +172,7 @@ async function cacheFirst(request) {
 
 async function networkFirst(request) {
   const cache = await caches.open(RUNTIME_CACHE);
-  
+
   try {
     const response = await fetch(request);
     if (response.ok) {
@@ -188,7 +191,7 @@ async function networkFirst(request) {
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(RUNTIME_CACHE);
   const cached = await cache.match(request);
-  
+
   const fetchPromise = fetch(request)
     .then((response) => {
       if (response.ok) {
@@ -200,7 +203,7 @@ async function staleWhileRevalidate(request) {
       console.error('[Service Worker] Stale while revalidate fetch failed:', error);
       return cached;
     });
-  
+
   return cached || fetchPromise;
 }
 
@@ -218,11 +221,11 @@ async function networkOnly(request) {
 async function cacheOnly(request) {
   const cache = await caches.open(RUNTIME_CACHE);
   const cached = await cache.match(request);
-  
+
   if (cached) {
     return cached;
   }
-  
+
   // For cache-only strategy, return a 503 if not cached
   return new Response('Resource not available offline', {
     status: 503,
@@ -236,7 +239,7 @@ async function cacheOnly(request) {
 // Handle database requests with special caching
 async function handleDatabaseRequest(request) {
   const cache = await caches.open(DATABASE_CACHE);
-  
+
   try {
     // Try to fetch the latest database
     const response = await fetch(request);
@@ -253,7 +256,7 @@ async function handleDatabaseRequest(request) {
       console.log('[Service Worker] Serving cached database');
       return cached;
     }
-    
+
     // No cached database available
     console.error('[Service Worker] Database not available offline');
     return new Response('Database not available offline', {
@@ -280,11 +283,10 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
+
   if (event.data && event.data.type === 'CACHE_URLS') {
     const urlsToCache = event.data.payload;
-    caches.open(RUNTIME_CACHE)
-      .then((cache) => cache.addAll(urlsToCache));
+    caches.open(RUNTIME_CACHE).then((cache) => cache.addAll(urlsToCache));
   }
 });
 
@@ -327,29 +329,23 @@ self.addEventListener('push', (event) => {
       },
     ],
   };
-  
-  event.waitUntil(
-    self.registration.showNotification('Forum Scraper Update', options)
-  );
+
+  event.waitUntil(self.registration.showNotification('Forum Scraper Update', options));
 });
 
 // Notification click handler
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
+
   // Handle different notification actions
   if (event.action === 'view') {
-    event.waitUntil(
-      clients.openWindow('/')
-    );
+    event.waitUntil(clients.openWindow('/'));
   } else if (event.action === 'dismiss') {
     // Just close the notification
     return;
   } else {
     // Default action - open the app
-    event.waitUntil(
-      clients.openWindow('/')
-    );
+    event.waitUntil(clients.openWindow('/'));
   }
 });
 

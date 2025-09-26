@@ -164,7 +164,7 @@ Example usage:
 // Fetch posts with filters
 fetch('/api/posts?platform=reddit&limit=50')
   .then((res) => res.json())
-  .then((data) => console.log(data))
+  .then((data) => console.log(data));
 ```
 
 ## 🧪 Testing
@@ -325,7 +325,7 @@ module.exports = {
   basePath: '/fscrape-frontend',
   images: { unoptimized: true },
   // Additional configuration...
-}
+};
 ```
 
 ## 🌐 Browser Compatibility

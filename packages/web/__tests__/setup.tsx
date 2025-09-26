@@ -33,7 +33,7 @@ function AllTheProviders({ children }: { children: ReactNode }) {
         retry: false,
       },
     },
-  })
+  });
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -41,15 +41,15 @@ function AllTheProviders({ children }: { children: ReactNode }) {
         {children}
       </ThemeProvider>
     </QueryClientProvider>
-  )
+  );
 }
 
 export function render(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
-  return rtlRender(ui, { wrapper: AllTheProviders, ...options })
+  return rtlRender(ui, { wrapper: AllTheProviders, ...options });
 }
 
 // Re-export everything from RTL
-export * from '@testing-library/react'
+export * from '@testing-library/react';
 
 // Mock database utilities
 export const mockDatabase = {
@@ -58,7 +58,7 @@ export const mockDatabase = {
   run: vi.fn(),
   prepare: vi.fn(),
   close: vi.fn(),
-}
+};
 
 // Mock post data factory
 export const createMockPost = (overrides = {}) => ({
@@ -73,26 +73,26 @@ export const createMockPost = (overrides = {}) => ({
   url: 'https://example.com/post',
   sentiment: 0.5,
   ...overrides,
-})
+});
 
 // Mock time series data factory
 export const createMockTimeSeriesData = (days = 7) => {
-  const data = []
-  const now = Date.now()
-  const dayMs = 24 * 60 * 60 * 1000
+  const data = [];
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
 
   for (let i = 0; i < days; i++) {
-    const date = new Date(now - (days - i - 1) * dayMs)
+    const date = new Date(now - (days - i - 1) * dayMs);
     data.push({
       date: date.toISOString().split('T')[0],
       count: Math.floor(Math.random() * 100) + 50,
       avgScore: Math.floor(Math.random() * 1000) + 100,
       avgComments: Math.floor(Math.random() * 100) + 10,
-    })
+    });
   }
 
-  return data
-}
+  return data;
+};
 
 // Mock author stats factory
 export const createMockAuthorStats = (overrides = {}) => ({
@@ -103,7 +103,7 @@ export const createMockAuthorStats = (overrides = {}) => ({
   avg_score: 100,
   avg_comments: 50,
   ...overrides,
-})
+});
 
 // Mock platform stats factory
 export const createMockPlatformStats = (overrides = {}) => ({
@@ -113,15 +113,15 @@ export const createMockPlatformStats = (overrides = {}) => ({
   avgScore: 250,
   avgComments: 75,
   ...overrides,
-})
+});
 
 // Wait utilities
 export const waitForLoadingToFinish = async () => {
-  const { waitFor, screen } = await import('@testing-library/react')
+  const { waitFor, screen } = await import('@testing-library/react');
   await waitFor(() => {
-    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument()
-  })
-}
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+  });
+};
 
 // Mock fetch responses
 export const mockFetch = (data: any, status = 200) => {
@@ -130,8 +130,8 @@ export const mockFetch = (data: any, status = 200) => {
     status,
     json: async () => data,
     text: async () => JSON.stringify(data),
-  } as Response)
-}
+  } as Response);
+};
 
 // Database test utilities
 export const setupTestDatabase = () => {
@@ -145,13 +145,13 @@ export const setupTestDatabase = () => {
       free: vi.fn(),
     }),
     close: vi.fn(),
-  }
+  };
 
-  return mockDb
-}
+  return mockDb;
+};
 
 // Reset all mocks
 export const resetAllMocks = () => {
-  vi.clearAllMocks()
-  vi.resetModules()
-}
+  vi.clearAllMocks();
+  vi.resetModules();
+};

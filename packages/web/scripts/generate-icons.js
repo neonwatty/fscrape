@@ -5,24 +5,24 @@
  * Creates placeholder icons with the app initials
  */
 
-const fs = require('fs')
-const path = require('path')
+const fs = require('fs');
+const path = require('path');
 
 // Icon sizes needed for PWA
-const ICON_SIZES = [72, 96, 128, 144, 152, 192, 384, 512]
+const ICON_SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
 
 // Colors for the icon
-const THEME_COLOR = '#6366f1' // Indigo
-const BACKGROUND_COLOR = '#ffffff'
-const TEXT_COLOR = '#ffffff'
+const THEME_COLOR = '#6366f1'; // Indigo
+const BACKGROUND_COLOR = '#ffffff';
+const TEXT_COLOR = '#ffffff';
 
 /**
  * Generate SVG icon with app initials
  */
 function generateSVG(size, isMaskable = false) {
-  const padding = isMaskable ? size * 0.1 : 0 // 10% padding for maskable icons
-  const effectiveSize = size - padding * 2
-  const fontSize = effectiveSize * 0.35
+  const padding = isMaskable ? size * 0.1 : 0; // 10% padding for maskable icons
+  const effectiveSize = size - padding * 2;
+  const fontSize = effectiveSize * 0.35;
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
@@ -59,9 +59,9 @@ function generateSVG(size, isMaskable = false) {
       ? `<rect x="${padding}" y="${padding}" width="${effectiveSize}" height="${effectiveSize}" rx="${effectiveSize * 0.1}" fill="none" stroke="${THEME_COLOR}" stroke-width="1" opacity="0.2"/>`
       : `<circle cx="${size / 2}" cy="${size / 2}" r="${effectiveSize / 2 - 1}" fill="none" stroke="${THEME_COLOR}" stroke-width="1" opacity="0.2"/>`
   }
-</svg>`
+</svg>`;
 
-  return svg
+  return svg;
 }
 
 /**
@@ -86,56 +86,56 @@ function saveSVGAsPlaceholder(svg, filepath) {
 <body>
   ${svg}
 </body>
-</html>`
+</html>`;
 
   // Save as HTML for now (would be PNG in production)
-  const htmlPath = filepath.replace('.png', '.html')
-  fs.writeFileSync(htmlPath, html)
+  const htmlPath = filepath.replace('.png', '.html');
+  fs.writeFileSync(htmlPath, html);
 
   // Also save the SVG directly
-  const svgPath = filepath.replace('.png', '.svg')
-  fs.writeFileSync(svgPath, svg)
+  const svgPath = filepath.replace('.png', '.svg');
+  fs.writeFileSync(svgPath, svg);
 
-  console.log(`✅ Created placeholder: ${path.basename(svgPath)}`)
+  console.log(`✅ Created placeholder: ${path.basename(svgPath)}`);
 
-  return true
+  return true;
 }
 
 /**
  * Generate all required icons
  */
 function generateIcons() {
-  const iconsDir = path.join(__dirname, '..', 'public')
+  const iconsDir = path.join(__dirname, '..', 'public');
 
-  console.log('🎨 Generating PWA icons...\n')
+  console.log('🎨 Generating PWA icons...\n');
 
   // Generate regular icons
   ICON_SIZES.forEach((size) => {
-    const svg = generateSVG(size, false)
-    const filepath = path.join(iconsDir, `icon-${size}.png`)
-    saveSVGAsPlaceholder(svg, filepath)
-  })
+    const svg = generateSVG(size, false);
+    const filepath = path.join(iconsDir, `icon-${size}.png`);
+    saveSVGAsPlaceholder(svg, filepath);
+  });
 
   // Generate maskable versions for key sizes
-  ;[192, 512].forEach((size) => {
-    const svg = generateSVG(size, true)
-    const filepath = path.join(iconsDir, `icon-maskable-${size}.png`)
-    saveSVGAsPlaceholder(svg, filepath)
-  })
+  [192, 512].forEach((size) => {
+    const svg = generateSVG(size, true);
+    const filepath = path.join(iconsDir, `icon-maskable-${size}.png`);
+    saveSVGAsPlaceholder(svg, filepath);
+  });
 
   // Generate Apple touch icon
-  const appleSvg = generateSVG(180, false)
-  saveSVGAsPlaceholder(appleSvg, path.join(iconsDir, 'apple-touch-icon.png'))
+  const appleSvg = generateSVG(180, false);
+  saveSVGAsPlaceholder(appleSvg, path.join(iconsDir, 'apple-touch-icon.png'));
 
   // Generate favicon
-  const faviconSvg = generateSVG(32, false)
-  saveSVGAsPlaceholder(faviconSvg, path.join(iconsDir, 'favicon.png'))
+  const faviconSvg = generateSVG(32, false);
+  saveSVGAsPlaceholder(faviconSvg, path.join(iconsDir, 'favicon.png'));
 
-  console.log('\n✨ Icon generation complete!')
-  console.log('\nNote: These are SVG placeholders. For production, convert to PNG using:')
-  console.log('  - Sharp (Node.js): npm install sharp')
-  console.log('  - ImageMagick: convert icon.svg icon.png')
-  console.log('  - Online tools: https://cloudconvert.com/svg-to-png')
+  console.log('\n✨ Icon generation complete!');
+  console.log('\nNote: These are SVG placeholders. For production, convert to PNG using:');
+  console.log('  - Sharp (Node.js): npm install sharp');
+  console.log('  - ImageMagick: convert icon.svg icon.png');
+  console.log('  - Online tools: https://cloudconvert.com/svg-to-png');
 
   // Create a simple README for the icons
   const readme = `# PWA Icons
@@ -185,10 +185,10 @@ node convert-svg-to-png.js
 - **Contrast**: Ensure good contrast for accessibility
 - **Simplicity**: Icons should be recognizable at small sizes
 - **Consistency**: Maintain brand colors and style
-`
+`;
 
-  fs.writeFileSync(path.join(iconsDir, 'icons-README.md'), readme)
+  fs.writeFileSync(path.join(iconsDir, 'icons-README.md'), readme);
 }
 
 // Run the generator
-generateIcons()
+generateIcons();

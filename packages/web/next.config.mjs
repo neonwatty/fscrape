@@ -1,5 +1,5 @@
-import { createRequire } from 'module'
-const require = createRequire(import.meta.url)
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -53,7 +53,7 @@ const nextConfig = {
   // Security headers for production
   async headers() {
     if (process.env.NODE_ENV !== 'production') {
-      return []
+      return [];
     }
 
     return [
@@ -106,7 +106,7 @@ const nextConfig = {
           },
         ],
       },
-    ]
+    ];
   },
 
   webpack: (config, { isServer, dev }) => {
@@ -116,18 +116,18 @@ const nextConfig = {
         fs: false,
         path: false,
         crypto: false,
-      }
+      };
     }
 
     // Production optimizations
     if (!dev) {
       // Enable minification and tree shaking
-      config.optimization.minimize = true
-      config.optimization.minimizer = config.optimization.minimizer || []
+      config.optimization.minimize = true;
+      config.optimization.minimizer = config.optimization.minimizer || [];
 
       // Add Terser plugin for better minification if available
       try {
-        const TerserPlugin = require('terser-webpack-plugin')
+        const TerserPlugin = require('terser-webpack-plugin');
         config.optimization.minimizer.push(
           new TerserPlugin({
             terserOptions: {
@@ -146,10 +146,10 @@ const nextConfig = {
             },
             extractComments: false,
           })
-        )
+        );
       } catch (e) {
         // Terser plugin not available, use default minification
-        console.log('Using default minification (terser-webpack-plugin not installed)')
+        console.log('Using default minification (terser-webpack-plugin not installed)');
       }
 
       // Split chunks more aggressively
@@ -170,12 +170,12 @@ const nextConfig = {
             },
             lib: {
               test(module) {
-                return module.size() > 160000 && /node_modules[\\/]/.test(module.identifier())
+                return module.size() > 160000 && /node_modules[\\/]/.test(module.identifier());
               },
               name(module) {
-                const hash = require('crypto').createHash('sha1')
-                hash.update(module.identifier())
-                return hash.digest('hex').substring(0, 8)
+                const hash = require('crypto').createHash('sha1');
+                hash.update(module.identifier());
+                return hash.digest('hex').substring(0, 8);
               },
               priority: 30,
               minChunks: 1,
@@ -193,7 +193,7 @@ const nextConfig = {
                   .createHash('sha1')
                   .update(chunks.reduce((acc, chunk) => acc + chunk.name, ''))
                   .digest('hex')
-                  .substring(0, 8)}`
+                  .substring(0, 8)}`;
               },
               priority: 10,
               minChunks: 2,
@@ -201,14 +201,14 @@ const nextConfig = {
             },
           },
         },
-      }
+      };
 
       // Enable module concatenation
-      config.optimization.concatenateModules = true
+      config.optimization.concatenateModules = true;
     }
 
-    return config
+    return config;
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

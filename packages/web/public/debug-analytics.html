@@ -28,60 +28,60 @@
     <script src="/sql-js/sql-wasm.js"></script>
     <script>
       async function debugAnalytics() {
-        const statusEl = document.getElementById('status')
-        const resultsEl = document.getElementById('results')
-        const results = []
+        const statusEl = document.getElementById('status');
+        const resultsEl = document.getElementById('results');
+        const results = [];
 
         try {
           // Initialize SQL.js
           const SQL = await initSqlJs({
             locateFile: (file) => `/sql-js/${file}`,
-          })
+          });
 
           // Fetch and load database
-          const response = await fetch('/data/sample.db')
-          const buffer = await response.arrayBuffer()
-          const data = new Uint8Array(buffer)
-          const db = new SQL.Database(data)
+          const response = await fetch('/data/sample.db');
+          const buffer = await response.arrayBuffer();
+          const data = new Uint8Array(buffer);
+          const db = new SQL.Database(data);
 
           // Test the exact query that getRecentPosts uses
-          results.push('<h2>1. Testing getRecentPosts Query:</h2>')
+          results.push('<h2>1. Testing getRecentPosts Query:</h2>');
           try {
-            const stmt = db.prepare('SELECT * FROM posts ORDER BY created_utc DESC LIMIT 10')
-            const posts = []
+            const stmt = db.prepare('SELECT * FROM posts ORDER BY created_utc DESC LIMIT 10');
+            const posts = [];
             while (stmt.step()) {
-              posts.push(stmt.getAsObject())
+              posts.push(stmt.getAsObject());
             }
-            stmt.free()
-            results.push(`<p class="success">✅ Found ${posts.length} posts</p>`)
-            results.push('<pre>' + JSON.stringify(posts.slice(0, 2), null, 2) + '</pre>')
+            stmt.free();
+            results.push(`<p class="success">✅ Found ${posts.length} posts</p>`);
+            results.push('<pre>' + JSON.stringify(posts.slice(0, 2), null, 2) + '</pre>');
           } catch (e) {
-            results.push(`<p class="error">❌ Query failed: ${e.message}</p>`)
+            results.push(`<p class="error">❌ Query failed: ${e.message}</p>`);
           }
 
           // Check table structure
-          results.push('<h2>2. Table Structure:</h2>')
-          const schemaStmt = db.prepare("SELECT name FROM pragma_table_info('posts')")
-          const columns = []
+          results.push('<h2>2. Table Structure:</h2>');
+          const schemaStmt = db.prepare("SELECT name FROM pragma_table_info('posts')");
+          const columns = [];
           while (schemaStmt.step()) {
-            columns.push(schemaStmt.getAsObject().name)
+            columns.push(schemaStmt.getAsObject().name);
           }
-          schemaStmt.free()
-          results.push(`<p>Columns: ${columns.join(', ')}</p>`)
+          schemaStmt.free();
+          results.push(`<p>Columns: ${columns.join(', ')}</p>`);
 
           // Check for required columns
-          results.push('<h2>3. Required Columns Check:</h2>')
-          const required = ['id', 'title', 'created_utc', 'num_comments', 'source', 'platform']
+          results.push('<h2>3. Required Columns Check:</h2>');
+          const required = ['id', 'title', 'created_utc', 'num_comments', 'source', 'platform'];
           required.forEach((col) => {
             if (columns.includes(col)) {
-              results.push(`<p class="success">✅ ${col} exists</p>`)
+              results.push(`<p class="success">✅ ${col} exists</p>`);
             } else {
-              results.push(`<p class="error">❌ ${col} missing</p>`)
+              results.push(`<p class="error">❌ ${col} missing</p>`);
             }
-          })
+          });
 
           // Check data stats
-          results.push('<h2>4. Data Statistics:</h2>')
+          results.push('<h2>4. Data Statistics:</h2>');
           const statsStmt = db.prepare(`
                     SELECT
                         COUNT(*) as total,
@@ -92,35 +92,35 @@
                         AVG(score) as avg_score,
                         AVG(num_comments) as avg_comments
                     FROM posts
-                `)
-          const stats = statsStmt.getAsObject()
-          statsStmt.free()
-          results.push(`<pre>${JSON.stringify(stats, null, 2)}</pre>`)
+                `);
+          const stats = statsStmt.getAsObject();
+          statsStmt.free();
+          results.push(`<pre>${JSON.stringify(stats, null, 2)}</pre>`);
 
           // Test filtering by date range (last 30 days)
-          results.push('<h2>5. Date Range Filter Test (30 days):</h2>')
-          const now = Math.floor(Date.now() / 1000)
-          const thirtyDaysAgo = now - 30 * 24 * 60 * 60
-          const dateStmt = db.prepare('SELECT COUNT(*) as count FROM posts WHERE created_utc >= ?')
-          dateStmt.bind([thirtyDaysAgo])
-          const dateResult = dateStmt.getAsObject()
-          dateStmt.free()
-          results.push(`<p>Posts in last 30 days: ${dateResult.count}</p>`)
-          results.push(`<p>Current time: ${now} (${new Date(now * 1000).toLocaleString()})</p>`)
+          results.push('<h2>5. Date Range Filter Test (30 days):</h2>');
+          const now = Math.floor(Date.now() / 1000);
+          const thirtyDaysAgo = now - 30 * 24 * 60 * 60;
+          const dateStmt = db.prepare('SELECT COUNT(*) as count FROM posts WHERE created_utc >= ?');
+          dateStmt.bind([thirtyDaysAgo]);
+          const dateResult = dateStmt.getAsObject();
+          dateStmt.free();
+          results.push(`<p>Posts in last 30 days: ${dateResult.count}</p>`);
+          results.push(`<p>Current time: ${now} (${new Date(now * 1000).toLocaleString()})</p>`);
           results.push(
             `<p>30 days ago: ${thirtyDaysAgo} (${new Date(thirtyDaysAgo * 1000).toLocaleString()})</p>`
-          )
+          );
 
-          db.close()
-          statusEl.innerHTML = '<span class="success">✅ All checks complete!</span>'
-          resultsEl.innerHTML = results.join('')
+          db.close();
+          statusEl.innerHTML = '<span class="success">✅ All checks complete!</span>';
+          resultsEl.innerHTML = results.join('');
         } catch (error) {
-          statusEl.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`
-          console.error('Debug failed:', error)
+          statusEl.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+          console.error('Debug failed:', error);
         }
       }
 
-      debugAnalytics()
+      debugAnalytics();
     </script>
   </body>
 </html>

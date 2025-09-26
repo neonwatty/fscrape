@@ -200,19 +200,19 @@
     <script>
       // Check connection status
       function updateConnectionStatus() {
-        const statusEl = document.getElementById('connection-status')
-        const statusText = document.getElementById('status-text')
+        const statusEl = document.getElementById('connection-status');
+        const statusText = document.getElementById('status-text');
 
         if (navigator.onLine) {
-          statusEl.classList.add('online')
-          statusText.textContent = 'Online'
+          statusEl.classList.add('online');
+          statusText.textContent = 'Online';
           // Auto reload after connection restored
           setTimeout(() => {
-            location.reload()
-          }, 2000)
+            location.reload();
+          }, 2000);
         } else {
-          statusEl.classList.remove('online')
-          statusText.textContent = 'Offline'
+          statusEl.classList.remove('online');
+          statusText.textContent = 'Offline';
         }
       }
 
@@ -220,30 +220,30 @@
         // Try to fetch a small resource
         fetch('/manifest.json', { method: 'HEAD' })
           .then(() => {
-            updateConnectionStatus()
+            updateConnectionStatus();
           })
           .catch(() => {
-            alert('Still offline. Please check your internet connection.')
-          })
+            alert('Still offline. Please check your internet connection.');
+          });
       }
 
       function goBack() {
         if (window.history.length > 1) {
-          window.history.back()
+          window.history.back();
         } else {
-          location.href = '/'
+          location.href = '/';
         }
       }
 
       // Listen for connection changes
-      window.addEventListener('online', updateConnectionStatus)
-      window.addEventListener('offline', updateConnectionStatus)
+      window.addEventListener('online', updateConnectionStatus);
+      window.addEventListener('offline', updateConnectionStatus);
 
       // Check initial status
-      updateConnectionStatus()
+      updateConnectionStatus();
 
       // Periodically check connection
-      setInterval(updateConnectionStatus, 5000)
+      setInterval(updateConnectionStatus, 5000);
     </script>
   </body>
 </html>
