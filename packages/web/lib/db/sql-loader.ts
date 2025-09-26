@@ -16,7 +16,7 @@ export interface DatabaseConfig {
 
 // Default configuration
 const DEFAULT_CONFIG: Required<DatabaseConfig> = {
-  databasePath: '/.fscrape/fscrape.db',
+  databasePath: '/data/sample.db',
   wasmPath: '/sql-js/',
   validateSchema: true,
   schemaVersion: 1,
