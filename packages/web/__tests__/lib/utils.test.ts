@@ -62,7 +62,7 @@ describe('Filter utilities', () => {
         author: 'user2',
         score: 500,
         num_comments: 50,
-        created_utc: Date.now() / 1000 - 86400, // 1 day ago
+        created_utc: Date.now() / 1000 - 7200, // 2 hours ago
         url: 'https://news.ycombinator.com/2',
       },
       {
@@ -74,7 +74,7 @@ describe('Filter utilities', () => {
         author: 'user3',
         score: 50,
         num_comments: 5,
-        created_utc: Date.now() / 1000 - 604800, // 1 week ago
+        created_utc: Date.now() / 1000 - 172800, // 2 days ago
         url: 'https://reddit.com/3',
         link_flair_text: 'Help',
       },
@@ -144,7 +144,7 @@ describe('Filter utilities', () => {
 
     it('should filter by time range - week', () => {
       const result = applyFilters(mockPosts, { timeRange: 'week' });
-      // All posts are within a week
+      // All posts are within a week (1h, 2h, and 1 day ago)
       expect(result).toHaveLength(3);
     });
 
