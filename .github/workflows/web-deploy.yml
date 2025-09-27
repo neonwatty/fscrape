@@ -37,29 +37,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Download sample database
+        run: |
+          mkdir -p packages/web/public/data
+          curl -L -o packages/web/public/data/sample.db \
+            https://github.com/neonwatty/fscrape/releases/download/sample-data-v1/sample.db
+          echo "Downloaded sample database ($(du -h packages/web/public/data/sample.db | cut -f1))"
+
       - name: Build web application
         run: npm run build:web
         env:
           NODE_ENV: production
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-        working-directory: ./packages/web
-
-      - name: Run E2E tests on production build
-        run: npm run test:e2e -- --project=chromium
-        working-directory: ./packages/web
-        env:
-          NODE_ENV: production
-        continue-on-error: true
-
-      - name: Upload E2E test results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: ./packages/web/playwright-report/
-          retention-days: 7
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

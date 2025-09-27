@@ -73,7 +73,6 @@ packages/cli/data/
 packages/cli/exports/
 packages/web/public/data/*.db
 packages/web/public/data/*.sqlite*
-!packages/web/public/data/sample.db
 
 # Temporary files
 *.tmp
@@ -93,7 +92,6 @@ test-*.db
 test-*.db-shm
 test-*.db-wal
 *.db
-!packages/web/public/data/sample.db
 *.db-shm
 *.db-wal
 *.sqlite
