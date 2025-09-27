@@ -244,8 +244,10 @@ export function DatabaseProvider({
   useEffect(() => {
     console.log('DatabaseProvider mount - isInitialized:', isInitialized, 'isLoading:', isLoading);
     if (!isInitialized && !isLoading) {
-      console.log('Attempting to load database from /data/sample.db');
-      loadDatabaseFn('/data/sample.db')
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const dbPath = `${basePath}/data/sample.db`;
+      console.log(`Attempting to load database from ${dbPath}`);
+      loadDatabaseFn(dbPath)
         .then(() => console.log('Database loaded successfully'))
         .catch((err) => console.error('Failed to load database:', err));
     }
