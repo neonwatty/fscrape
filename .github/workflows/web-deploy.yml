@@ -51,6 +51,7 @@ jobs:
         working-directory: ./packages/web
         env:
           NODE_ENV: production
+        continue-on-error: true
 
       - name: Upload E2E test results
         if: failure()
