@@ -85,8 +85,10 @@ export function DatabaseProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     console.log('DatabaseContext mount - initializing database');
     if (!isInitialized && !isLoading) {
-      console.log('Loading database from /data/sample.db');
-      loadDatabase('/data/sample.db')
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+      const dbPath = `${basePath}/data/sample.db`;
+      console.log(`Loading database from ${dbPath}`);
+      loadDatabase(dbPath)
         .then(() => console.log('Database loaded successfully'))
         .catch((err) => console.error('Failed to load database:', err));
     }
