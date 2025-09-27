@@ -37,6 +37,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Download sample database
+        run: |
+          mkdir -p packages/web/public/data
+          curl -L -o packages/web/public/data/sample.db \
+            https://github.com/neonwatty/fscrape/releases/download/sample-data-v1/sample.db
+          echo "Downloaded sample database ($(du -h packages/web/public/data/sample.db | cut -f1))"
+
       - name: Build web application
         run: npm run build:web
         env:
