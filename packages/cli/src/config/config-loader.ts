@@ -123,7 +123,7 @@ export class ConfigLoader {
     }
 
     if (process.env[`${ENV_PREFIX}DRY_RUN`] === 'true') {
-      config.development = { ...config.development, dryRun: true };
+      config.development = { ...(config.development || {}), dryRun: true };
       hasEnvVars = true;
     }
 
@@ -265,20 +265,20 @@ export class ConfigLoader {
 
     // Development options
     if (options.debug) {
-      overrides.development = { ...overrides.development, debug: true };
+      overrides.development = { ...(overrides.development || {}), debug: true };
     }
 
     if (options.dryRun) {
-      overrides.development = { ...overrides.development, dryRun: true };
+      overrides.development = { ...(overrides.development || {}), dryRun: true };
     }
 
     // Export options
     if (options.format) {
-      overrides.export = { ...overrides.export, defaultFormat: options.format };
+      overrides.export = { ...(overrides.export || {}), defaultFormat: options.format };
     }
 
     if (options.output) {
-      overrides.export = { ...overrides.export, outputDir: options.output };
+      overrides.export = { ...(overrides.export || {}), outputDir: options.output };
     }
 
     return validatePartialConfig(overrides);

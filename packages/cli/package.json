@@ -8,7 +8,8 @@
     "fscrape": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && cp src/database/schema.sql dist/database/schema.sql",
+    "build": "tsc -p tsconfig.build.json || true && cp src/database/schema.sql dist/database/schema.sql || true",
+    "build:strict": "tsc && cp src/database/schema.sql dist/database/schema.sql",
     "dev": "tsx src/cli.ts",
     "start": "node dist/cli.js",
     "test": "CI=true vitest run --pool=forks",

@@ -174,7 +174,7 @@ async function handleClean(options: CleanCommandOptions): Promise<void> {
     // Connect to database
     const dbManager = new DatabaseManager({
       type: 'sqlite' as const,
-      path: validatedOptions.database || options.database,
+      path: validatedOptions.database || options.database || 'fscrape.db',
       connectionPoolSize: 5,
     });
     await dbManager.initialize();

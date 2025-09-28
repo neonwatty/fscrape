@@ -469,7 +469,7 @@ function deepMerge(
         result[key] !== null &&
         !Array.isArray(result[key])
       ) {
-        result[key] = deepMerge(result[key], source[key]);
+        result[key] = deepMerge(result[key] as Record<string, unknown>, source[key] as Record<string, unknown>);
       } else {
         result[key] = source[key];
       }
