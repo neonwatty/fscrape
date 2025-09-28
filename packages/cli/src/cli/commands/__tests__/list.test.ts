@@ -44,7 +44,7 @@ const mockProcessExit = vi
   .spyOn(process, 'exit')
   .mockImplementation((code?: string | number | null | undefined) => {
     throw new Error(`process.exit called with code ${code}`);
-  }) as any;
+  });
 
 describe('List Command', () => {
   let program: Command;

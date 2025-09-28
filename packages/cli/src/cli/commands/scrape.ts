@@ -17,9 +17,25 @@ import { PlatformRegistry } from '../../platforms/platform-registry.js';
 import { DatabaseManager } from '../../database/database.js';
 import { ExportManager } from '../../export/export-manager.js';
 import { ConfigManager } from '../../config/manager.js';
-import type { Platform, ScrapeResult, SortOption } from '../../types/core.js';
+import type { Platform, ScrapeResult, SortOption, Comment } from '../../types/core.js';
 import chalk from 'chalk';
 import ora from 'ora';
+
+interface ScrapeCommandOptions {
+  platform?: string;
+  limit?: number;
+  sortBy?: string;
+  timeRange?: string;
+  includeComments?: boolean;
+  maxDepth?: number;
+  output?: string;
+  format?: string;
+  database?: string;
+  config?: string;
+  save?: boolean;
+  stdout?: boolean;
+  verbose?: boolean;
+}
 
 /**
  * Create the scrape command
@@ -47,7 +63,7 @@ export function createScrapeCommand(): Command {
     .option('--no-save', "Don't save to database")
     .option('--stdout', 'Output scraped data to terminal (stdout)', false)
     .option('--verbose', 'Verbose output', false)
-    .action(async (url: string, options: any) => {
+    .action(async (url: string, options: ScrapeCommandOptions) => {
       try {
         await handleScrape(url, options);
       } catch (error) {
@@ -62,11 +78,11 @@ export function createScrapeCommand(): Command {
 /**
  * Handle the scrape command
  */
-async function handleScrape(url: string, options: any): Promise<void> {
+async function handleScrape(url: string, options: ScrapeCommandOptions): Promise<void> {
   // Load configuration
   const configPath = validatePath(options.config || 'fscrape.config.json');
   const configManager = new ConfigManager(configPath);
-  let config: any = {};
+  let config: Record<string, unknown> = {};
 
   try {
     config = configManager.loadConfig();
@@ -102,7 +118,12 @@ async function handleScrape(url: string, options: any): Promise<void> {
   // Initialize database if saving
   let dbManager: DatabaseManager | null = null;
   if (options.save !== false) {
-    const dbPath = options.database || config.database?.path || 'fscrape.db';
+    const dbPath =
+      options.database ||
+      (config.database && typeof config.database === 'object' && 'path' in config.database
+        ? (config.database.path as string)
+        : undefined) ||
+      'fscrape.db';
     dbManager = new DatabaseManager({
       type: 'sqlite' as const,
       path: dbPath,
@@ -121,8 +142,11 @@ async function handleScrape(url: string, options: any): Promise<void> {
     // Initialize platform registry first
     await PlatformRegistry.initializeAsync();
 
-    const platformConfig = config.platforms?.[platform] || {};
-    const scraper = await PlatformFactory.create(platform, platformConfig);
+    const platformConfig =
+      (config.platforms && typeof config.platforms === 'object' && platform in config.platforms
+        ? (config.platforms as Record<string, unknown>)[platform]
+        : {}) || {};
+    const scraper = await PlatformFactory.create(platform as Platform, platformConfig);
 
     await scraper.initialize();
     spinner.succeed(chalk.green(`${platform} scraper initialized`));
@@ -136,7 +160,7 @@ async function handleScrape(url: string, options: any): Promise<void> {
     let result: ScrapeResult;
 
     if (scrapeTarget.type === 'category') {
-      const categoryOptions: any = {};
+      const categoryOptions: Record<string, unknown> = {};
       if (scrapeOptions.limit !== undefined) categoryOptions.limit = scrapeOptions.limit;
       if (scrapeOptions.sortBy !== undefined)
         categoryOptions.sortBy = scrapeOptions.sortBy as SortOption;
@@ -162,7 +186,7 @@ async function handleScrape(url: string, options: any): Promise<void> {
         throw new Error(`Post not found: ${scrapeTarget.value}`);
       }
 
-      let comments: any[] | undefined = undefined;
+      let comments: Comment[] | undefined = undefined;
       if (scrapeOptions.includeComments) {
         comments = await scraper.scrapeComments(scrapeTarget.value, {
           ...(scrapeOptions.maxDepth !== undefined && {
@@ -183,7 +207,7 @@ async function handleScrape(url: string, options: any): Promise<void> {
       };
     } else {
       // General scrape
-      const generalOptions: any = {};
+      const generalOptions: Record<string, unknown> = {};
       if (scrapeOptions.limit !== undefined) generalOptions.limit = scrapeOptions.limit;
       if (scrapeOptions.sortBy !== undefined)
         generalOptions.sortBy = scrapeOptions.sortBy as SortOption;
@@ -248,7 +272,7 @@ async function handleScrape(url: string, options: any): Promise<void> {
     }
 
     // Display summary
-    displaySummary(result, options.verbose);
+    displaySummary(result, options.verbose || false);
   } catch (error) {
     spinner.fail(chalk.red(formatError(error)));
     throw error;

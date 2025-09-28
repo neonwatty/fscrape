@@ -89,7 +89,7 @@ export class ConfigLoader {
    * Loads configuration from environment variables
    */
   private loadFromEnvironment(): PartialConfig | null {
-    const config: any = {};
+    const config: Record<string, unknown> = {};
     let hasEnvVars = false;
 
     // Database path
@@ -191,7 +191,7 @@ export class ConfigLoader {
 
       return validatePartialConfig(rawConfig);
     } catch (error) {
-      if ((error as any).code !== 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         logger.warn(`Failed to load config from ${filePath}:`, error);
       }
       return null;
@@ -234,8 +234,8 @@ export class ConfigLoader {
   /**
    * Creates a CLI override configuration from command options
    */
-  createCliOverrides(options: any): PartialConfig {
-    const overrides: any = {};
+  createCliOverrides(options: Record<string, unknown>): PartialConfig {
+    const overrides: Record<string, unknown> = {};
 
     // Database options
     if (options.database) {
@@ -295,7 +295,7 @@ export class ConfigLoader {
   /**
    * Masks sensitive values in configuration
    */
-  private maskSecrets(config: any): any {
+  private maskSecrets(config: Record<string, unknown>): Record<string, unknown> {
     const masked = JSON.parse(JSON.stringify(config));
 
     // Mask API credentials

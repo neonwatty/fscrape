@@ -179,7 +179,7 @@ export interface BatchCommandOptions extends BaseCommandOptions {
  * Generic command options (for commands not yet typed)
  */
 export interface GenericCommandOptions extends BaseCommandOptions {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**

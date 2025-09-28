@@ -53,7 +53,7 @@ export interface RecoveryContext {
   maxAttempts: number;
   delay: number;
   strategy: RecoveryStrategy;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -72,7 +72,7 @@ export interface NotificationConfig {
  */
 export interface DegradationConfig {
   enabled: boolean;
-  fallbackServices: Map<string, () => any>;
+  fallbackServices: Map<string, () => unknown>;
   degradationThreshold: number;
   autoRecover: boolean;
   recoveryCheckInterval: number;
@@ -265,7 +265,7 @@ export class ErrorHandler {
     context?: {
       name?: string;
       fallback?: () => T | Promise<T>;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     }
   ): Promise<T> {
     const operationName = context?.name || 'unnamed_operation';
@@ -431,7 +431,10 @@ export class ErrorHandler {
   /**
    * Handle rate limit errors
    */
-  public async handleRateLimit(error: RateLimitError, operation: () => Promise<any>): Promise<any> {
+  public async handleRateLimit(
+    error: RateLimitError,
+    operation: () => Promise<unknown>
+  ): Promise<unknown> {
     const retryAfter = error.retryAfter || 60000; // Default to 1 minute
 
     errorLogger.info(`Rate limited, waiting ${retryAfter}ms before retry`, {
@@ -492,7 +495,7 @@ export class ErrorHandler {
     context?: {
       name?: string;
       fallback?: () => T | Promise<T>;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     }
   ): Promise<T> {
     errorLogger.debug(`Applying recovery strategy: ${strategy}`);
@@ -533,7 +536,7 @@ export class ErrorHandler {
 
       case RecoveryStrategy.IGNORE:
         errorLogger.debug('Ignoring error as per recovery strategy');
-        return undefined as any;
+        return undefined as unknown;
 
       case RecoveryStrategy.TERMINATE:
       default:
@@ -684,7 +687,7 @@ export class ErrorHandler {
   /**
    * Get fallback for degraded service
    */
-  private getFallbackForService(serviceName: string): (() => any) | undefined {
+  private getFallbackForService(serviceName: string): (() => unknown) | undefined {
     return this.degradationConfig.fallbackServices.get(serviceName);
   }
 
@@ -737,12 +740,12 @@ export const globalErrorHandler = new ErrorHandler();
 /**
  * Wrap async function with error handling
  */
-export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
+export function withErrorHandling<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
   options?: {
     name?: string;
     fallback?: () => ReturnType<T>;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   }
 ): T {
   return (async (...args: Parameters<T>) => {
@@ -753,16 +756,19 @@ export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
 /**
  * Decorator for class methods with error handling
  */
-export function HandleErrors(options?: { strategy?: RecoveryStrategy; fallback?: () => any }): any {
+export function HandleErrors(options?: {
+  strategy?: RecoveryStrategy;
+  fallback?: () => unknown;
+}): PropertyDescriptor {
   return function (
-    target: any,
+    target: Record<string, unknown>,
     propertyKey: string | symbol,
     descriptor?: PropertyDescriptor
-  ): any {
+  ): PropertyDescriptor {
     // TypeScript 5+ decorators
     if (typeof propertyKey === 'symbol' || arguments.length === 2) {
       const method = target;
-      return async function (this: any, ...args: any[]) {
+      return async function (this: Record<string, unknown>, ...args: unknown[]) {
         const className = this?.constructor?.name || 'Unknown';
         const methodName = `${className}.${String(propertyKey)}`;
 
@@ -785,7 +791,7 @@ export function HandleErrors(options?: { strategy?: RecoveryStrategy; fallback?:
 
     const originalMethod = descriptor.value;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       const className = target.constructor.name;
       const methodName = `${className}.${String(propertyKey)}`;
 

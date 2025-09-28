@@ -153,14 +153,14 @@ if (process.env.NODE_ENV !== 'test') {
  * Logger interface matching existing logger
  */
 export interface Logger {
-  trace(message: string, ...meta: any[]): void;
-  debug(message: string, ...meta: any[]): void;
-  info(message: string, ...meta: any[]): void;
-  warn(message: string, ...meta: any[]): void;
-  error(message: string, error?: Error | BaseError, ...meta: any[]): void;
-  critical(message: string, error?: Error | BaseError, ...meta: any[]): void;
-  logError(error: Error | BaseError, context?: Record<string, any>): void;
-  child(metadata: Record<string, any>): Logger;
+  trace(message: string, ...meta: unknown[]): void;
+  debug(message: string, ...meta: unknown[]): void;
+  info(message: string, ...meta: unknown[]): void;
+  warn(message: string, ...meta: unknown[]): void;
+  error(message: string, error?: Error | BaseError, ...meta: unknown[]): void;
+  critical(message: string, error?: Error | BaseError, ...meta: unknown[]): void;
+  logError(error: Error | BaseError, context?: Record<string, unknown>): void;
+  child(metadata: Record<string, unknown>): Logger;
   startTimer(): () => void;
 }
 
@@ -168,41 +168,41 @@ export interface Logger {
  * Enhanced logger implementation
  */
 class EnhancedLogger implements Logger {
-  private metadata: Record<string, any> = {};
+  private metadata: Record<string, unknown> = {};
 
-  constructor(metadata?: Record<string, any>) {
+  constructor(metadata?: Record<string, unknown>) {
     this.metadata = metadata || {};
   }
 
-  trace(message: string, ...meta: any[]): void {
+  trace(message: string, ...meta: unknown[]): void {
     winstonLogger.log('trace', message, {
       ...this.metadata,
       ...this.extractMeta(meta),
     });
   }
 
-  debug(message: string, ...meta: any[]): void {
+  debug(message: string, ...meta: unknown[]): void {
     winstonLogger.debug(message, {
       ...this.metadata,
       ...this.extractMeta(meta),
     });
   }
 
-  info(message: string, ...meta: any[]): void {
+  info(message: string, ...meta: unknown[]): void {
     winstonLogger.info(message, {
       ...this.metadata,
       ...this.extractMeta(meta),
     });
   }
 
-  warn(message: string, ...meta: any[]): void {
+  warn(message: string, ...meta: unknown[]): void {
     winstonLogger.warn(message, {
       ...this.metadata,
       ...this.extractMeta(meta),
     });
   }
 
-  error(message: string, error?: Error | BaseError, ...meta: any[]): void {
+  error(message: string, error?: Error | BaseError, ...meta: unknown[]): void {
     const metadata = { ...this.metadata, ...this.extractMeta(meta) };
     if (error) {
       metadata.error = error;
@@ -210,7 +210,7 @@ class EnhancedLogger implements Logger {
     winstonLogger.error(message, metadata);
   }
 
-  critical(message: string, error?: Error | BaseError, ...meta: any[]): void {
+  critical(message: string, error?: Error | BaseError, ...meta: unknown[]): void {
     const metadata = { ...this.metadata, ...this.extractMeta(meta) };
     if (error) {
       metadata.error = error;
@@ -225,7 +225,7 @@ class EnhancedLogger implements Logger {
   /**
    * Log an error with automatic severity detection
    */
-  logError(error: Error | BaseError, context?: Record<string, any>): void {
+  logError(error: Error | BaseError, context?: Record<string, unknown>): void {
     const metadata = { ...this.metadata, ...context, error };
 
     if (error instanceof BaseError) {
@@ -255,7 +255,7 @@ class EnhancedLogger implements Logger {
   /**
    * Create a child logger with additional metadata
    */
-  child(metadata: Record<string, any>): Logger {
+  child(metadata: Record<string, unknown>): Logger {
     return new EnhancedLogger({ ...this.metadata, ...metadata });
   }
 
@@ -273,7 +273,7 @@ class EnhancedLogger implements Logger {
   /**
    * Extract metadata from variadic arguments
    */
-  private extractMeta(args: any[]): Record<string, any> {
+  private extractMeta(args: unknown[]): Record<string, unknown> {
     if (args.length === 0) return {};
 
     if (args.length === 1 && typeof args[0] === 'object' && !Array.isArray(args[0])) {
@@ -292,14 +292,19 @@ export const logger: Logger = new EnhancedLogger();
 /**
  * Create a scoped logger with context
  */
-export function createLogger(scope: string, metadata?: Record<string, any>): Logger {
+export function createLogger(scope: string, metadata?: Record<string, unknown>): Logger {
   return logger.child({ scope, ...metadata });
 }
 
 /**
  * Middleware for Express/Koa error logging
  */
-export function errorLoggingMiddleware(err: Error, req: any, res: any, next: any): void {
+export function errorLoggingMiddleware(
+  err: Error,
+  req: Record<string, unknown>,
+  res: Record<string, unknown>,
+  next: () => void
+): void {
   const metadata = {
     method: req.method,
     url: req.url,
@@ -327,7 +332,7 @@ export function setupGlobalErrorHandlers(): void {
   });
 
   // Handle unhandled promise rejections
-  process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
     logger.critical('Unhandled Promise Rejection', new Error(String(reason)), {
       promise: promise.toString(),
     });

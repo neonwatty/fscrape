@@ -16,6 +16,23 @@ import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import type { Platform } from '../types/core.js';
+
+interface BatchCommandOptions {
+  interactive?: boolean;
+  dryRun?: boolean;
+  parallel?: boolean;
+  maxConcurrency?: number;
+  verbose?: boolean;
+  output?: string;
+}
+
+interface CleanCommandOptions {
+  database?: string;
+  olderThan?: string;
+  platform?: Platform;
+  dryRun?: boolean;
+}
 
 // Get package.json for version
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -70,7 +87,7 @@ function createProgram(): Command {
     .option('-p, --parallel', 'Run operations in parallel', false)
     .option('--max-concurrency <number>', 'Maximum concurrent operations', parseInt, 5)
     .option('-v, --verbose', 'Verbose output', false)
-    .action(async (file: string | undefined, options: any) => {
+    .action(async (file: string | undefined, options: BatchCommandOptions) => {
       await handleBatch(file, options);
     });
 
@@ -81,7 +98,7 @@ function createProgram(): Command {
     .option('--older-than <days>', 'Remove data older than specified days')
     .option('--platform <platform>', 'Clean only specific platform data')
     .option('--dry-run', 'Show what would be deleted without actually deleting')
-    .action(async (options: any) => {
+    .action(async (options: CleanCommandOptions) => {
       await handleClean(options);
     });
 
@@ -94,7 +111,7 @@ function createProgram(): Command {
 /**
  * Handle batch command
  */
-async function handleBatch(file: string | undefined, options: any): Promise<void> {
+async function handleBatch(file: string | undefined, options: BatchCommandOptions): Promise<void> {
   try {
     const { BatchProcessor } = await import('./batch-processor.js');
 
@@ -141,7 +158,7 @@ async function handleBatch(file: string | undefined, options: any): Promise<void
 /**
  * Handle clean command
  */
-async function handleClean(options: any): Promise<void> {
+async function handleClean(options: CleanCommandOptions): Promise<void> {
   try {
     // Validate options
     const validatedOptions = validateCleanOptions({
@@ -167,7 +184,7 @@ async function handleClean(options: any): Promise<void> {
 
       if (validatedOptions.dryRun) {
         // Count items that would be deleted
-        const countOptions: { olderThanDays: number; platform?: any } = {
+        const countOptions: { olderThanDays: number; platform?: Platform } = {
           olderThanDays,
         };
         if (validatedOptions.platform) {
@@ -182,7 +199,7 @@ async function handleClean(options: any): Promise<void> {
         console.log(`  Users: ${counts.users}`);
       } else {
         // Actually delete
-        const deleteOptions: { olderThanDays: number; platform?: any } = {
+        const deleteOptions: { olderThanDays: number; platform?: Platform } = {
           olderThanDays,
         };
         if (validatedOptions.platform) {

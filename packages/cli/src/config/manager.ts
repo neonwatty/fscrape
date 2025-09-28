@@ -135,16 +135,16 @@ export class ConfigManager {
     base: Partial<ScraperConfig>,
     override: Partial<ScraperConfig>
   ): Partial<ScraperConfig> {
-    const merged: any = { ...base };
+    const merged: Partial<ScraperConfig> = { ...base };
 
     for (const key in override) {
-      const overrideValue = (override as any)[key];
+      const overrideValue = (override as Record<string, unknown>)[key];
 
       if (overrideValue !== undefined && overrideValue !== null) {
         if (typeof overrideValue === 'object' && !Array.isArray(overrideValue)) {
           // Recursively merge nested objects
           merged[key] = {
-            ...((base as any)[key] || {}),
+            ...((base as Record<string, unknown>)[key] || {}),
             ...overrideValue,
           };
         } else {
@@ -191,7 +191,11 @@ export class ConfigManager {
       if (!config.logging) {
         config.logging = this.getDefaultConfig().logging as LoggingConfig;
       }
-      (config.logging as LoggingConfig).level = process.env.FSCRAPE_LOG_LEVEL as any;
+      (config.logging as LoggingConfig).level = process.env.FSCRAPE_LOG_LEVEL as
+        | 'debug'
+        | 'info'
+        | 'warn'
+        | 'error';
     }
 
     // Proxy

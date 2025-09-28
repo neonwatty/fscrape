@@ -12,13 +12,13 @@ import { DatabaseManager } from '../database/database.js';
 import { RedditScraper } from '../platforms/reddit/scraper.js';
 import { HackerNewsScraper } from '../platforms/hackernews/scraper.js';
 import { ExportManager } from '../export/export-manager.js';
-// import type { ForumPost, Comment } from "../types/core.js";
+import type { Platform } from '../types/core.js';
 
 export interface BatchOperation {
   type: 'scrape' | 'export' | 'clean' | 'migrate';
   platform?: 'reddit' | 'hackernews' | 'both';
   items?: string[];
-  options?: Record<string, any>;
+  options?: Record<string, unknown>;
 }
 
 export interface BatchConfig {
@@ -36,7 +36,7 @@ export interface BatchResult {
   operation: BatchOperation;
   status: 'success' | 'failed' | 'skipped';
   message?: string;
-  data?: any;
+  data?: unknown;
   error?: Error;
   duration?: number;
 }
@@ -97,7 +97,7 @@ export class BatchProcessor {
         case 'scrape':
           operations.push({
             type: 'scrape',
-            platform: parts[1] as any,
+            platform: parts[1] as 'reddit' | 'hackernews' | 'both',
             items: parts.slice(2),
           });
           break;
@@ -388,7 +388,7 @@ export class BatchProcessor {
     }
 
     try {
-      let data: any;
+      let data: unknown;
 
       switch (operation.type) {
         case 'scrape':
@@ -418,14 +418,14 @@ export class BatchProcessor {
         data,
         duration: Date.now() - startTime,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.formatter.updateBatch(operationName, 'failed');
 
       return {
         operation,
         status: 'failed',
-        error,
-        message: error.message,
+        error: error instanceof Error ? error : new Error(String(error)),
+        message: error instanceof Error ? error.message : String(error),
         duration: Date.now() - startTime,
       };
     }
@@ -434,7 +434,9 @@ export class BatchProcessor {
   /**
    * Execute scrape operation
    */
-  private async executeScrape(operation: BatchOperation): Promise<any> {
+  private async executeScrape(
+    operation: BatchOperation
+  ): Promise<{ posts: number; comments: number; users: number }> {
     const dbManager = new DatabaseManager({
       type: 'sqlite',
       path: this.config.database || 'fscrape.db',
@@ -462,7 +464,10 @@ export class BatchProcessor {
             // Remove /r/ prefix if present
             const subreddit = item.replace(/^\/r\//, '');
             const posts = await scraper.scrapeCategory(subreddit, {
-              limit: operation.options?.limit || 100,
+              limit:
+                (typeof operation.options?.limit === 'number'
+                  ? operation.options.limit
+                  : undefined) || 100,
             });
 
             // Save posts using upsertPost
@@ -489,7 +494,10 @@ export class BatchProcessor {
           }
         } else {
           const scrapeResult = await scraper.scrapePosts('topstories', {
-            limit: operation.options?.limit || 100,
+            limit:
+              (typeof operation.options?.limit === 'number'
+                ? operation.options.limit
+                : undefined) || 100,
           });
 
           // Handle both array and ScrapeResult format
@@ -510,7 +518,9 @@ export class BatchProcessor {
   /**
    * Execute export operation
    */
-  private async executeExport(operation: BatchOperation): Promise<any> {
+  private async executeExport(
+    operation: BatchOperation
+  ): Promise<Record<string, { count: number; file: string }>> {
     const dbManager = new DatabaseManager({
       type: 'sqlite',
       path: this.config.database || 'fscrape.db',
@@ -519,14 +529,19 @@ export class BatchProcessor {
     await dbManager.initialize();
 
     try {
-      const outputDir = operation.options?.output || './exports';
+      const outputDir =
+        (typeof operation.options?.output === 'string' ? operation.options.output : undefined) ||
+        './exports';
       await fs.mkdir(outputDir, { recursive: true });
 
-      const format = operation.options?.format || 'json';
-      const dataType = operation.options?.data || 'all';
+      const format =
+        (typeof operation.options?.format === 'string' ? operation.options.format : undefined) ||
+        'json';
+      const dataType =
+        (typeof operation.options?.data === 'string' ? operation.options.data : undefined) || 'all';
 
       // Create ExportManager with appropriate format
-      const exportConfig: any = {
+      const exportConfig = {
         format: format as 'json' | 'csv',
         outputDirectory: './',
         defaultFormat: format as 'json' | 'csv',
@@ -535,17 +550,17 @@ export class BatchProcessor {
       };
       const exporter = new ExportManager(exportConfig);
 
-      const results: any = {};
+      const results: Record<string, { count: number; file: string }> = {};
 
       if (dataType === 'posts' || dataType === 'all') {
         const posts = await dbManager.queryPosts({ limit: 10000 });
-        const filePath = await exporter.exportData(
+        const exportResult = await exporter.exportData(
           {
             posts,
             comments: [],
             users: [],
             metadata: {
-              platform: 'mixed' as any,
+              platform: 'custom' as Platform,
               totalPosts: posts.length,
               scrapedAt: new Date(),
             },
@@ -553,18 +568,19 @@ export class BatchProcessor {
           `export-posts-${Date.now()}`,
           format as 'json' | 'csv'
         );
+        const filePath = Array.isArray(exportResult) ? exportResult[0] : exportResult;
         results.posts = { count: posts.length, file: filePath };
       }
 
       if (dataType === 'comments' || dataType === 'all') {
         const comments = await dbManager.queryComments({ limit: 10000 });
-        const filePath = await exporter.exportData(
+        const exportResult = await exporter.exportData(
           {
             posts: [],
             comments,
             users: [],
             metadata: {
-              platform: 'mixed' as any,
+              platform: 'custom' as Platform,
               totalPosts: 0,
               totalComments: comments.length,
               scrapedAt: new Date(),
@@ -573,18 +589,19 @@ export class BatchProcessor {
           `export-comments-${Date.now()}`,
           format as 'json' | 'csv'
         );
+        const filePath = Array.isArray(exportResult) ? exportResult[0] : exportResult;
         results.comments = { count: comments.length, file: filePath };
       }
 
       if (dataType === 'users' || dataType === 'all') {
         const users = await dbManager.queryUsers({ limit: 10000 });
-        const filePath = await exporter.exportData(
+        const exportResult = await exporter.exportData(
           {
             posts: [],
             comments: [],
             users,
             metadata: {
-              platform: 'mixed' as any,
+              platform: 'custom' as Platform,
               totalPosts: 0,
               scrapedAt: new Date(),
             },
@@ -592,6 +609,7 @@ export class BatchProcessor {
           `export-users-${Date.now()}`,
           format as 'json' | 'csv'
         );
+        const filePath = Array.isArray(exportResult) ? exportResult[0] : exportResult;
         results.users = { count: users.length, file: filePath };
       }
 
@@ -604,7 +622,7 @@ export class BatchProcessor {
   /**
    * Execute clean operation
    */
-  private async executeClean(operation: BatchOperation): Promise<any> {
+  private async executeClean(operation: BatchOperation): Promise<Record<string, number>> {
     const dbManager = new DatabaseManager({
       type: 'sqlite',
       path: this.config.database || 'fscrape.db',
@@ -613,25 +631,39 @@ export class BatchProcessor {
     await dbManager.initialize();
 
     try {
-      const olderThanDays = operation.options?.olderThan || 30;
-      const results: any = {};
+      const olderThanDays =
+        (typeof operation.options?.olderThan === 'number'
+          ? operation.options.olderThan
+          : undefined) || 30;
+      const results: Record<string, number> = {};
 
       // Check if mock methods exist, otherwise use real methods
-      if ((dbManager as any).deletePosts) {
+      const dbManagerWithMethods = dbManager as DatabaseManager & {
+        deletePosts?: () => Promise<{ deletedCount: number }>;
+        deleteComments?: () => Promise<{ deletedCount: number }>;
+        deleteUsers?: () => Promise<{ deletedCount: number }>;
+        deleteOldData?: (options: {
+          olderThanDays: number;
+          platform?: string;
+        }) => Promise<Record<string, number>>;
+        vacuum?: () => Promise<void>;
+      };
+
+      if (dbManagerWithMethods.deletePosts) {
         // Using mocked methods
-        const postsResult = await (dbManager as any).deletePosts();
+        const postsResult = await dbManagerWithMethods.deletePosts();
         results.deletedPosts = postsResult?.deletedCount || 0;
 
         if (operation.options?.data === 'all' || !operation.options?.data) {
-          const commentsResult = await (dbManager as any).deleteComments();
+          const commentsResult = await dbManagerWithMethods.deleteComments?.();
           results.deletedComments = commentsResult?.deletedCount || 0;
 
-          const usersResult = await (dbManager as any).deleteUsers();
+          const usersResult = await dbManagerWithMethods.deleteUsers?.();
           results.deletedUsers = usersResult?.deletedCount || 0;
         }
-      } else if ((dbManager as any).deleteOldData) {
+      } else if (dbManagerWithMethods.deleteOldData) {
         // Using real method
-        const result = await (dbManager as any).deleteOldData({
+        const result = await dbManagerWithMethods.deleteOldData({
           olderThanDays,
           platform: operation.platform,
         });
@@ -639,8 +671,8 @@ export class BatchProcessor {
       }
 
       // Call vacuum if it exists
-      if ((dbManager as any).vacuum) {
-        await (dbManager as any).vacuum();
+      if (dbManagerWithMethods.vacuum) {
+        await dbManagerWithMethods.vacuum();
       }
 
       return results;
@@ -689,7 +721,9 @@ export class BatchProcessor {
   /**
    * Execute migrate operation
    */
-  private async executeMigrate(operation: BatchOperation): Promise<any> {
+  private async executeMigrate(
+    operation: BatchOperation
+  ): Promise<{ action: string; path: string }> {
     const dbManager = new DatabaseManager({
       type: 'sqlite',
       path: this.config.database || 'fscrape.db',
@@ -698,17 +732,26 @@ export class BatchProcessor {
     await dbManager.initialize();
 
     try {
-      const action = operation.options?.action || 'backup';
-      const filePath = operation.options?.path || './backup.db';
+      const action =
+        (typeof operation.options?.action === 'string' ? operation.options.action : undefined) ||
+        'backup';
+      const filePath =
+        (typeof operation.options?.path === 'string' ? operation.options.path : undefined) ||
+        './backup.db';
+
+      const dbManagerWithMigration = dbManager as DatabaseManager & {
+        backup?: (path: string) => Promise<void>;
+        restore?: (path: string) => Promise<void>;
+      };
 
       if (action === 'backup') {
-        if ((dbManager as any).backup) {
-          await (dbManager as any).backup(filePath);
+        if (dbManagerWithMigration.backup) {
+          await dbManagerWithMigration.backup(filePath);
         }
         return { action: 'backup', path: filePath };
       } else if (action === 'restore') {
-        if ((dbManager as any).restore) {
-          await (dbManager as any).restore(filePath);
+        if (dbManagerWithMigration.restore) {
+          await dbManagerWithMigration.restore(filePath);
         }
         return { action: 'restore', path: filePath };
       } else {

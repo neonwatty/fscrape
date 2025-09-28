@@ -28,7 +28,7 @@ export interface SessionState {
   // Resume information
   resumeData?: {
     token?: string;
-    checkpoint?: any;
+    checkpoint?: Record<string, unknown>;
     lastSuccessfulItem?: string;
     nextUrl?: string;
   };
@@ -379,7 +379,7 @@ export class SessionStateManager {
 
       // Restore error timestamps
       if (parsed.errors && Array.isArray(parsed.errors)) {
-        parsed.errors = parsed.errors.map((error: any) => ({
+        parsed.errors = parsed.errors.map((error: Record<string, unknown>) => ({
           ...error,
           timestamp: new Date(error.timestamp),
         }));
@@ -482,7 +482,7 @@ export class SessionStateManager {
   /**
    * Create a recovery checkpoint
    */
-  createCheckpoint(id: string): any {
+  createCheckpoint(id: string): Record<string, unknown> | null {
     const state = this.states.get(id);
     if (!state) return null;
 
@@ -496,7 +496,7 @@ export class SessionStateManager {
   /**
    * Restore from checkpoint
    */
-  restoreFromCheckpoint(checkpoint: any): SessionState | null {
+  restoreFromCheckpoint(checkpoint: Record<string, unknown>): SessionState | null {
     try {
       if (!checkpoint || !checkpoint.state) {
         throw new Error('Invalid checkpoint format');

@@ -98,7 +98,7 @@ export class MarkdownExporter {
   /**
    * Generate metadata section
    */
-  private generateMetadataSection(metadata: any): string {
+  private generateMetadataSection(metadata: Record<string, unknown>): string {
     const lines: string[] = ['## Export Metadata\n'];
 
     const metaItems: string[] = [];

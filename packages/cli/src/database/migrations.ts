@@ -262,7 +262,9 @@ export const migrations: Migration[] = [
         // If schema.sql not found, use the schema from schema.ts
         // Create tables
         for (const [, tableSchema] of Object.entries(DATABASE_SCHEMA)) {
-          db.exec(tableSchema as string);
+          if (typeof tableSchema === 'string') {
+            db.exec(tableSchema);
+          }
         }
 
         // Create indexes
@@ -283,8 +285,8 @@ export const migrations: Migration[] = [
     up: (db: Database.Database) => {
       // Add post_count and comment_count to users table if they don't exist
       try {
-        const tableInfo = db.prepare('PRAGMA table_info(users)').all() as any[];
-        const columnNames = tableInfo.map((col: any) => col.name);
+        const tableInfo = db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>;
+        const columnNames = tableInfo.map((col) => col.name);
 
         if (!columnNames.includes('post_count')) {
           db.exec(`ALTER TABLE users ADD COLUMN post_count INTEGER DEFAULT 0`);
@@ -310,8 +312,8 @@ export const migrations: Migration[] = [
     up: (db: Database.Database) => {
       // Add platform_id column if it doesn't exist
       try {
-        const tableInfo = db.prepare('PRAGMA table_info(posts)').all() as any[];
-        const columnNames = tableInfo.map((col: any) => col.name);
+        const tableInfo = db.prepare('PRAGMA table_info(posts)').all() as Array<{ name: string }>;
+        const columnNames = tableInfo.map((col) => col.name);
 
         if (!columnNames.includes('platform_id')) {
           db.exec(`ALTER TABLE posts ADD COLUMN platform_id TEXT NOT NULL DEFAULT ''`);

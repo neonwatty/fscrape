@@ -313,8 +313,8 @@ export class RedditScraper extends BasePlatform {
       return this.client.convertToForumPost(post);
     } catch (error) {
       if (
-        (error as any).message?.toLowerCase().includes('not found') ||
-        (error as any).message?.toLowerCase().includes('network error')
+        (error instanceof Error && error.message?.toLowerCase().includes('not found')) ||
+        (error instanceof Error && error.message?.toLowerCase().includes('network error'))
       ) {
         return null;
       }
@@ -364,9 +364,12 @@ export class RedditScraper extends BasePlatform {
       return this.client.convertToUser(user);
     } catch (error) {
       if (
-        (error as any).statusCode === 404 ||
-        (error as any).message?.toLowerCase().includes('user not found') ||
-        (error as any).message?.toLowerCase().includes('404 not found')
+        (error &&
+          typeof error === 'object' &&
+          'statusCode' in error &&
+          (error as { statusCode: number }).statusCode === 404) ||
+        (error instanceof Error && error.message?.toLowerCase().includes('user not found')) ||
+        (error instanceof Error && error.message?.toLowerCase().includes('404 not found'))
       ) {
         return null;
       }
@@ -578,7 +581,7 @@ export class RedditScraper extends BasePlatform {
         return 'top';
       case 'controversial':
         return 'controversial';
-      case 'old' as any:
+      case 'old':
         return 'old';
       default:
         return 'confidence';

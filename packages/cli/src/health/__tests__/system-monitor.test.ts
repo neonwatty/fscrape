@@ -55,7 +55,7 @@ describe('SystemMonitor', () => {
         speed: 2400,
         times: { user: 1000, nice: 0, sys: 500, idle: 8500, irq: 0 },
       },
-    ] as any);
+    ] as unknown);
 
     vi.mocked(os.totalmem).mockReturnValue(16 * 1024 * 1024 * 1024); // 16GB
     vi.mocked(os.freemem).mockReturnValue(8 * 1024 * 1024 * 1024); // 8GB free
@@ -71,7 +71,7 @@ describe('SystemMonitor', () => {
           cidr: '192.168.1.100/24',
         },
       ],
-    } as any);
+    } as unknown);
 
     // Mock process functions
     vi.spyOn(process, 'uptime').mockReturnValue(3600);
@@ -94,15 +94,15 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as any);
+      } as unknown);
 
       const results = await systemMonitor.checkSystem();
 
       expect(results).toHaveLength(4); // cpu, memory, disk, process
-      expect(results.some((r: any) => r.name === 'system:cpu')).toBe(true);
-      expect(results.some((r: any) => r.name === 'system:memory')).toBe(true);
-      expect(results.some((r: any) => r.name === 'system:disk')).toBe(true);
-      expect(results.some((r: any) => r.name === 'system:process')).toBe(true);
+      expect(results.some((r) => r.name === 'system:cpu')).toBe(true);
+      expect(results.some((r) => r.name === 'system:memory')).toBe(true);
+      expect(results.some((r) => r.name === 'system:disk')).toBe(true);
+      expect(results.some((r) => r.name === 'system:process')).toBe(true);
     });
 
     it('should detect high CPU usage', async () => {
@@ -113,10 +113,10 @@ describe('SystemMonitor', () => {
           speed: 2400,
           times: { user: 9000, nice: 0, sys: 500, idle: 500, irq: 0 },
         },
-      ] as any);
+      ] as unknown);
 
       const results = await systemMonitor.checkSystem();
-      const cpuCheck = results.find((r: any) => r.name === 'system:cpu');
+      const cpuCheck = results.find((r) => r.name === 'system:cpu');
 
       expect(cpuCheck?.status).toBe('warning');
       expect(cpuCheck?.message).toContain('CPU usage high');
@@ -128,7 +128,7 @@ describe('SystemMonitor', () => {
       vi.mocked(os.freemem).mockReturnValue(0.8 * 1024 * 1024 * 1024); // Only 5% free
 
       const results = await systemMonitor.checkSystem();
-      const memoryCheck = results.find((r: any) => r.name === 'system:memory');
+      const memoryCheck = results.find((r) => r.name === 'system:memory');
 
       expect(memoryCheck?.status).toBe('warning');
       expect(memoryCheck?.message).toContain('Memory usage high');
@@ -139,10 +139,10 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 50000, // Only 5% available
-      } as any);
+      } as unknown);
 
       const results = await systemMonitor.checkSystem();
-      const diskCheck = results.find((r: any) => r.name === 'system:disk');
+      const diskCheck = results.find((r) => r.name === 'system:disk');
 
       expect(diskCheck?.status).toBe('warning');
       expect(diskCheck?.message).toContain('Disk usage high');
@@ -152,7 +152,7 @@ describe('SystemMonitor', () => {
       vi.mocked(fs.statfs).mockRejectedValue(new Error('Permission denied'));
 
       const results = await systemMonitor.checkSystem();
-      const diskCheck = results.find((r: any) => r.name === 'system:disk');
+      const diskCheck = results.find((r) => r.name === 'system:disk');
 
       // When statfs fails, it falls back to 0 values which is normal/pass
       expect(diskCheck?.status).toBe('pass');
@@ -161,7 +161,7 @@ describe('SystemMonitor', () => {
 
     it('should check process health', async () => {
       const results = await systemMonitor.checkSystem();
-      const processCheck = results.find((r: any) => r.name === 'system:process');
+      const processCheck = results.find((r) => r.name === 'system:process');
 
       expect(processCheck?.status).toBe('pass');
       expect(processCheck?.message).toBe('Process healthy');
@@ -178,7 +178,7 @@ describe('SystemMonitor', () => {
       });
 
       const results = await systemMonitor.checkSystem();
-      const processCheck = results.find((r: any) => r.name === 'system:process');
+      const processCheck = results.find((r) => r.name === 'system:process');
 
       expect(processCheck?.status).toBe('warning');
       expect(processCheck?.message).toContain('Process heap usage high');
@@ -191,7 +191,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as any);
+      } as unknown);
 
       const metrics = await systemMonitor.collectMetrics();
 
@@ -244,7 +244,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as any);
+      } as unknown);
 
       // checkSystem calls collectMetrics and adds to history
       await systemMonitor.checkSystem();
@@ -260,7 +260,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as any);
+      } as unknown);
 
       // Add more than max history size (100)
       for (let i = 0; i < 105; i++) {
@@ -277,7 +277,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as any);
+      } as unknown);
 
       await systemMonitor.checkSystem();
       await systemMonitor.checkSystem();
@@ -300,7 +300,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as any);
+      } as unknown);
 
       await systemMonitor.collectMetrics();
       systemMonitor.clearHistory();
@@ -317,7 +317,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as any);
+      } as unknown);
 
       const isHealthy = await systemMonitor.isSystemHealthy();
 
@@ -333,7 +333,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as any);
+      } as unknown);
 
       const isHealthy = await systemMonitor.isSystemHealthy();
 
@@ -359,7 +359,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as any);
+      } as unknown);
 
       const metrics = await systemMonitor.getCurrentMetrics();
 

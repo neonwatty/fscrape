@@ -23,8 +23,8 @@ vi.mock('ora', () => ({
 
 // Mock table
 vi.mock('table', () => ({
-  table: vi.fn((data: any) => {
-    return data.map((row: any) => row.join(' | ')).join('\n');
+  table: vi.fn((data: string[][]) => {
+    return data.map((row) => row.join(' | ')).join('\n');
   }),
 }));
 
@@ -167,7 +167,7 @@ describe('OutputFormatter', () => {
     });
 
     it('should start spinner with text', async () => {
-      const ora = (await import('ora')).default as any;
+      const ora = vi.mocked((await import('ora')).default);
       formatter.startSpinner('Loading...');
       expect(ora).toHaveBeenCalled();
       const spinner = ora.mock.results[0].value;
@@ -175,7 +175,7 @@ describe('OutputFormatter', () => {
     });
 
     it('should update spinner text', async () => {
-      const ora = (await import('ora')).default as any;
+      const ora = vi.mocked((await import('ora')).default);
       formatter.startSpinner('Loading...');
       formatter.updateSpinner('Still loading...');
       const spinner = ora.mock.results[0].value;
@@ -183,7 +183,7 @@ describe('OutputFormatter', () => {
     });
 
     it('should succeed spinner', async () => {
-      const ora = (await import('ora')).default as any;
+      const ora = vi.mocked((await import('ora')).default);
       formatter.startSpinner('Loading...');
       formatter.succeedSpinner('Done!');
       const spinner = ora.mock.results[0].value;
@@ -191,7 +191,7 @@ describe('OutputFormatter', () => {
     });
 
     it('should fail spinner', async () => {
-      const ora = (await import('ora')).default as any;
+      const ora = vi.mocked((await import('ora')).default);
       formatter.startSpinner('Loading...');
       formatter.failSpinner('Failed!');
       const spinner = ora.mock.results[0].value;
@@ -200,7 +200,7 @@ describe('OutputFormatter', () => {
 
     it('should not start spinner when showProgress is false', async () => {
       formatter = new OutputFormatter({ showProgress: false });
-      const ora = (await import('ora')).default as any;
+      const ora = vi.mocked((await import('ora')).default);
       formatter.startSpinner('Loading...');
       expect(ora).not.toHaveBeenCalled();
     });

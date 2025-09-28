@@ -24,7 +24,7 @@ vi.mock('../../utils/advanced-logger', () => ({
 describe('ApiMonitor', () => {
   let apiMonitor: ApiMonitor;
   let config: HealthCheckConfig;
-  let mockFetch: any;
+  let mockFetch: ReturnType<typeof vi.mocked>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -203,7 +203,7 @@ describe('ApiMonitor', () => {
       await apiMonitor.checkEndpoint(endpoint);
       await apiMonitor.checkEndpoint(endpoint);
 
-      const stats = apiMonitor.getStats('test-api') as any;
+      const stats = apiMonitor.getStats('test-api') as Record<string, unknown>;
 
       expect(stats.totalChecks).toBe(2);
       expect(stats.successfulChecks).toBe(2);
@@ -272,7 +272,7 @@ describe('ApiMonitor', () => {
       await apiMonitor.checkEndpoint(endpoint);
       apiMonitor.resetStats('test-api');
 
-      const stats = apiMonitor.getStats('test-api') as any;
+      const stats = apiMonitor.getStats('test-api') as Record<string, unknown>;
 
       expect(stats.totalChecks).toBe(0);
     });
@@ -286,7 +286,7 @@ describe('ApiMonitor', () => {
       await apiMonitor.checkEndpoints(['http://test1.com', 'http://test2.com']);
       apiMonitor.resetStats();
 
-      const allStats = apiMonitor.getStats() as Map<string, any>;
+      const allStats = apiMonitor.getStats() as Map<string, Record<string, unknown>>;
 
       expect(allStats.size).toBe(0);
     });

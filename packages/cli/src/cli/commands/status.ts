@@ -86,14 +86,80 @@ async function handleStatus(options: StatusCommandOptions): Promise<void> {
 /**
  * Gather statistics from database
  */
-async function gatherStatistics(options: StatusOptions, dbManager: DatabaseManager): Promise<any> {
-  const stats: any = {
-    overview: {},
+interface DatabaseStats {
+  overview: {
+    totalPosts: number;
+    totalComments: number;
+    totalUsers: number;
+    databaseSize: number;
+    lastActivity: number;
+  };
+  platforms: Record<
+    string,
+    {
+      postCount: number;
+      commentCount: number;
+      userCount: number;
+      avgScore: number;
+    }
+  >;
+  recent: {
+    posts: {
+      data: Array<{ date: string; count: number }>;
+    };
+    comments: {
+      data: Array<{ date: string; count: number }>;
+    };
+  };
+  activeSessions: unknown[];
+  recentSessions: unknown[];
+  systemHealth: {
+    databaseSize: number;
+    tableCount: number;
+    indexCount?: number;
+    cacheHitRate?: number;
+    fragmentation?: number;
+  };
+  topContent: {
+    posts: Array<{
+      id: string;
+      title: string;
+      score: number;
+      commentCount: number;
+      author: string;
+      platform: string;
+    }>;
+    users: unknown[];
+  };
+}
+
+async function gatherStatistics(
+  options: StatusOptions,
+  dbManager: DatabaseManager
+): Promise<DatabaseStats> {
+  const stats: DatabaseStats = {
+    overview: {
+      totalPosts: 0,
+      totalComments: 0,
+      totalUsers: 0,
+      databaseSize: 0,
+      lastActivity: 0,
+    },
     platforms: {},
-    recent: {},
+    recent: {
+      posts: { data: [] },
+      comments: { data: [] },
+    },
     activeSessions: [],
     recentSessions: [],
-    systemHealth: {},
+    systemHealth: {
+      databaseSize: 0,
+      tableCount: 0,
+    },
+    topContent: {
+      posts: [],
+      users: [],
+    },
   };
 
   // Get basic database counts using existing methods
@@ -244,7 +310,7 @@ async function gatherStatistics(options: StatusOptions, dbManager: DatabaseManag
 
   // Update total users count from platform stats
   stats.overview.totalUsers = Object.values(stats.platforms).reduce(
-    (sum: number, platform: any) => sum + (platform.userCount || 0),
+    (sum: number, platform) => sum + (platform.userCount || 0),
     0
   );
 
@@ -254,14 +320,14 @@ async function gatherStatistics(options: StatusOptions, dbManager: DatabaseManag
 /**
  * Display statistics as JSON
  */
-function displayJson(stats: any): void {
+function displayJson(stats: DatabaseStats): void {
   console.log(JSON.stringify(stats, null, 2));
 }
 
 /**
  * Display statistics as summary
  */
-function displaySummary(stats: any): void {
+function displaySummary(stats: DatabaseStats): void {
   console.log(chalk.bold.cyan('\n📊 Database Statistics Summary\n'));
 
   // Overview
@@ -277,10 +343,16 @@ function displaySummary(stats: any): void {
   // Active sessions
   if (stats.activeSessions && stats.activeSessions.length > 0) {
     console.log(chalk.yellow('\nActive Sessions:'));
-    stats.activeSessions.forEach((session: any) => {
-      console.log(`  ${chalk.green('●')} ${session.platform} - ${session.status}`);
-      console.log(`    Started: ${new Date(session.startedAt).toLocaleString()}`);
-      console.log(`    Items scraped: ${session.totalItemsScraped || 0}`);
+    stats.activeSessions.forEach((session: unknown) => {
+      const sess = session as {
+        platform: string;
+        status: string;
+        startedAt: string;
+        totalItemsScraped?: number;
+      };
+      console.log(`  ${chalk.green('●')} ${sess.platform} - ${sess.status}`);
+      console.log(`    Started: ${new Date(sess.startedAt).toLocaleString()}`);
+      console.log(`    Items scraped: ${sess.totalItemsScraped || 0}`);
     });
   } else {
     console.log(chalk.yellow('\nActive Sessions:'));
@@ -312,7 +384,7 @@ function displaySummary(stats: any): void {
   if (Object.keys(stats.platforms).length > 0) {
     console.log(chalk.yellow('\nPlatform Breakdown:'));
     for (const [platform, platformStats] of Object.entries(stats.platforms)) {
-      const pStats = platformStats as any;
+      const pStats = platformStats;
       console.log(`  ${chalk.cyan(platform)}:`);
       console.log(`    Posts: ${pStats.postCount?.toLocaleString() || 0}`);
       console.log(`    Comments: ${pStats.commentCount?.toLocaleString() || 0}`);
@@ -326,12 +398,9 @@ function displaySummary(stats: any): void {
   // Recent activity
   if (stats.recent.posts && stats.recent.posts.data) {
     console.log(chalk.yellow('\nRecent Activity:'));
-    const recentPosts = stats.recent.posts.data.reduce(
-      (sum: number, day: any) => sum + day.count,
-      0
-    );
+    const recentPosts = stats.recent.posts.data.reduce((sum: number, day) => sum + day.count, 0);
     const recentComments =
-      stats.recent.comments?.data?.reduce((sum: number, day: any) => sum + day.count, 0) || 0;
+      stats.recent.comments?.data?.reduce((sum: number, day) => sum + day.count, 0) || 0;
     console.log(
       `  Posts (last ${stats.recent.posts.data.length} days): ${recentPosts.toLocaleString()}`
     );
@@ -343,7 +412,7 @@ function displaySummary(stats: any): void {
   // Top content
   if (stats.topContent && stats.topContent.posts && stats.topContent.posts.length > 0) {
     console.log(chalk.yellow('\nTop Posts:'));
-    stats.topContent.posts.forEach((post: any, index: number) => {
+    stats.topContent.posts.forEach((post, index: number) => {
       console.log(`  ${index + 1}. ${truncateString(post.title, 50)}`);
       console.log(`     Score: ${post.score} | Comments: ${post.commentCount}`);
     });
@@ -353,7 +422,7 @@ function displaySummary(stats: any): void {
 /**
  * Display statistics as table
  */
-function displayTable(stats: any, verbose: boolean): void {
+function displayTable(stats: DatabaseStats, verbose: boolean): void {
   console.log(chalk.bold.cyan('\n📊 Database Statistics\n'));
 
   // Overview table
@@ -409,7 +478,7 @@ function displayTable(stats: any, verbose: boolean): void {
     });
 
     for (const [platform, platformStats] of Object.entries(stats.platforms)) {
-      const pStats = platformStats as any;
+      const pStats = platformStats;
       platformTable.push([
         platform,
         pStats.postCount.toLocaleString(),
@@ -436,26 +505,33 @@ function displayTable(stats: any, verbose: boolean): void {
       colWidths: [12, 10, 20, 10, 8],
     });
 
-    stats.activeSessions.forEach((session: any) => {
+    stats.activeSessions.forEach((session: unknown) => {
+      const sess = session as {
+        platform: string;
+        status: string;
+        startedAt: string;
+        totalItemsScraped?: number;
+        errorCount?: number;
+      };
       const statusColor =
-        session.status === 'running'
+        sess.status === 'running'
           ? chalk.green
-          : session.status === 'pending'
+          : sess.status === 'pending'
             ? chalk.yellow
-            : session.status === 'failed'
+            : sess.status === 'failed'
               ? chalk.red
               : chalk.gray;
       sessionsTable.push([
-        session.platform,
-        statusColor(session.status),
-        new Date(session.startedAt).toLocaleString('en-US', {
+        sess.platform,
+        statusColor(sess.status),
+        new Date(sess.startedAt).toLocaleString('en-US', {
           month: 'short',
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
         }),
-        session.totalItemsScraped?.toString() || '0',
-        session.errorCount?.toString() || '0',
+        sess.totalItemsScraped?.toString() || '0',
+        sess.errorCount?.toString() || '0',
       ]);
     });
 
@@ -481,7 +557,7 @@ function displayTable(stats: any, verbose: boolean): void {
       colWidths: [5, 45, 10, 12],
     });
 
-    stats.topContent.posts.forEach((post: any, index: number) => {
+    stats.topContent.posts.forEach((post, index: number) => {
       topPostsTable.push([
         (index + 1).toString(),
         truncateString(post.title, 40),
@@ -507,13 +583,19 @@ function displayTable(stats: any, verbose: boolean): void {
       colWidths: [5, 20, 10, 12, 12],
     });
 
-    stats.topContent.users.forEach((user: any, index: number) => {
+    stats.topContent.users.forEach((user: unknown, index: number) => {
+      const u = user as {
+        username: string;
+        postCount: number;
+        commentCount: number;
+        karma?: number;
+      };
       topUsersTable.push([
         (index + 1).toString(),
-        truncateString(user.username, 18),
-        user.postCount.toString(),
-        user.commentCount.toString(),
-        user.karma?.toString() || 'N/A',
+        truncateString(u.username, 18),
+        u.postCount.toString(),
+        u.commentCount.toString(),
+        u.karma?.toString() || 'N/A',
       ]);
     });
 

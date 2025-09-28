@@ -136,7 +136,7 @@ export class PlatformFactory {
     // Apply platform-specific configuration
     if (platformConfig && platformConfig.platform === platform) {
       if ('config' in platformConfig) {
-        const platformSpecificConfig = platformConfig.config as any;
+        const platformSpecificConfig = platformConfig.config as Record<string, unknown>;
         finalConfig = {
           ...finalConfig,
           clientId: platformSpecificConfig.clientId,

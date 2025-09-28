@@ -246,13 +246,13 @@ async function interactiveConfig(currentConfig: ConfigData): Promise<ConfigData>
 /**
  * Get nested config value
  */
-function getConfigValue(config: ConfigData, key: string): any {
+function getConfigValue(config: ConfigData, key: string): unknown {
   const keys = key.split('.');
-  let value: any = config;
+  let value: unknown = config;
 
   for (const k of keys) {
-    if (value && typeof value === 'object' && k in value) {
-      value = value[k];
+    if (value && typeof value === 'object' && value !== null && k in value) {
+      value = (value as Record<string, unknown>)[k];
     } else {
       return undefined;
     }
@@ -264,16 +264,16 @@ function getConfigValue(config: ConfigData, key: string): any {
 /**
  * Set nested config value
  */
-function setConfigValue(config: ConfigData, key: string, value: any): void {
+function setConfigValue(config: ConfigData, key: string, value: string): void {
   const keys = key.split('.');
-  let obj: any = config;
+  let obj: Record<string, unknown> = config as Record<string, unknown>;
 
   for (let i = 0; i < keys.length - 1; i++) {
     const k = keys[i];
     if (!(k in obj) || typeof obj[k] !== 'object') {
       obj[k] = {};
     }
-    obj = obj[k];
+    obj = obj[k] as Record<string, unknown>;
   }
 
   const lastKey = keys[keys.length - 1];
@@ -303,7 +303,7 @@ function displayConfig(config: ConfigData, indent = 0): void {
   for (const [key, value] of Object.entries(config)) {
     if (typeof value === 'object' && value !== null) {
       console.log(chalk.cyan(`${spaces}${key}:`));
-      displayConfig(value as any, indent + 2);
+      displayConfig(value as ConfigData, indent + 2);
     } else {
       const displayValue = typeof value === 'string' ? `"${value}"` : value;
       console.log(`${spaces}${chalk.gray(key)}: ${chalk.yellow(displayValue)}`);

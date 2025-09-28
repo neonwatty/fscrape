@@ -40,10 +40,13 @@ export class RedditParsers {
     }
 
     // Extract gallery URLs if present
-    if ((post as any).media_metadata) {
-      for (const [, media] of Object.entries((post as any).media_metadata)) {
-        if ((media as any).s?.u) {
-          urls.push(this.decodeRedditUrl((media as any).s.u));
+    const postWithMetadata = post as RedditPost & {
+      media_metadata?: Record<string, { s?: { u?: string } }>;
+    };
+    if (postWithMetadata.media_metadata) {
+      for (const [, media] of Object.entries(postWithMetadata.media_metadata)) {
+        if (media.s?.u) {
+          urls.push(this.decodeRedditUrl(media.s.u));
         }
       }
     }
@@ -98,7 +101,7 @@ export class RedditParsers {
   /**
    * Parse Reddit awards (gold, silver, etc.)
    */
-  static parseAwards(data: any): Record<string, number> {
+  static parseAwards(data: Record<string, unknown>): Record<string, number> {
     const awards: Record<string, number> = {};
 
     if (data.all_awardings) {
@@ -134,7 +137,9 @@ export class RedditParsers {
   /**
    * Parse subreddit rules from about endpoint
    */
-  static parseSubredditRules(rules: any[]): Array<{ name: string; description: string }> {
+  static parseSubredditRules(
+    rules: Array<Record<string, unknown>>
+  ): Array<{ name: string; description: string }> {
     if (!Array.isArray(rules)) return [];
 
     return rules.map((rule) => ({
@@ -245,7 +250,11 @@ export class RedditParsers {
       return 'video';
     }
 
-    if ((post as any).is_gallery || (post as any).media_metadata) {
+    const postWithGallery = post as RedditPost & {
+      is_gallery?: boolean;
+      media_metadata?: Record<string, unknown>;
+    };
+    if (postWithGallery.is_gallery || postWithGallery.media_metadata) {
       return 'gallery';
     }
 
@@ -263,7 +272,7 @@ export class RedditParsers {
   /**
    * Extract crosspost information
    */
-  static extractCrosspostInfo(post: any): {
+  static extractCrosspostInfo(post: Record<string, unknown>): {
     originalSubreddit: string;
     originalAuthor: string;
     originalId: string;

@@ -176,7 +176,7 @@ export class RedditAuth {
         const error = new Error(
           `Reddit auth failed: ${response.status} ${response.statusText} - ${errorText}`
         );
-        (error as any).statusCode = response.status;
+        (error as Error & { statusCode: number }).statusCode = response.status;
         throw error;
       }
 

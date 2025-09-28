@@ -183,8 +183,8 @@ export class RedditPublicClient {
   /**
    * Get user profile (public info only)
    */
-  async getUser(username: string): Promise<any> {
-    return this.request<any>(`/user/${username}/about`);
+  async getUser(username: string): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>(`/user/${username}/about`);
   }
 
   /**

@@ -122,7 +122,7 @@ export class JsonExporter {
   /**
    * Export metadata to JSON
    */
-  async exportMetadata(metadata: any, outputPath: string): Promise<string> {
+  async exportMetadata(metadata: Record<string, unknown>, outputPath: string): Promise<string> {
     const transformedMetadata = this.transformMetadata(metadata);
     const jsonString = this.stringify(transformedMetadata);
     writeFileSync(outputPath, jsonString);
@@ -132,8 +132,8 @@ export class JsonExporter {
   /**
    * Transform complete data for export
    */
-  private transformData(data: ScrapeResult): any {
-    const result: any = {
+  private transformData(data: ScrapeResult): Record<string, unknown> {
+    const result: Record<string, unknown> = {
       posts: data.posts.map((post) => this.transformPost(post)),
     };
 
@@ -155,8 +155,8 @@ export class JsonExporter {
   /**
    * Transform post for export
    */
-  private transformPost(post: ForumPost): any {
-    const transformed: any = {
+  private transformPost(post: ForumPost): Record<string, unknown> {
+    const transformed: Record<string, unknown> = {
       id: post.id,
       title: post.title,
       author: post.author,
@@ -190,8 +190,8 @@ export class JsonExporter {
   /**
    * Transform comment for export
    */
-  private transformComment(comment: Comment): any {
-    const transformed: any = {
+  private transformComment(comment: Comment): Record<string, unknown> {
+    const transformed: Record<string, unknown> = {
       id: comment.id,
       postId: comment.postId,
       author: comment.author,
@@ -221,8 +221,8 @@ export class JsonExporter {
   /**
    * Transform user for export
    */
-  private transformUser(user: User): any {
-    const transformed: any = {
+  private transformUser(user: User): Record<string, unknown> {
+    const transformed: Record<string, unknown> = {
       id: user.id,
       username: user.username,
       platform: user.platform,
@@ -246,8 +246,8 @@ export class JsonExporter {
   /**
    * Transform metadata for export
    */
-  private transformMetadata(metadata: any): any {
-    const transformed: any = {
+  private transformMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+    const transformed: Record<string, unknown> = {
       ...metadata,
     };
 
@@ -281,7 +281,7 @@ export class JsonExporter {
   /**
    * Stringify data with formatting options
    */
-  private stringify(data: any): string {
+  private stringify(data: Record<string, unknown>): string {
     if (this.options.compress) {
       return JSON.stringify(data);
     }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { AdvancedLogger } from '../utils/advanced-logger.js';
 
 const advancedLogger = new AdvancedLogger();
@@ -24,7 +23,7 @@ export interface HealthCheckResult {
   status: 'pass' | 'fail' | 'warning';
   message: string;
   responseTime?: number;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 export interface HealthCheckConfig {
@@ -276,7 +275,7 @@ export class HealthChecker {
   /**
    * Get health metrics for monitoring
    */
-  public getMetrics(): Record<string, any> {
+  public getMetrics(): Record<string, unknown> {
     if (!this.lastStatus) {
       return {
         status: 'unknown',

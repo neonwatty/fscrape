@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * HackerNews scraper implementation
  * Extends base platform with HN-specific story and comment extraction
@@ -126,10 +125,13 @@ export class HackerNewsScraper {
     try {
       const result = await this.scrapePosts(category, options);
       return result.posts;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Re-throw rate limiting errors
-      if (error.response?.status === 429 || error.message?.includes('Rate limited')) {
-        throw error;
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status: number }; message?: string };
+        if (axiosError.response?.status === 429 || axiosError.message?.includes('Rate limited')) {
+          throw error;
+        }
       }
       // For other errors, return empty array
       return [];
@@ -196,10 +198,13 @@ export class HackerNewsScraper {
       let storyIds;
       try {
         storyIds = await this.client.getStoryList(storyType, limit);
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Re-throw rate limiting errors
-        if (error.response?.status === 429 || error.message?.includes('Rate limited')) {
-          throw error;
+        if (error && typeof error === 'object' && 'response' in error) {
+          const axiosError = error as { response?: { status: number }; message?: string };
+          if (axiosError.response?.status === 429 || axiosError.message?.includes('Rate limited')) {
+            throw error;
+          }
         }
         throw error;
       }
@@ -257,10 +262,13 @@ export class HackerNewsScraper {
       }
 
       this.logger.info(`Scraped ${posts.length} posts and ${comments.length} comments`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Re-throw rate limiting errors
-      if (error.response?.status === 429 || error.message?.includes('Rate limited')) {
-        throw error;
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status: number }; message?: string };
+        if (axiosError.response?.status === 429 || axiosError.message?.includes('Rate limited')) {
+          throw error;
+        }
       }
 
       this.logger.error('Error scraping posts:', error);
@@ -293,11 +301,12 @@ export class HackerNewsScraper {
         }
 
         return HackerNewsParsers.parsePost(item);
-      } catch (error: any) {
+      } catch (error: unknown) {
         this.logger.error(`Error scraping post (attempt ${attempt}/${maxRetries}):`, error);
 
         // Don't retry on non-network errors
         if (
+          error instanceof Error &&
           error.message &&
           !error.message.toLowerCase().includes('network') &&
           !error.message.toLowerCase().includes('fetch')
@@ -803,7 +812,7 @@ export class HackerNewsScraper {
     posts: ForumPost[];
     hasMore: boolean;
     totalResults: number;
-    paginationState?: any;
+    paginationState?: Record<string, unknown>;
   }> {
     // HackerNews doesn't have a native search API
     // This is a mock implementation for testing
@@ -815,7 +824,7 @@ export class HackerNewsScraper {
       paginationState: {
         currentPage: 1,
         totalPages: 1,
-      },
+      } as Record<string, unknown>,
     };
   }
 

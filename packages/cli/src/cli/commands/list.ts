@@ -8,6 +8,7 @@ import chalk from 'chalk';
 import { DatabaseManager } from '../../database/database.js';
 import { formatError } from '../validation.js';
 import { table } from 'table';
+import type { Platform } from '../../types/core.js';
 
 export interface ListCommandOptions {
   database?: string;
@@ -128,8 +129,18 @@ async function handleList(type: string, options: ListCommandOptions): Promise<vo
     await dbManager.initialize();
 
     // Build query options
-    const queryOptions: any = {
-      platform: options.platform,
+    const queryOptions: {
+      platform?: Platform;
+      limit: number;
+      offset: number;
+      sortBy?: string;
+      sortOrder?: string;
+      author?: string;
+      minScore?: number;
+      startDate?: Date;
+      endDate?: Date;
+    } = {
+      platform: options.platform as Platform | undefined,
       limit: options.limit || 10,
       offset: options.offset || 0,
       sortBy: options.sortBy,
@@ -160,7 +171,7 @@ async function handleList(type: string, options: ListCommandOptions): Promise<vo
     // Sort posts
     if (options.sortBy) {
       posts.sort((a, b) => {
-        let aVal: any, bVal: any;
+        let aVal: number, bVal: number;
         switch (options.sortBy) {
           case 'score':
             aVal = a.score || 0;
@@ -245,7 +256,19 @@ async function handleList(type: string, options: ListCommandOptions): Promise<vo
 /**
  * Handle list comments
  */
-async function handleListComments(options: any): Promise<void> {
+interface ListCommentsOptions {
+  database?: string;
+  platform?: string;
+  postId?: string;
+  limit?: number;
+  offset?: number;
+  author?: string;
+  minScore?: number;
+  format?: string;
+  verbose?: boolean;
+}
+
+async function handleListComments(options: ListCommentsOptions): Promise<void> {
   try {
     const dbManager = new DatabaseManager({
       type: 'sqlite',
@@ -254,8 +277,15 @@ async function handleListComments(options: any): Promise<void> {
     });
     await dbManager.initialize();
 
-    const queryOptions: any = {
-      platform: options.platform,
+    const queryOptions: {
+      platform?: Platform;
+      limit: number;
+      offset: number;
+      postIds?: string[];
+      author?: string;
+      minScore?: number;
+    } = {
+      platform: options.platform as Platform | undefined,
       limit: options.limit || 10,
       offset: options.offset || 0,
     };
@@ -338,7 +368,18 @@ async function handleListComments(options: any): Promise<void> {
 /**
  * Handle list users
  */
-async function handleListUsers(options: any): Promise<void> {
+interface ListUsersOptions {
+  database?: string;
+  platform?: string;
+  limit?: number;
+  offset?: number;
+  minKarma?: number;
+  sortBy?: string;
+  sortOrder?: string;
+  format?: string;
+}
+
+async function handleListUsers(options: ListUsersOptions): Promise<void> {
   try {
     const dbManager = new DatabaseManager({
       type: 'sqlite',
@@ -347,8 +388,13 @@ async function handleListUsers(options: any): Promise<void> {
     });
     await dbManager.initialize();
 
-    const queryOptions: any = {
-      platform: options.platform,
+    const queryOptions: {
+      platform?: Platform;
+      limit: number;
+      offset: number;
+      minKarma?: number;
+    } = {
+      platform: options.platform as Platform | undefined,
       limit: options.limit || 10,
       offset: options.offset || 0,
     };
@@ -367,7 +413,7 @@ async function handleListUsers(options: any): Promise<void> {
     // Sort users
     if (options.sortBy) {
       users.sort((a, b) => {
-        let aVal: any, bVal: any;
+        let aVal: number, bVal: number;
         switch (options.sortBy) {
           case 'created':
             aVal = new Date(a.createdAt || 0).getTime();
@@ -424,7 +470,14 @@ async function handleListUsers(options: any): Promise<void> {
 /**
  * Handle stats command
  */
-async function handleStats(options: any): Promise<void> {
+interface StatsOptions {
+  database?: string;
+  platform?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+async function handleStats(options: StatsOptions): Promise<void> {
   try {
     const dbManager = new DatabaseManager({
       type: 'sqlite',
@@ -454,12 +507,12 @@ async function handleStats(options: any): Promise<void> {
       console.log(chalk.cyan('\n📈 Platform Breakdown\n'));
       const platformTable = [['Platform', 'Posts', 'Comments', 'Users']];
 
-      Object.entries(stats.platformBreakdown).forEach(([platform, data]: [string, any]) => {
+      Object.entries(stats.platformBreakdown).forEach(([platform, count]: [string, number]) => {
         platformTable.push([
           platform,
-          data.posts?.toString() || '0',
-          data.comments?.toString() || '0',
-          data.users?.toString() || '0',
+          count.toString(),
+          '0', // Comments not available in current structure
+          '0', // Users not available in current structure
         ]);
       });
 
@@ -479,7 +532,15 @@ async function handleStats(options: any): Promise<void> {
 /**
  * Handle search command
  */
-async function handleSearch(query: string, options: any): Promise<void> {
+interface SearchOptions {
+  database?: string;
+  platform?: string;
+  limit?: number;
+  in?: string;
+  format?: string;
+}
+
+async function handleSearch(query: string, options: SearchOptions): Promise<void> {
   try {
     const dbManager = new DatabaseManager({
       type: 'sqlite',
@@ -492,7 +553,12 @@ async function handleSearch(query: string, options: any): Promise<void> {
 
     // Search in specified fields
     const searchFields = options.in ? options.in.split(',') : ['title', 'content'];
-    const searchOptions: any = {
+    const searchOptions: {
+      query: string;
+      fields: string[];
+      platform?: string;
+      limit: number;
+    } = {
       query,
       fields: searchFields,
       platform: options.platform,

@@ -51,7 +51,7 @@ export interface ErrorMetadata {
   userId?: string;
   platform?: string;
   operation?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   stackTrace?: string;
 }
 
@@ -99,7 +99,7 @@ export class BaseError extends Error {
   /**
    * Add context to error metadata
    */
-  public addContext(context: Record<string, any>): this {
+  public addContext(context: Record<string, unknown>): this {
     this.metadata.context = { ...this.metadata.context, ...context };
     return this;
   }
@@ -107,7 +107,7 @@ export class BaseError extends Error {
   /**
    * Get error context
    */
-  public get context(): Record<string, any> | undefined {
+  public get context(): Record<string, unknown> | undefined {
     return this.metadata.context;
   }
 
@@ -122,7 +122,7 @@ export class BaseError extends Error {
   /**
    * Convert error to JSON representation
    */
-  public toJSON(): Record<string, any> {
+  public toJSON(): Record<string, unknown> {
     return {
       name: this.name,
       message: this.message,
@@ -195,7 +195,7 @@ export class DatabaseConnectionError extends DatabaseError {
     this.host = host;
     this.port = port;
     this.database = database;
-    (this as any).recoveryStrategy = RecoveryStrategy.EXPONENTIAL_BACKOFF;
+    Object.assign(this, { recoveryStrategy: RecoveryStrategy.EXPONENTIAL_BACKOFF });
   }
 }
 
@@ -204,13 +204,13 @@ export class DatabaseConnectionError extends DatabaseError {
  */
 export class DatabaseQueryError extends DatabaseError {
   public readonly query: string | undefined;
-  public readonly params: any[] | undefined;
+  public readonly params: unknown[] | undefined;
   public readonly sqlState: string | undefined;
 
   constructor(
     message: string,
     query?: string,
-    params?: any[],
+    params?: unknown[],
     sqlState?: string,
     originalError?: Error
   ) {
@@ -265,7 +265,7 @@ export class DatabaseConstraintError extends DatabaseError {
     this.constraint = constraint;
     this.table = table;
     this.column = column;
-    (this as any).severity = ErrorSeverity.MEDIUM;
+    Object.assign(this, { severity: ErrorSeverity.MEDIUM });
   }
 }
 
@@ -297,10 +297,10 @@ export class ValidationError extends BaseError {
  */
 export class FieldValidationError extends ValidationError {
   public readonly fieldName: string;
-  public readonly fieldValue: any;
+  public readonly fieldValue: unknown;
   public readonly rules: string[];
 
-  constructor(message: string, fieldName: string, fieldValue: any, rules: string[]) {
+  constructor(message: string, fieldName: string, fieldValue: unknown, rules: string[]) {
     const fieldErrors = { [fieldName]: rules };
     super(message, fieldErrors, 'FIELD_VALIDATION_ERROR');
     this.fieldName = fieldName;
@@ -313,14 +313,14 @@ export class FieldValidationError extends ValidationError {
  * Schema validation error
  */
 export class SchemaValidationError extends ValidationError {
-  public readonly schema: any;
-  public readonly data: any;
+  public readonly schema: unknown;
+  public readonly data: unknown;
   public readonly schemaPath: string | undefined;
 
   constructor(
     message: string,
-    schema: any,
-    data: any,
+    schema: unknown,
+    data: unknown,
     validationErrors?: Record<string, string[]>,
     schemaPath?: string
   ) {
@@ -335,16 +335,16 @@ export class SchemaValidationError extends ValidationError {
  * Input sanitization error
  */
 export class InputSanitizationError extends ValidationError {
-  public readonly input: any;
+  public readonly input: unknown;
   public readonly sanitizationType: string;
   public readonly detectedIssues: string[];
 
-  constructor(message: string, input: any, sanitizationType: string, detectedIssues: string[]) {
+  constructor(message: string, input: unknown, sanitizationType: string, detectedIssues: string[]) {
     super(message, { input: detectedIssues }, 'INPUT_SANITIZATION_ERROR');
     this.input = input;
     this.sanitizationType = sanitizationType;
     this.detectedIssues = detectedIssues;
-    (this as any).severity = ErrorSeverity.MEDIUM;
+    Object.assign(this, { severity: ErrorSeverity.MEDIUM });
   }
 }
 
@@ -354,19 +354,19 @@ export class InputSanitizationError extends ValidationError {
 export class BusinessRuleError extends ValidationError {
   public readonly ruleName: string;
   public readonly ruleDescription: string | undefined;
-  public readonly context: Record<string, any> | undefined;
+  public readonly context: Record<string, unknown> | undefined;
 
   constructor(
     message: string,
     ruleName: string,
     ruleDescription?: string,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(message, undefined, 'BUSINESS_RULE_ERROR');
     this.ruleName = ruleName;
     this.ruleDescription = ruleDescription;
     this.context = context;
-    (this as any).severity = ErrorSeverity.MEDIUM;
+    Object.assign(this, { severity: ErrorSeverity.MEDIUM });
   }
 }
 
@@ -467,9 +467,9 @@ export class FileSystemError extends BaseError {
  */
 export class ConfigurationError extends BaseError {
   public readonly configKey: string | undefined;
-  public readonly configValue: any;
+  public readonly configValue: unknown;
 
-  constructor(message: string, configKey?: string, configValue?: any) {
+  constructor(message: string, configKey?: string, configValue?: unknown) {
     super(
       message,
       'CONFIG_ERROR',
@@ -492,7 +492,7 @@ export class MissingConfigError extends ConfigurationError {
   constructor(message: string, requiredKeys: string[], configKey?: string) {
     super(message, configKey, undefined);
     this.requiredKeys = requiredKeys;
-    (this as any).code = 'CONFIG_MISSING';
+    Object.assign(this, { code: 'CONFIG_MISSING' });
   }
 }
 
@@ -507,7 +507,7 @@ export class InvalidConfigError extends ConfigurationError {
   constructor(
     message: string,
     configKey: string,
-    configValue: any,
+    configValue: unknown,
     expectedType?: string,
     validationRule?: string
   ) {
@@ -515,7 +515,7 @@ export class InvalidConfigError extends ConfigurationError {
     this.expectedType = expectedType;
     this.actualType = typeof configValue;
     this.validationRule = validationRule;
-    (this as any).code = 'CONFIG_INVALID';
+    Object.assign(this, { code: 'CONFIG_INVALID' });
   }
 }
 
@@ -530,7 +530,7 @@ export class EnvironmentConfigError extends ConfigurationError {
     super(message, undefined, undefined);
     this.environment = environment || process.env.NODE_ENV;
     this.missingEnvVars = missingEnvVars;
-    (this as any).code = 'ENV_CONFIG_ERROR';
+    Object.assign(this, { code: 'ENV_CONFIG_ERROR' });
   }
 }
 
@@ -563,14 +563,14 @@ export class APIError extends NetworkError {
   public readonly statusCode: number | undefined;
   public readonly endpoint: string | undefined;
   public readonly method: string | undefined;
-  public readonly responseBody: any;
+  public readonly responseBody: unknown;
 
   constructor(
     message: string,
     statusCode?: number,
     endpoint?: string,
     method?: string,
-    responseBody?: any,
+    responseBody?: unknown,
     originalError?: Error
   ) {
     // Determine recovery strategy based on status code before calling super
@@ -592,8 +592,8 @@ export class APIError extends NetworkError {
     super(message, code, originalError);
 
     // Override properties set by NetworkError if needed
-    (this as any).recoveryStrategy = recoveryStrategy;
-    (this as any).isRetryable = isRetryable;
+    Object.assign(this, { recoveryStrategy });
+    Object.assign(this, { isRetryable });
 
     this.statusCode = statusCode;
     this.endpoint = endpoint;
@@ -611,9 +611,9 @@ export class APITimeoutError extends APIError {
   constructor(message: string, endpoint: string, timeoutMs: number, originalError?: Error) {
     super(message, 408, endpoint, undefined, undefined, originalError);
     this.timeoutMs = timeoutMs;
-    (this as any).code = 'API_TIMEOUT';
-    (this as any).isRetryable = true;
-    (this as any).recoveryStrategy = RecoveryStrategy.RETRY;
+    Object.assign(this, { code: 'API_TIMEOUT' });
+    Object.assign(this, { isRetryable: true });
+    Object.assign(this, { recoveryStrategy: RecoveryStrategy.RETRY });
   }
 }
 
@@ -626,8 +626,8 @@ export class APIResponseError extends APIError {
   constructor(message: string, endpoint: string, rawResponse?: string, originalError?: Error) {
     super(message, undefined, endpoint, undefined, undefined, originalError);
     this.rawResponse = rawResponse;
-    (this as any).code = 'API_RESPONSE_PARSE_ERROR';
-    (this as any).category = ErrorCategory.PARSING;
+    Object.assign(this, { code: 'API_RESPONSE_PARSE_ERROR' });
+    Object.assign(this, { category: ErrorCategory.PARSING });
   }
 }
 

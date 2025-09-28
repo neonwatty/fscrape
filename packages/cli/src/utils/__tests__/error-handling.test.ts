@@ -227,7 +227,7 @@ describe('Error Types', () => {
 
 describe('ErrorHandler', () => {
   let errorHandler: ErrorHandler;
-  let mockOperation: any;
+  let mockOperation: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     errorHandler = new ErrorHandler();
@@ -288,9 +288,9 @@ describe('ErrorHandler', () => {
   describe('Exponential Backoff', () => {
     it('should apply exponential backoff', async () => {
       const delays: number[] = [];
-      const originalSleep = (errorHandler as any).sleep;
+      const originalSleep = (errorHandler as unknown as Record<string, unknown>).sleep;
 
-      (errorHandler as any).sleep = vi.fn((ms: number) => {
+      (errorHandler as unknown as Record<string, unknown>).sleep = vi.fn((ms: number) => {
         delays.push(ms);
         return Promise.resolve();
       });
@@ -305,7 +305,7 @@ describe('ErrorHandler', () => {
       expect(delays.length).toBe(2);
       expect(delays[1]).toBeGreaterThan(delays[0]); // Exponential increase
 
-      (errorHandler as any).sleep = originalSleep;
+      (errorHandler as unknown as Record<string, unknown>).sleep = originalSleep;
     });
   });
 

@@ -254,7 +254,12 @@ export class DatabaseOperations {
   }
 
   // Statistics operations
-  getStatistics(platform?: Platform): any {
+  getStatistics(platform?: Platform): {
+    totalPosts: number;
+    totalComments: number;
+    totalUsers: number;
+    recentSessions: unknown[];
+  } {
     const db = this.connection.getDatabase();
 
     const baseQuery = platform ? ' WHERE platform = ?' : '';
@@ -262,13 +267,13 @@ export class DatabaseOperations {
 
     const postCount = db
       .prepare(`SELECT COUNT(*) as count FROM posts${baseQuery}`)
-      .get(...params) as any;
+      .get(...params) as { count: number };
     const commentCount = db
       .prepare(`SELECT COUNT(*) as count FROM comments${baseQuery}`)
-      .get(...params) as any;
+      .get(...params) as { count: number };
     const userCount = db
       .prepare(`SELECT COUNT(*) as count FROM users${baseQuery}`)
-      .get(...params) as any;
+      .get(...params) as { count: number };
 
     const recentSessions = db
       .prepare(

@@ -30,7 +30,72 @@ export interface SessionInfo {
 export interface UpsertResult {
   inserted: number;
   updated: number;
-  errors: Array<{ item: any; error: string }>;
+  errors: Array<{ item: unknown; error: string }>;
+}
+
+interface DatabaseRow {
+  [key: string]: unknown;
+}
+
+interface PostRow extends DatabaseRow {
+  id: string;
+  platform: string;
+  platform_id?: string;
+  title: string;
+  content?: string;
+  author: string;
+  author_id?: string;
+  url: string;
+  score: number;
+  comment_count: number;
+  created_at: number;
+  updated_at?: number;
+  metadata?: string;
+}
+
+interface CommentRow extends DatabaseRow {
+  id: string;
+  post_id: string;
+  platform: string;
+  parent_id?: string;
+  author: string;
+  author_id?: string;
+  content: string;
+  score: number;
+  created_at: number;
+  updated_at?: number;
+  depth: number;
+}
+
+interface UserRow extends DatabaseRow {
+  id: string;
+  platform: string;
+  username: string;
+  karma?: number;
+  created_at?: number;
+  last_seen_at: number;
+  metadata?: string;
+}
+
+interface SessionRow extends DatabaseRow {
+  id: number;
+  session_id: string;
+  platform: string;
+  query_type?: string;
+  query_value?: string;
+  status: string;
+  total_posts?: number;
+  total_comments?: number;
+  total_users?: number;
+  started_at: number;
+  completed_at?: number;
+  last_error?: string;
+  metadata?: string;
+}
+
+interface DatabaseUpsertResult {
+  changes: number;
+  inserted: boolean;
 }
 
 export class DatabaseManager {
@@ -72,7 +137,7 @@ export class DatabaseManager {
   // Post Operations
   // ============================================================================
 
-  upsertPost(post: ForumPost): any {
+  upsertPost(post: ForumPost): DatabaseUpsertResult {
     if (!this.queries) {
       throw new Error('DatabaseManager not initialized. Call initialize() first.');
     }
@@ -149,7 +214,7 @@ export class DatabaseManager {
     const row = this.db
       .prepare('SELECT * FROM posts WHERE platform = ? AND id = ?')
       .get(platform, id);
-    return row ? this.mapRowToPost(row) : null;
+    return row ? this.mapRowToPost(row as PostRow) : null;
   }
 
   getPosts(platform?: Platform, limit = 100, offset = 0): { posts: ForumPost[]; total: number } {
@@ -158,11 +223,11 @@ export class DatabaseManager {
       : this.queries.posts.getAll.all(limit, offset);
 
     const total = platform
-      ? (this.queries.posts.countByPlatform.get(platform) as any).count
-      : (this.queries.posts.count.get() as any).count;
+      ? (this.queries.posts.countByPlatform.get(platform) as { count: number }).count
+      : (this.queries.posts.count.get() as { count: number }).count;
 
     return {
-      posts: posts.map((row) => this.mapRowToPost(row as any)),
+      posts: posts.map((row) => this.mapRowToPost(row as PostRow)),
       total,
     };
   }
@@ -171,7 +236,7 @@ export class DatabaseManager {
   // Comment Operations
   // ============================================================================
 
-  upsertComment(comment: Comment): any {
+  upsertComment(comment: Comment): DatabaseUpsertResult {
     if (!this.queries) {
       throw new Error('DatabaseManager not initialized. Call initialize() first.');
     }
@@ -242,14 +307,14 @@ export class DatabaseManager {
 
   getCommentsByPost(postId: string): Comment[] {
     const rows = this.queries.comments.getByPost.all(postId);
-    return rows.map((row) => this.mapRowToComment(row as any));
+    return rows.map((row) => this.mapRowToComment(row as CommentRow));
   }
 
   // ============================================================================
   // User Operations
   // ============================================================================
 
-  upsertUser(user: User): any {
+  upsertUser(user: User): DatabaseUpsertResult {
     if (!this.queries) {
       throw new Error('DatabaseManager not initialized. Call initialize() first.');
     }
@@ -398,7 +463,7 @@ export class DatabaseManager {
     }>
   ): void {
     // Initialize params with all required fields for the query
-    const params: any = {
+    const params: Record<string, unknown> = {
       id: sessionId,
       status: null,
       totalPosts: null,
@@ -426,7 +491,7 @@ export class DatabaseManager {
 
   getSession(sessionId: number): SessionInfo | null {
     const row = this.db.prepare('SELECT * FROM scraping_sessions WHERE id = ?').get(sessionId);
-    return row ? this.mapRowToSession(row as any) : null;
+    return row ? this.mapRowToSession(row as SessionRow) : null;
   }
 
   getResumableSessions(platform?: Platform): SessionInfo[] {
@@ -440,7 +505,7 @@ export class DatabaseManager {
           .prepare('SELECT * FROM scraping_sessions WHERE status IN ("pending", "running")')
           .all();
 
-    return rows.map((row) => this.mapRowToSession(row as any));
+    return rows.map((row) => this.mapRowToSession(row as SessionRow));
   }
 
   /**
@@ -456,7 +521,7 @@ export class DatabaseManager {
       )
       .all(limit);
 
-    return rows.map((row) => this.mapRowToSession(row as any));
+    return rows.map((row) => this.mapRowToSession(row as SessionRow));
   }
 
   /**
@@ -476,7 +541,7 @@ export class DatabaseManager {
       ? this.db.prepare(query).all(platform, limit)
       : this.db.prepare(query).all(limit);
 
-    return rows.map((row) => this.mapRowToSession(row as any));
+    return rows.map((row) => this.mapRowToSession(row as SessionRow));
   }
 
   // ============================================================================
@@ -489,9 +554,9 @@ export class DatabaseManager {
     users: UpsertResult;
   } {
     const results = {
-      posts: { inserted: 0, updated: 0, errors: [] as any[] },
-      comments: { inserted: 0, updated: 0, errors: [] as any[] },
-      users: { inserted: 0, updated: 0, errors: [] as any[] },
+      posts: { inserted: 0, updated: 0, errors: [] as Array<{ item: unknown; error: string }> },
+      comments: { inserted: 0, updated: 0, errors: [] as Array<{ item: unknown; error: string }> },
+      users: { inserted: 0, updated: 0, errors: [] as Array<{ item: unknown; error: string }> },
     };
 
     // Use a transaction for all operations
@@ -560,7 +625,7 @@ export class DatabaseManager {
     recentActivity: number;
   }> {
     let whereClause = '1=1';
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (options.platform) {
       whereClause += ' AND platform = ?';
@@ -631,12 +696,12 @@ export class DatabaseManager {
    * Search content in posts and comments
    */
   async searchContent(options: { query?: string; platform?: string; limit?: number }): Promise<{
-    posts: any[];
-    comments: any[];
+    posts: PostRow[];
+    comments: CommentRow[];
   }> {
     const limit = options.limit || 20;
-    let posts: any[] = [];
-    let comments: any[] = [];
+    let posts: PostRow[] = [];
+    let comments: CommentRow[] = [];
 
     if (options.query) {
       // Search posts by title or content
@@ -645,7 +710,7 @@ export class DatabaseManager {
         WHERE (title LIKE ? OR content LIKE ?)
       `;
       const searchPattern = `%${options.query}%`;
-      const params: any[] = [searchPattern, searchPattern];
+      const params: unknown[] = [searchPattern, searchPattern];
 
       if (options.platform) {
         postQuery += ' AND platform = ?';
@@ -662,7 +727,7 @@ export class DatabaseManager {
         SELECT * FROM comments
         WHERE content LIKE ?
       `;
-      const commentParams: any[] = [searchPattern];
+      const commentParams: unknown[] = [searchPattern];
 
       if (options.platform) {
         commentQuery += ' AND platform = ?';
@@ -676,7 +741,7 @@ export class DatabaseManager {
     } else {
       // Return recent posts and comments
       let postQuery = 'SELECT * FROM posts';
-      const params: any[] = [];
+      const params: unknown[] = [];
 
       if (options.platform) {
         postQuery += ' WHERE platform = ?';
@@ -689,7 +754,7 @@ export class DatabaseManager {
       posts = this.db.prepare(postQuery).all(...params);
 
       let commentQuery = 'SELECT * FROM comments';
-      const commentParams: any[] = [];
+      const commentParams: unknown[] = [];
 
       if (options.platform) {
         commentQuery += ' WHERE platform = ?';
@@ -750,11 +815,11 @@ export class DatabaseManager {
     return 'reddit'; // Default
   }
 
-  private mapRowToPost(row: any): ForumPost {
+  private mapRowToPost(row: PostRow): ForumPost {
     return {
       id: row.id,
       title: row.title,
-      content: row.content,
+      content: row.content || null,
       author: row.author,
       authorId: row.author_id || undefined,
       url: row.url,
@@ -767,7 +832,7 @@ export class DatabaseManager {
     };
   }
 
-  private mapRowToComment(row: any): Comment {
+  private mapRowToComment(row: CommentRow): Comment {
     return {
       id: row.id,
       postId: row.post_id,
@@ -783,7 +848,7 @@ export class DatabaseManager {
     };
   }
 
-  private mapRowToSession(row: any): SessionInfo {
+  private mapRowToSession(row: SessionRow): SessionInfo {
     const session: SessionInfo = {
       id: row.id,
       sessionId: row.id, // Use numeric id as sessionId
@@ -809,13 +874,13 @@ export class DatabaseManager {
     if (row.last_error) {
       session.lastError = row.last_error;
       // Add errorMessage property for test compatibility
-      (session as any).errorMessage = row.last_error;
+      (session as SessionInfo & { errorMessage?: string }).errorMessage = row.last_error;
     }
 
     return session;
   }
 
-  private mapRowToUser(row: any): User {
+  private mapRowToUser(row: UserRow): User {
     return {
       id: row.id,
       username: row.username,
@@ -841,7 +906,7 @@ export class DatabaseManager {
     offset?: number;
   }): ForumPost[] {
     let query = 'SELECT * FROM posts WHERE 1=1';
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (options.platform) {
       query += ' AND platform = ?';
@@ -871,7 +936,7 @@ export class DatabaseManager {
     }
 
     const rows = this.db.prepare(query).all(...params);
-    return rows.map((row) => this.mapRowToPost(row as any));
+    return rows.map((row) => this.mapRowToPost(row as PostRow));
   }
 
   /**
@@ -885,7 +950,7 @@ export class DatabaseManager {
     limit?: number;
   }): Comment[] {
     let query = 'SELECT * FROM comments WHERE 1=1';
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (options.platform) {
       query += ' AND platform = ?';
@@ -916,12 +981,12 @@ export class DatabaseManager {
     }
 
     const rows = this.db.prepare(query).all(...params);
-    return rows.map((row) => this.mapRowToComment(row as any));
+    return rows.map((row) => this.mapRowToComment(row as CommentRow));
   }
 
   queryUsers(options: { platform?: Platform; limit?: number; minKarma?: number }): User[] {
     let query = 'SELECT * FROM users WHERE 1=1';
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (options.platform) {
       query += ' AND platform = ?';
@@ -941,7 +1006,7 @@ export class DatabaseManager {
     }
 
     const rows = this.db.prepare(query).all(...params);
-    return rows.map((row) => this.mapRowToUser(row as any));
+    return rows.map((row) => this.mapRowToUser(row as UserRow));
   }
 
   /**
@@ -954,7 +1019,7 @@ export class DatabaseManager {
   } {
     const cutoffTime = Date.now() - options.olderThanDays * 24 * 60 * 60 * 1000;
     let platformClause = '';
-    const params: any[] = [cutoffTime];
+    const params: unknown[] = [cutoffTime];
 
     if (options.platform) {
       platformClause = ' AND platform = ?';
@@ -990,7 +1055,7 @@ export class DatabaseManager {
   } {
     const cutoffTime = Date.now() - options.olderThanDays * 24 * 60 * 60 * 1000;
     let platformClause = '';
-    const params: any[] = [cutoffTime];
+    const params: unknown[] = [cutoffTime];
 
     if (options.platform) {
       platformClause = ' AND platform = ?';
