@@ -312,9 +312,15 @@ export class RedditScraper extends BasePlatform {
 
       return this.client.convertToForumPost(post);
     } catch (error) {
+      // Check both the error message and details for not found/network errors
+      const errorMessage = (error as { message?: string })?.message?.toLowerCase() || '';
+      const detailsMessage = (error as { details?: { message?: string } })?.details?.message?.toLowerCase() || '';
+
       if (
-        (error instanceof Error && error.message?.toLowerCase().includes('not found')) ||
-        (error instanceof Error && error.message?.toLowerCase().includes('network error'))
+        errorMessage.includes('not found') ||
+        errorMessage.includes('network error') ||
+        detailsMessage.includes('not found') ||
+        detailsMessage.includes('network error')
       ) {
         return null;
       }
@@ -363,13 +369,19 @@ export class RedditScraper extends BasePlatform {
 
       return this.client.convertToUser(user);
     } catch (error) {
+      // Check both the error message and details for not found errors
+      const errorMessage = (error as { message?: string })?.message?.toLowerCase() || '';
+      const detailsMessage = (error as { details?: { message?: string } })?.details?.message?.toLowerCase() || '';
+      const statusCode = (error as { statusCode?: number })?.statusCode;
+      const detailsStatusCode = (error as { details?: { statusCode?: number } })?.details?.statusCode;
+
       if (
-        (error &&
-          typeof error === 'object' &&
-          'statusCode' in error &&
-          (error as { statusCode: number }).statusCode === 404) ||
-        (error instanceof Error && error.message?.toLowerCase().includes('user not found')) ||
-        (error instanceof Error && error.message?.toLowerCase().includes('404 not found'))
+        statusCode === 404 ||
+        detailsStatusCode === 404 ||
+        errorMessage.includes('user not found') ||
+        errorMessage.includes('404 not found') ||
+        detailsMessage.includes('user not found') ||
+        detailsMessage.includes('404 not found')
       ) {
         return null;
       }

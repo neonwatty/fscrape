@@ -359,8 +359,20 @@ export abstract class BasePlatform {
       }
     }
 
-    // All attempts failed
-    this.handleApiError(lastError, context);
+    // All attempts failed - throw the error so calling methods can handle it
+    const message = (lastError as Error)?.message || 'Unknown error';
+    this.logger.error(`${context}: ${message}`, lastError);
+
+    const scrapeError: ScrapeError = {
+      code: (lastError as { code?: string })?.code || 'UNKNOWN_ERROR',
+      message: `${this.platform} API error in ${context}: ${message}`,
+      details: lastError,
+      timestamp: new Date(),
+      platform: this.platform,
+      retryable: false, // Already retried
+    };
+
+    throw scrapeError;
   }
 
   /**
