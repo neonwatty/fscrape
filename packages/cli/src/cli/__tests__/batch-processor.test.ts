@@ -25,11 +25,53 @@ vi.mock('inquirer');
 
 describe('BatchProcessor', () => {
   let processor: BatchProcessor;
-  let mockFormatter: any;
-  let mockDatabase: any;
-  let mockRedditScraper: any;
-  let mockHackerNewsScraper: any;
-  let mockExportManager: any;
+  let mockFormatter: {
+    startBatch: ReturnType<typeof vi.fn>;
+    updateBatch: ReturnType<typeof vi.fn>;
+    endBatch: ReturnType<typeof vi.fn>;
+    completeBatch: ReturnType<typeof vi.fn>;
+    log: ReturnType<typeof vi.fn>;
+    error: ReturnType<typeof vi.fn>;
+    success: ReturnType<typeof vi.fn>;
+    warning: ReturnType<typeof vi.fn>;
+    info: ReturnType<typeof vi.fn>;
+    startSpinner: ReturnType<typeof vi.fn>;
+    stopSpinner: ReturnType<typeof vi.fn>;
+  };
+  let mockDatabase: {
+    initialize: ReturnType<typeof vi.fn>;
+    connect: ReturnType<typeof vi.fn>;
+    close: ReturnType<typeof vi.fn>;
+    upsertPost: ReturnType<typeof vi.fn>;
+    queryPosts: ReturnType<typeof vi.fn>;
+    queryComments: ReturnType<typeof vi.fn>;
+    queryUsers: ReturnType<typeof vi.fn>;
+    getAllPosts: ReturnType<typeof vi.fn>;
+    getAllComments: ReturnType<typeof vi.fn>;
+    getAllUsers: ReturnType<typeof vi.fn>;
+    deletePosts: ReturnType<typeof vi.fn>;
+    deleteComments: ReturnType<typeof vi.fn>;
+    deleteUsers: ReturnType<typeof vi.fn>;
+    backup: ReturnType<typeof vi.fn>;
+    restore: ReturnType<typeof vi.fn>;
+    savePosts: ReturnType<typeof vi.fn>;
+    saveComments: ReturnType<typeof vi.fn>;
+    saveUsers: ReturnType<typeof vi.fn>;
+  };
+  let mockRedditScraper: {
+    scrapeSubreddit: ReturnType<typeof vi.fn>;
+    scrapeCategory: ReturnType<typeof vi.fn>;
+    scrapePost: ReturnType<typeof vi.fn>;
+  };
+  let mockHackerNewsScraper: {
+    scrapeStory: ReturnType<typeof vi.fn>;
+    scrapePost: ReturnType<typeof vi.fn>;
+    scrapePosts: ReturnType<typeof vi.fn>;
+    scrapeTopStories: ReturnType<typeof vi.fn>;
+  };
+  let mockExportManager: {
+    exportData: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     // Setup mocks
@@ -132,11 +174,21 @@ describe('BatchProcessor', () => {
     };
 
     // Mock constructor returns
-    vi.mocked(OutputFormatter).mockImplementation(() => mockFormatter);
-    vi.mocked(DatabaseManager).mockImplementation(() => mockDatabase);
-    vi.mocked(RedditScraper).mockImplementation(() => mockRedditScraper);
-    vi.mocked(HackerNewsScraper).mockImplementation(() => mockHackerNewsScraper);
-    vi.mocked(ExportManager).mockImplementation(() => mockExportManager);
+    vi.mocked(OutputFormatter).mockImplementation(
+      () => mockFormatter as Partial<OutputFormatter> as OutputFormatter
+    );
+    vi.mocked(DatabaseManager).mockImplementation(
+      () => mockDatabase as Partial<DatabaseManager> as DatabaseManager
+    );
+    vi.mocked(RedditScraper).mockImplementation(
+      () => mockRedditScraper as Partial<RedditScraper> as RedditScraper
+    );
+    vi.mocked(HackerNewsScraper).mockImplementation(
+      () => mockHackerNewsScraper as Partial<HackerNewsScraper> as HackerNewsScraper
+    );
+    vi.mocked(ExportManager).mockImplementation(
+      () => mockExportManager as Partial<ExportManager> as ExportManager
+    );
   });
 
   afterEach(() => {
@@ -174,7 +226,7 @@ describe('BatchProcessor', () => {
         operations: [{ type: 'scrape', platform: 'reddit', items: ['test'] }],
         parallel: true,
       };
-      (fs.readFile as any).mockResolvedValueOnce(JSON.stringify(mockConfig));
+      vi.mocked(fs.readFile).mockResolvedValueOnce(JSON.stringify(mockConfig));
 
       const config = await BatchProcessor.loadFromFile('batch.json');
       expect(config).toEqual(mockConfig);
@@ -187,7 +239,7 @@ scrape reddit /r/programming
 export posts ./exports
 clean old-posts
 `;
-      (fs.readFile as any).mockResolvedValueOnce(textContent);
+      vi.mocked(fs.readFile).mockResolvedValueOnce(textContent);
 
       const config = await BatchProcessor.loadFromFile('batch.txt');
       expect(config.operations).toHaveLength(3);
@@ -197,7 +249,7 @@ clean old-posts
     });
 
     it('should throw error for unsupported file format', async () => {
-      (fs.readFile as any).mockResolvedValueOnce('content');
+      vi.mocked(fs.readFile).mockResolvedValueOnce('content');
       await expect(BatchProcessor.loadFromFile('batch.xml')).rejects.toThrow(
         'Unsupported batch file format'
       );

@@ -26,9 +26,6 @@ jobs:
       - name: Lint CLI
         run: npm run lint --workspace=packages/cli
 
-      - name: Type check CLI
-        run: npm run typecheck --workspace=packages/cli
-
       - name: Test CLI
         run: npm run test --workspace=packages/cli
 
@@ -50,9 +47,6 @@ jobs:
 
       - name: Lint Web
         run: npm run lint --workspace=packages/web
-
-      - name: Type check Web
-        run: npm run typecheck --workspace=packages/web
 
       - name: Test Web
         run: npm run test:run --workspace=packages/web

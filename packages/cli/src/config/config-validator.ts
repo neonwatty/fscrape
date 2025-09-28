@@ -445,7 +445,10 @@ export function mergeConfigs(...configs: PartialConfig[]): Config {
 /**
  * Deep merge utility for configuration objects
  */
-function deepMerge(target: any, source: any): any {
+function deepMerge(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>
+): Record<string, unknown> {
   if (source === undefined || source === null) {
     return target;
   }
@@ -466,7 +469,10 @@ function deepMerge(target: any, source: any): any {
         result[key] !== null &&
         !Array.isArray(result[key])
       ) {
-        result[key] = deepMerge(result[key], source[key]);
+        result[key] = deepMerge(
+          result[key] as Record<string, unknown>,
+          source[key] as Record<string, unknown>
+        );
       } else {
         result[key] = source[key];
       }

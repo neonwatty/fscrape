@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Reddit platform implementation exports
  */
@@ -23,7 +22,9 @@ export type { RedditTokenResponse, RedditAuthState } from './auth.js';
 // Import for platform constructor
 // import { RedditScraper } from "./scraper.js";
 import type { PlatformConstructor } from '../platform-factory.js';
-import type { BasePlatform, BasePlatformConfig } from '../base-platform.js';
+import type { BasePlatform, BasePlatformConfig, ScrapeOptions } from '../base-platform.js';
+import type { RateLimiter } from '../../scrapers/rate-limiter.js';
+import type { ForumPost } from '../../types/core.js';
 import type winston from 'winston';
 
 // Import the public client instead of the OAuth scraper
@@ -67,7 +68,7 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
     return Promise.resolve();
   }
 
-  async scrapePosts(options?: any) {
+  async scrapePosts(options?: ScrapeOptions) {
     const subreddit = options?.subreddit || 'all';
     const limit = options?.limit || 25;
     const sort = options?.sortBy || 'hot';
@@ -76,13 +77,13 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
     return listing.data.children.map((child) => this.client.convertPost(child.data));
   }
 
-  async scrapeCategory(category: string, options?: any) {
+  async scrapeCategory(category: string, options?: ScrapeOptions) {
     const limit = options?.limit || 25;
     const sort = options?.sortBy || 'hot';
 
     // If limit > 100, we need to paginate
     if (limit > 100) {
-      const allPosts: any[] = [];
+      const allPosts: ForumPost[] = [];
       let after: string | undefined = undefined;
       const pageSize = 100;
       const totalPages = Math.ceil(limit / pageSize);
@@ -95,9 +96,7 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
           break; // No more posts
         }
 
-        const posts = listing.data.children.map((child: any) =>
-          this.client.convertPost(child.data)
-        );
+        const posts = listing.data.children.map((child) => this.client.convertPost(child.data));
         allPosts.push(...posts);
 
         // Get the 'after' token for next page
@@ -139,7 +138,7 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
     }
   }
 
-  async scrapeComments(postId: string, options?: any) {
+  async scrapeComments(postId: string, options?: ScrapeOptions) {
     const subreddit = options?.subreddit || 'all';
     const sort = options?.sort || 'best';
     const limit = options?.limit;
@@ -177,7 +176,7 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
     }
   }
 
-  async search(query: string, options?: any) {
+  async search(query: string, options?: ScrapeOptions) {
     const subreddit = options?.subreddit || 'all';
     const limit = options?.limit || 25;
     const sort = options?.sort || 'relevance';
@@ -186,7 +185,7 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
     return listing.data.children.map((child) => this.client.convertPost(child.data));
   }
 
-  async getTrending(options?: any) {
+  async getTrending(options?: ScrapeOptions) {
     const limit = options?.limit || 25;
 
     // Use "hot" from popular subreddits as trending
@@ -207,12 +206,12 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
     return true; // No auth refresh needed
   }
 
-  setRateLimiter(_rateLimiter: any) {
+  setRateLimiter(_rateLimiter: RateLimiter) {
     // Public client handles its own simple rate limiting
     // This is a no-op for compatibility
   }
 
-  async scrape(options?: any) {
+  async scrape(options?: ScrapeOptions) {
     // Generic scrape method - delegate to appropriate specific method
     if (options?.subreddit) {
       const posts = await this.scrapeCategory(options.subreddit, options);
@@ -220,7 +219,7 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
         posts,
         comments: [],
         metadata: {
-          platform: 'reddit' as any,
+          platform: 'reddit' as const,
           totalPosts: posts.length,
           scrapedAt: new Date(),
           subreddit: options.subreddit,
@@ -233,7 +232,7 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
         posts,
         comments: [],
         metadata: {
-          platform: 'reddit' as any,
+          platform: 'reddit' as const,
           totalPosts: posts.length,
           scrapedAt: new Date(),
           subreddit: 'popular',
@@ -241,7 +240,7 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
       };
     }
   }
-} as any;
+};
 
 // Default export for platform registration
 export default RedditPlatform;

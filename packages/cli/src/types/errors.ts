@@ -13,7 +13,11 @@ export type AppError = Error | BaseError | NodeJS.ErrnoException | unknown;
  * Type guard for Node.js system errors (e.g., file system errors)
  */
 export function isNodeError(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && 'code' in error && typeof (error as any).code === 'string';
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    typeof (error as NodeJS.ErrnoException).code === 'string'
+  );
 }
 
 /**
@@ -49,7 +53,7 @@ export function getErrorCode(error: unknown): string | undefined {
   if (isBaseError(error)) return error.code;
   if (isNodeError(error)) return error.code;
   if (error && typeof error === 'object' && 'code' in error) {
-    return String((error as any).code);
+    return String((error as Record<string, unknown>).code);
   }
   return undefined;
 }
@@ -60,7 +64,7 @@ export function getErrorCode(error: unknown): string | undefined {
 export function getErrorStack(error: unknown): string | undefined {
   if (isError(error)) return error.stack;
   if (error && typeof error === 'object' && 'stack' in error) {
-    return String((error as any).stack);
+    return String((error as Record<string, unknown>).stack);
   }
   return undefined;
 }

@@ -26,7 +26,7 @@ import {
 
 describe('ErrorHandler', () => {
   let errorHandler: ErrorHandler;
-  let consoleLogSpy: any;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     errorHandler = new ErrorHandler();
@@ -76,18 +76,18 @@ describe('ErrorHandler', () => {
       );
       const operation = vi.fn().mockRejectedValue(error);
 
-      let caughtError: any;
+      let caughtError: unknown;
       try {
         await errorHandler.handle(operation, {
           name: 'test_operation',
           metadata: { userId: '123' },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         caughtError = err;
       }
 
       expect(caughtError).toBeDefined();
-      expect(caughtError.context).toMatchObject({
+      expect((caughtError as BaseError).context).toMatchObject({
         operation: 'test_operation',
         userId: '123',
       });
@@ -638,9 +638,9 @@ describe('ErrorHandler', () => {
 
       try {
         await handler.handle(operation, { name: 'test_op' });
-      } catch (error: any) {
+      } catch (error: unknown) {
         expect(error).toBeInstanceOf(BaseError);
-        expect(error.message).toBe('string error');
+        expect((error as BaseError).message).toBe('string error');
       }
     });
 
@@ -653,18 +653,18 @@ describe('ErrorHandler', () => {
 
       const operation = vi.fn().mockRejectedValue(originalError);
 
-      let caughtError: any;
+      let caughtError: unknown;
       try {
         await handler.handle(operation, { name: 'test_op' });
-      } catch (error: any) {
+      } catch (error: unknown) {
         caughtError = error;
       }
 
       expect(caughtError).toBeDefined();
-      expect(caughtError.code).toBe('NETWORK_ERROR');
-      expect(caughtError.context).toBeDefined();
-      expect(caughtError.context.requestId).toBe('123');
-      expect(caughtError.context.operation).toBe('test_op');
+      expect((caughtError as BaseError).code).toBe('NETWORK_ERROR');
+      expect((caughtError as BaseError).context).toBeDefined();
+      expect((caughtError as BaseError).context.requestId).toBe('123');
+      expect((caughtError as BaseError).context.operation).toBe('test_op');
     });
   });
 

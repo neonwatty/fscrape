@@ -39,14 +39,27 @@ export function createInitCommand(): Command {
     .option('--no-interactive', 'Skip interactive prompts')
     .option('--skip-database', 'Skip database initialization')
     .option('--template <template>', 'Configuration template (minimal, full)', 'minimal')
-    .action(async (directory: string, options: any) => {
-      try {
-        await handleInit(directory, options);
-      } catch (error) {
-        console.error(chalk.red(formatError(error)));
-        process.exit(1);
+    .action(
+      async (
+        directory: string,
+        options: {
+          name?: string;
+          database?: string;
+          platform?: string;
+          force?: boolean;
+          interactive?: boolean;
+          skipDatabase?: boolean;
+          template?: string;
+        }
+      ) => {
+        try {
+          await handleInit(directory, options);
+        } catch (error) {
+          console.error(chalk.red(formatError(error)));
+          process.exit(1);
+        }
       }
-    });
+    );
 
   return command;
 }
@@ -54,7 +67,17 @@ export function createInitCommand(): Command {
 /**
  * Handle the init command
  */
-async function handleInit(directory: string, options: any): Promise<void> {
+interface InitCommandOptions {
+  name?: string;
+  database?: string;
+  platform?: string;
+  force?: boolean;
+  interactive?: boolean;
+  skipDatabase?: boolean;
+  template?: string;
+}
+
+async function handleInit(directory: string, options: InitCommandOptions): Promise<void> {
   const projectDir = resolve(directory);
   const configPath = join(projectDir, 'fscrape.config.json');
 
@@ -97,12 +120,15 @@ async function handleInit(directory: string, options: any): Promise<void> {
   let initOptions: InitOptions;
 
   if (options.interactive !== false && process.stdin.isTTY) {
-    initOptions = await promptForOptions(options);
+    initOptions = await promptForOptions({
+      ...options,
+      platform: options.platform as Platform | undefined,
+    });
   } else {
     initOptions = validateInitOptions({
       name: options.name || `fscrape-${Date.now()}`,
       database: options.database,
-      platform: options.platform,
+      platform: options.platform as Platform | undefined,
       force: options.force,
     });
   }
@@ -236,7 +262,7 @@ async function handleInit(directory: string, options: any): Promise<void> {
 /**
  * Prompt for configuration options
  */
-async function promptForOptions(existingOptions: any): Promise<InitOptions> {
+async function promptForOptions(existingOptions: Partial<InitOptions>): Promise<InitOptions> {
   const questions = [];
 
   if (!existingOptions.name) {

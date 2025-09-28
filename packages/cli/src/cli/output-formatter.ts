@@ -523,7 +523,7 @@ export class OutputFormatter {
   /**
    * Format statistics
    */
-  formatStats(stats: Record<string, any>): void {
+  formatStats(stats: Record<string, unknown>): void {
     if (this.options.format === 'json') {
       console.log(JSON.stringify(stats, null, 2));
       return;

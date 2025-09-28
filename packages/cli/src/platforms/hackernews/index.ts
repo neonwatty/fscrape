@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * HackerNews platform module exports
  */
@@ -14,7 +13,8 @@ export { HackerNewsParsers, HackerNewsValidators } from './parsers.js';
 // Import for platform constructor
 import { HackerNewsScraper } from './scraper.js';
 import type { PlatformConstructor } from '../platform-factory.js';
-import type { BasePlatform, BasePlatformConfig } from '../base-platform.js';
+import type { BasePlatform, BasePlatformConfig, ScrapeOptions } from '../base-platform.js';
+import type { RateLimiter } from '../../scrapers/rate-limiter.js';
 import type winston from 'winston';
 
 /**
@@ -41,11 +41,11 @@ export const HackerNewsPlatform: PlatformConstructor = class implements BasePlat
     return this.scraper.initialize();
   }
 
-  async scrapePosts(category: string, options: any) {
+  async scrapePosts(category: string, options: ScrapeOptions) {
     return this.scraper.scrapePosts(category, options);
   }
 
-  async scrapePost(postId: string, options: any) {
+  async scrapePost(postId: string, options: ScrapeOptions) {
     return this.scraper.scrapePost(postId, options);
   }
 
@@ -53,7 +53,7 @@ export const HackerNewsPlatform: PlatformConstructor = class implements BasePlat
     return this.scraper.scrapeUser(username);
   }
 
-  async scrape(options: any) {
+  async scrape(options: ScrapeOptions) {
     // Default scrape implementation - scrape top stories
     const posts = await this.scraper.scrapePosts('topstories', {
       limit: options?.limit || 10,
@@ -70,15 +70,15 @@ export const HackerNewsPlatform: PlatformConstructor = class implements BasePlat
     };
   }
 
-  async scrapeCategory(category: string, options: any) {
+  async scrapeCategory(category: string, options: ScrapeOptions) {
     return this.scraper.scrapeCategory(category, options);
   }
 
-  async scrapeComments(postId: string, options: any) {
+  async scrapeComments(postId: string, options: ScrapeOptions) {
     return this.scraper.scrapeComments(postId, options);
   }
 
-  async search(query: string, options: any) {
+  async search(query: string, options: ScrapeOptions) {
     return this.scraper.search(query, options);
   }
 
@@ -90,11 +90,11 @@ export const HackerNewsPlatform: PlatformConstructor = class implements BasePlat
     return this.scraper.validateAuth();
   }
 
-  setRateLimiter(_rateLimiter: any) {
+  setRateLimiter(_rateLimiter: RateLimiter) {
     // HackerNewsScraper doesn't use external rate limiter, has internal delay
     // This is a no-op for compatibility
   }
-} as any;
+};
 
 // Default export for platform registration
 export default HackerNewsPlatform;

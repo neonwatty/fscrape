@@ -312,9 +312,16 @@ export class RedditScraper extends BasePlatform {
 
       return this.client.convertToForumPost(post);
     } catch (error) {
+      // Check both the error message and details for not found/network errors
+      const errorMessage = (error as { message?: string })?.message?.toLowerCase() || '';
+      const detailsMessage =
+        (error as { details?: { message?: string } })?.details?.message?.toLowerCase() || '';
+
       if (
-        (error as any).message?.toLowerCase().includes('not found') ||
-        (error as any).message?.toLowerCase().includes('network error')
+        errorMessage.includes('not found') ||
+        errorMessage.includes('network error') ||
+        detailsMessage.includes('not found') ||
+        detailsMessage.includes('network error')
       ) {
         return null;
       }
@@ -363,10 +370,21 @@ export class RedditScraper extends BasePlatform {
 
       return this.client.convertToUser(user);
     } catch (error) {
+      // Check both the error message and details for not found errors
+      const errorMessage = (error as { message?: string })?.message?.toLowerCase() || '';
+      const detailsMessage =
+        (error as { details?: { message?: string } })?.details?.message?.toLowerCase() || '';
+      const statusCode = (error as { statusCode?: number })?.statusCode;
+      const detailsStatusCode = (error as { details?: { statusCode?: number } })?.details
+        ?.statusCode;
+
       if (
-        (error as any).statusCode === 404 ||
-        (error as any).message?.toLowerCase().includes('user not found') ||
-        (error as any).message?.toLowerCase().includes('404 not found')
+        statusCode === 404 ||
+        detailsStatusCode === 404 ||
+        errorMessage.includes('user not found') ||
+        errorMessage.includes('404 not found') ||
+        detailsMessage.includes('user not found') ||
+        detailsMessage.includes('404 not found')
       ) {
         return null;
       }
@@ -578,7 +596,7 @@ export class RedditScraper extends BasePlatform {
         return 'top';
       case 'controversial':
         return 'controversial';
-      case 'old' as any:
+      case 'old':
         return 'old';
       default:
         return 'confidence';

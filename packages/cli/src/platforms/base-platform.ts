@@ -283,7 +283,7 @@ export abstract class BasePlatform {
   /**
    * Helper to handle API errors consistently
    */
-  protected handleApiError(error: any, context: string): never {
+  protected handleApiError(error: unknown, context: string): never {
     const message = error.message || 'Unknown error';
     this.logger.error(`${context}: ${message}`, error);
 
@@ -302,7 +302,7 @@ export abstract class BasePlatform {
   /**
    * Determine if an error is retryable
    */
-  protected isRetryableError(error: any): boolean {
+  protected isRetryableError(error: unknown): boolean {
     // Check for common retryable error conditions
     if (error.code) {
       const retryableCodes = [
@@ -334,7 +334,7 @@ export abstract class BasePlatform {
     maxAttempts?: number
   ): Promise<T> {
     const attempts = maxAttempts || this.config.retryAttempts || 3;
-    let lastError: any;
+    let lastError: unknown;
 
     for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
@@ -359,8 +359,20 @@ export abstract class BasePlatform {
       }
     }
 
-    // All attempts failed
-    this.handleApiError(lastError, context);
+    // All attempts failed - throw the error so calling methods can handle it
+    const message = (lastError as Error)?.message || 'Unknown error';
+    this.logger.error(`${context}: ${message}`, lastError);
+
+    const scrapeError: ScrapeError = {
+      code: (lastError as { code?: string })?.code || 'UNKNOWN_ERROR',
+      message: `${this.platform} API error in ${context}: ${message}`,
+      details: lastError,
+      timestamp: new Date(),
+      platform: this.platform,
+      retryable: false, // Already retried
+    };
+
+    throw scrapeError;
   }
 
   /**

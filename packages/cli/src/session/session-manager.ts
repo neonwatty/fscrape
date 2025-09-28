@@ -29,7 +29,7 @@ export interface SessionEvents {
   'session:completed': (session: SessionState) => void;
   'session:failed': (session: SessionState, error: Error) => void;
   'session:cancelled': (session: SessionState) => void;
-  'session:progress': (sessionId: string, progress: any) => void;
+  'session:progress': (sessionId: string, progress: Record<string, unknown>) => void;
 }
 
 export class SessionManager extends EventEmitter {
@@ -511,7 +511,7 @@ export class SessionManager extends EventEmitter {
    */
   getSessionMetrics(sessionId: string): {
     session: SessionState | undefined;
-    progress: any;
+    progress: Record<string, unknown> | null;
   } {
     const session = this.stateManager.getSession(sessionId);
     const progress = this.progressTracker.getProgress(sessionId);

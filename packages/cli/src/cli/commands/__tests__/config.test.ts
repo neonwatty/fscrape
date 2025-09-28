@@ -46,12 +46,12 @@ const mockProcessExit = vi
   .spyOn(process, 'exit')
   .mockImplementation((code?: string | number | null | undefined) => {
     throw new Error(`process.exit called with code ${code}`);
-  }) as any;
+  });
 
 describe('Config Command', () => {
   let program: Command;
   let configCommand: Command;
-  const mockFs = fs as any;
+  const mockFs = vi.mocked(fs);
   const testConfigPath = path.join(process.cwd(), 'fscrape.config.json');
   const globalConfigPath = path.join(os.homedir(), '.fscrape', 'config.json');
 
@@ -116,8 +116,8 @@ describe('Config Command', () => {
 
   describe('Default Configuration', () => {
     it("should create default config when file doesn't exist", async () => {
-      const error = new Error('ENOENT: no such file or directory');
-      (error as any).code = 'ENOENT';
+      const error = new Error('ENOENT: no such file or directory') as Error & { code: string };
+      error.code = 'ENOENT';
       mockFs.readFile.mockRejectedValueOnce(error);
 
       await program.parseAsync(['node', 'test', 'config', '--list']);
@@ -194,7 +194,7 @@ describe('Config Command', () => {
       const [filePath, content] = mockFs.writeFile.mock.calls[0];
       expect(filePath).toBe(testConfigPath);
 
-      const savedConfig = JSON.parse(content);
+      const savedConfig = JSON.parse(content as string);
       expect(savedConfig.defaultDatabase).toBe('fscrape.db');
       expect(savedConfig.defaultPlatform).toBe('reddit');
       expect(savedConfig.verbose).toBe(false);
@@ -275,7 +275,7 @@ describe('Config Command', () => {
 
       expect(mockFs.writeFile).toHaveBeenCalled();
       const [, content] = mockFs.writeFile.mock.calls[0];
-      const savedConfig = JSON.parse(content);
+      const savedConfig = JSON.parse(content as string);
       expect(savedConfig.verbose).toBe(true);
 
       expect(mockConsoleLog).toHaveBeenCalled();
@@ -296,7 +296,7 @@ describe('Config Command', () => {
 
       expect(mockFs.writeFile).toHaveBeenCalled();
       const [, content] = mockFs.writeFile.mock.calls[0];
-      const savedConfig = JSON.parse(content);
+      const savedConfig = JSON.parse(content as string);
       expect(savedConfig.rateLimit.reddit).toBe(120);
     });
 
@@ -321,7 +321,7 @@ describe('Config Command', () => {
 
       expect(mockFs.writeFile).toHaveBeenCalled();
       const [, content] = mockFs.writeFile.mock.calls[0];
-      const savedConfig = JSON.parse(content);
+      const savedConfig = JSON.parse(content as string);
       expect(savedConfig.verbose).toBe(true);
       expect(savedConfig.maxConcurrency).toBe(10);
       expect(savedConfig.defaultDatabase).toBe('new.db');
@@ -354,7 +354,7 @@ describe('Config Command', () => {
       }
 
       const [, content] = mockFs.writeFile.mock.calls[0];
-      const savedConfig = JSON.parse(content);
+      const savedConfig = JSON.parse(content as string);
       expect(savedConfig.verbose).toBe(false);
       expect(typeof savedConfig.verbose).toBe('boolean');
     });
@@ -371,7 +371,7 @@ describe('Config Command', () => {
       }
 
       const [, content] = mockFs.writeFile.mock.calls[0];
-      const savedConfig = JSON.parse(content);
+      const savedConfig = JSON.parse(content as string);
       expect(savedConfig.maxConcurrency).toBe(15);
       expect(typeof savedConfig.maxConcurrency).toBe('number');
     });
@@ -394,7 +394,7 @@ describe('Config Command', () => {
       }
 
       const [, content] = mockFs.writeFile.mock.calls[0];
-      const savedConfig = JSON.parse(content);
+      const savedConfig = JSON.parse(content as string);
       expect(savedConfig.defaultDatabase).toBe('my-database.db');
       expect(typeof savedConfig.defaultDatabase).toBe('string');
     });
@@ -403,7 +403,7 @@ describe('Config Command', () => {
   describe('Interactive Configuration', () => {
     it('should prompt for configuration values', async () => {
       const inquirer = await import('inquirer');
-      const mockPrompt = inquirer.default.prompt as any;
+      const mockPrompt = vi.mocked(inquirer.default.prompt);
 
       mockFs.readFile.mockResolvedValueOnce(JSON.stringify(defaultConfig));
       mockFs.mkdir.mockResolvedValueOnce(undefined);
@@ -429,7 +429,7 @@ describe('Config Command', () => {
       expect(mockFs.writeFile).toHaveBeenCalled();
 
       const [, content] = mockFs.writeFile.mock.calls[0];
-      const savedConfig = JSON.parse(content);
+      const savedConfig = JSON.parse(content as string);
       expect(savedConfig.defaultDatabase).toBe('interactive.db');
       expect(savedConfig.defaultPlatform).toBe('hackernews');
       expect(savedConfig.outputFormat).toBe('json');
@@ -445,7 +445,7 @@ describe('Config Command', () => {
 
     it('should handle batch configuration in interactive mode', async () => {
       const inquirer = await import('inquirer');
-      const mockPrompt = inquirer.default.prompt as any;
+      const mockPrompt = vi.mocked(inquirer.default.prompt);
 
       mockFs.readFile.mockResolvedValueOnce(JSON.stringify(defaultConfig));
       mockFs.mkdir.mockResolvedValueOnce(undefined);
@@ -471,7 +471,7 @@ describe('Config Command', () => {
       }
 
       const [, content] = mockFs.writeFile.mock.calls[0];
-      const savedConfig = JSON.parse(content);
+      const savedConfig = JSON.parse(content as string);
       expect(savedConfig.batch.maxSize).toBe(200);
       expect(savedConfig.batch.timeout).toBe(60000);
       expect(savedConfig.cacheTTL).toBe(7200);

@@ -33,10 +33,10 @@ describe('AdvancedLogger', () => {
   afterEach(async () => {
     if (logger) {
       await logger.close();
-      logger = null as any;
+      logger = null as unknown as AdvancedLogger;
     }
     // Reset global logger
-    (global as any).globalLogger = null;
+    (global as Record<string, unknown>).globalLogger = null;
   });
 
   afterAll(async () => {
@@ -294,7 +294,7 @@ describe('AdvancedLogger', () => {
 
     it('should create global logger on first get if not initialized', () => {
       // Clear any existing global logger
-      (global as any).globalLogger = null;
+      (global as Record<string, unknown>).globalLogger = null;
 
       const logger = getLogger();
       expect(logger).toBeInstanceOf(AdvancedLogger);

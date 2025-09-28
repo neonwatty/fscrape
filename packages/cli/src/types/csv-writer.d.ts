@@ -19,9 +19,11 @@ declare module 'csv-writer' {
     writeRecords(records: T[]): Promise<void>;
   }
 
-  export function createObjectCsvWriter<T = any>(params: ObjectCsvWriterParams): CsvWriter<T>;
+  export function createObjectCsvWriter<T = Record<string, unknown>>(
+    params: ObjectCsvWriterParams
+  ): CsvWriter<T>;
 
-  export function createArrayCsvWriter<T extends any[] = any[]>(
+  export function createArrayCsvWriter<T extends unknown[] = unknown[]>(
     params: ArrayCsvWriterParams
   ): CsvWriter<T>;
 }

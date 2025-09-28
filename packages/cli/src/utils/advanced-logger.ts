@@ -69,7 +69,7 @@ export interface LoggerConfig {
   transports?: TransportConfig[];
   exitOnError?: boolean;
   silent?: boolean;
-  defaultMeta?: Record<string, any>;
+  defaultMeta?: Record<string, unknown>;
   logDirectory?: string;
   enableConsoleInProduction?: boolean;
   enableFileRotation?: boolean;
@@ -92,9 +92,9 @@ export interface LogMetadata {
   statusCode?: number;
   method?: string;
   url?: string;
-  error?: Error | any;
+  error?: Error | Record<string, unknown>;
   stack?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -124,7 +124,7 @@ function createStructuredFormat(): winston.Logform.Format {
       const { timestamp, level, message, ...meta } = info;
 
       // Build structured log object
-      const logObject: any = {
+      const logObject: Record<string, unknown> = {
         timestamp,
         level,
         message,
@@ -164,7 +164,7 @@ function createConsoleFormat(): winston.Logform.Format {
 
       // Add metadata in readable format
       if (meta.error) {
-        const error = meta.error as any;
+        const error = meta.error as Error | Record<string, unknown>;
         output += `\n  Error: ${error.message || error}`;
         if (error.stack && process.env.LOG_STACK_TRACES === 'true') {
           output += `\n  Stack: ${error.stack}`;
@@ -230,7 +230,7 @@ function createTransport(config: TransportConfig): winston.transport {
       });
 
     default:
-      throw new Error(`Unknown transport type: ${(config as any).type}`);
+      throw new Error(`Unknown transport type: ${(config as Record<string, unknown>).type}`);
   }
 }
 
@@ -240,7 +240,7 @@ function createTransport(config: TransportConfig): winston.transport {
 export class AdvancedLogger {
   private winston: winston.Logger;
   private config: LoggerConfig;
-  private defaultMeta: Record<string, any>;
+  private defaultMeta: Record<string, unknown>;
   private timers: Map<string, number> = new Map();
 
   constructor(config?: LoggerConfig) {
@@ -432,7 +432,7 @@ export class AdvancedLogger {
   /**
    * Create a child logger with additional default metadata
    */
-  child(defaultMeta: Record<string, any>): AdvancedLogger {
+  child(defaultMeta: Record<string, unknown>): AdvancedLogger {
     const childConfig = {
       ...this.config,
       defaultMeta: { ...this.defaultMeta, ...defaultMeta },
@@ -452,7 +452,9 @@ export class AdvancedLogger {
    * Remove a transport by name
    */
   removeTransport(transportName: string): void {
-    const transport = this.winston.transports.find((t) => (t as any).name === transportName);
+    const transport = this.winston.transports.find(
+      (t) => (t as Record<string, unknown>).name === transportName
+    );
     if (transport) {
       this.winston.remove(transport);
     }
@@ -461,7 +463,7 @@ export class AdvancedLogger {
   /**
    * Query logs (if using file transport)
    */
-  async query(options: any): Promise<any> {
+  async query(options: Record<string, unknown>): Promise<unknown> {
     return new Promise((resolve, reject) => {
       this.winston.query(options, (err, results) => {
         if (err) reject(err);
@@ -473,7 +475,7 @@ export class AdvancedLogger {
   /**
    * Stream logs
    */
-  stream(options?: any): NodeJS.ReadableStream {
+  stream(options?: Record<string, unknown>): NodeJS.ReadableStream {
     return this.winston.stream(options);
   }
 
@@ -575,7 +577,7 @@ export function requestLoggingMiddleware(options?: {
     ...options,
   };
 
-  return (req: any, res: any, next: any) => {
+  return (req: Record<string, unknown>, res: Record<string, unknown>, next: () => void) => {
     // Skip excluded paths
     if (req.path && config.excludePaths.some((path) => req.path.startsWith(path))) {
       return next();
@@ -609,7 +611,7 @@ export function requestLoggingMiddleware(options?: {
 
     // Log response
     const originalSend = res.send;
-    res.send = function (data: any) {
+    res.send = function (data: unknown) {
       const duration = Date.now() - startTime;
 
       childLogger.http('Request completed', {
@@ -635,7 +637,7 @@ function generateRequestId(): string {
 /**
  * Sanitize request body for logging
  */
-function sanitizeBody(body: any): any {
+function sanitizeBody(body: unknown): unknown {
   const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'authorization'];
   const sanitized = { ...body };
 
@@ -671,7 +673,7 @@ export function setupGlobalErrorLogging(): void {
   });
 
   // Handle unhandled promise rejections
-  process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
     logger.critical('Unhandled Promise Rejection', {
       reason: reason?.message || reason,
       stack: reason?.stack,
@@ -705,24 +707,24 @@ export function setupGlobalErrorLogging(): void {
  * Create a simple logger interface for backward compatibility
  */
 export function createSimpleLogger(): {
-  debug: (message: string, ...args: any[]) => void;
-  info: (message: string, ...args: any[]) => void;
-  warn: (message: string, ...args: any[]) => void;
-  error: (message: string, ...args: any[]) => void;
+  debug: (message: string, ...args: unknown[]) => void;
+  info: (message: string, ...args: unknown[]) => void;
+  warn: (message: string, ...args: unknown[]) => void;
+  error: (message: string, ...args: unknown[]) => void;
 } {
   const logger = getLogger();
 
   return {
-    debug: (message: string, ...args: any[]) => {
+    debug: (message: string, ...args: unknown[]) => {
       logger.debug(message, { data: args });
     },
-    info: (message: string, ...args: any[]) => {
+    info: (message: string, ...args: unknown[]) => {
       logger.info(message, { data: args });
     },
-    warn: (message: string, ...args: any[]) => {
+    warn: (message: string, ...args: unknown[]) => {
       logger.warn(message, { data: args });
     },
-    error: (message: string, ...args: any[]) => {
+    error: (message: string, ...args: unknown[]) => {
       logger.error(message, { data: args });
     },
   };

@@ -125,7 +125,7 @@ export type StatusOptions = z.infer<typeof StatusOptionsSchema>;
 /**
  * Validate and parse scrape options
  */
-export function validateScrapeOptions(options: any): ScrapeOptions {
+export function validateScrapeOptions(options: unknown): ScrapeOptions {
   try {
     return ScrapeOptionsSchema.parse(options);
   } catch (error) {
@@ -140,7 +140,7 @@ export function validateScrapeOptions(options: any): ScrapeOptions {
 /**
  * Validate and parse init options
  */
-export function validateInitOptions(options: any): InitOptions {
+export function validateInitOptions(options: unknown): InitOptions {
   try {
     return InitOptionsSchema.parse(options);
   } catch (error) {
@@ -155,7 +155,7 @@ export function validateInitOptions(options: any): InitOptions {
 /**
  * Validate and parse status options
  */
-export function validateStatusOptions(options: any): StatusOptions {
+export function validateStatusOptions(options: unknown): StatusOptions {
   try {
     return StatusOptionsSchema.parse(options);
   } catch (error) {
@@ -336,7 +336,7 @@ export type ConfigOptions = z.infer<typeof ConfigOptionsSchema>;
 /**
  * Validate and parse export options
  */
-export function validateExportOptions(options: any): ExportOptions {
+export function validateExportOptions(options: unknown): ExportOptions {
   try {
     return ExportOptionsSchema.parse(options);
   } catch (error) {
@@ -351,7 +351,7 @@ export function validateExportOptions(options: any): ExportOptions {
 /**
  * Validate and parse clean options
  */
-export function validateCleanOptions(options: any): CleanOptions {
+export function validateCleanOptions(options: unknown): CleanOptions {
   try {
     return CleanOptionsSchema.parse(options);
   } catch (error) {
@@ -366,7 +366,7 @@ export function validateCleanOptions(options: any): CleanOptions {
 /**
  * Validate and parse config options
  */
-export function validateConfigOptions(options: any): ConfigOptions {
+export function validateConfigOptions(options: unknown): ConfigOptions {
   try {
     return ConfigOptionsSchema.parse(options);
   } catch (error) {
@@ -779,7 +779,7 @@ export type PerformanceOptions = z.infer<typeof PerformanceOptionsSchema>;
 /**
  * Validate all CLI options at once
  */
-export function validateAllOptions(command: string, options: any): any {
+export function validateAllOptions(command: string, options: unknown): unknown {
   switch (command) {
     case 'scrape':
       return validateScrapeOptions(options);

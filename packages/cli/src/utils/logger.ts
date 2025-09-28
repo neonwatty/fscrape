@@ -30,7 +30,7 @@ export const logger = {
   /**
    * Log debug message
    */
-  debug: (message: string, ...args: any[]) => {
+  debug: (message: string, ...args: unknown[]) => {
     if (args.length > 0) {
       advancedLogger.debug(message, { data: args });
     } else {
@@ -41,7 +41,7 @@ export const logger = {
   /**
    * Log info message
    */
-  info: (message: string, ...args: any[]) => {
+  info: (message: string, ...args: unknown[]) => {
     if (args.length > 0) {
       advancedLogger.info(message, { data: args });
     } else {
@@ -52,7 +52,7 @@ export const logger = {
   /**
    * Log warning message
    */
-  warn: (message: string, ...args: any[]) => {
+  warn: (message: string, ...args: unknown[]) => {
     if (args.length > 0) {
       advancedLogger.warn(message, { data: args });
     } else {
@@ -63,7 +63,7 @@ export const logger = {
   /**
    * Log error message
    */
-  error: (message: string, ...args: any[]) => {
+  error: (message: string, ...args: unknown[]) => {
     // Check if first argument is an Error object
     if (args.length > 0 && args[0] instanceof Error) {
       const error = args[0];
@@ -129,25 +129,25 @@ export const logger = {
   /**
    * Create a child logger with additional metadata
    */
-  child: (metadata: Record<string, any>) => {
+  child: (metadata: Record<string, unknown>) => {
     const childAdvancedLogger = advancedLogger.child(metadata);
     return {
-      debug: (message: string, ...args: any[]) => {
+      debug: (message: string, ...args: unknown[]) => {
         childAdvancedLogger.debug(message, {
           data: args.length > 0 ? args : undefined,
         });
       },
-      info: (message: string, ...args: any[]) => {
+      info: (message: string, ...args: unknown[]) => {
         childAdvancedLogger.info(message, {
           data: args.length > 0 ? args : undefined,
         });
       },
-      warn: (message: string, ...args: any[]) => {
+      warn: (message: string, ...args: unknown[]) => {
         childAdvancedLogger.warn(message, {
           data: args.length > 0 ? args : undefined,
         });
       },
-      error: (message: string, ...args: any[]) => {
+      error: (message: string, ...args: unknown[]) => {
         childAdvancedLogger.error(message, {
           data: args.length > 0 ? args : undefined,
         });

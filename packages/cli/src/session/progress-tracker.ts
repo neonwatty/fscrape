@@ -15,7 +15,7 @@ export interface ProgressUpdate {
   itemsPerSecond?: number;
   estimatedTimeRemaining?: number;
   message?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface ProgressMilestone {
@@ -189,7 +189,7 @@ export class ProgressTracker extends EventEmitter {
   /**
    * Update with a custom message
    */
-  updateMessage(sessionId: string, message: string, details?: any): void {
+  updateMessage(sessionId: string, message: string, details?: Record<string, unknown>): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
@@ -213,7 +213,11 @@ export class ProgressTracker extends EventEmitter {
   /**
    * Mark a batch as completed
    */
-  completeBatch(sessionId: string, batchSize: number, batchDetails?: any): void {
+  completeBatch(
+    sessionId: string,
+    batchSize: number,
+    batchDetails?: Record<string, unknown>
+  ): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 

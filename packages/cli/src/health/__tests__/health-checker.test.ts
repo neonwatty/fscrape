@@ -35,9 +35,16 @@ vi.mock('../../utils/advanced-logger', () => ({
 
 describe('HealthChecker', () => {
   let healthChecker: HealthChecker;
-  let mockDatabase: any;
-  let mockApiMonitor: any;
-  let mockSystemMonitor: any;
+  let mockDatabase: {
+    testConnection: ReturnType<typeof vi.fn>;
+    vacuum: ReturnType<typeof vi.fn>;
+  };
+  let mockApiMonitor: {
+    checkEndpoints: ReturnType<typeof vi.fn>;
+  };
+  let mockSystemMonitor: {
+    checkAll: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,10 +82,12 @@ describe('HealthChecker', () => {
       ]),
     };
 
-    (ApiMonitor as any).mockImplementation(() => mockApiMonitor);
-    (SystemMonitor as any).mockImplementation(() => mockSystemMonitor);
+    (ApiMonitor as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => mockApiMonitor);
+    (SystemMonitor as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      () => mockSystemMonitor
+    );
 
-    healthChecker = new HealthChecker({}, mockDatabase as any);
+    healthChecker = new HealthChecker({}, mockDatabase as Parameters<typeof HealthChecker>[1]);
   });
 
   afterEach(() => {
@@ -124,7 +133,7 @@ describe('HealthChecker', () => {
 
     it('should check database connectivity', async () => {
       const result = await healthChecker.runHealthCheck();
-      const dbCheck = result.checks.find((c: any) => c.name === 'database');
+      const dbCheck = result.checks.find((c) => c.name === 'database');
 
       expect(dbCheck).toBeDefined();
       expect(dbCheck?.status).toBe('pass');
@@ -135,7 +144,7 @@ describe('HealthChecker', () => {
       mockDatabase.vacuum.mockRejectedValue(new Error('DB Error'));
 
       const result = await healthChecker.runHealthCheck();
-      const dbCheck = result.checks.find((c: any) => c.name === 'database');
+      const dbCheck = result.checks.find((c) => c.name === 'database');
 
       expect(dbCheck?.status).toBe('fail');
       expect(dbCheck?.message).toContain('Database connection failed');
@@ -178,7 +187,10 @@ describe('HealthChecker', () => {
         interval: 1000,
       };
 
-      const checker = new HealthChecker(config, mockDatabase as any);
+      const checker = new HealthChecker(
+        config,
+        mockDatabase as Parameters<typeof HealthChecker>[1]
+      );
       await checker.start();
 
       // Initial check
@@ -197,7 +209,10 @@ describe('HealthChecker', () => {
         enabled: false,
       };
 
-      const checker = new HealthChecker(config, mockDatabase as any);
+      const checker = new HealthChecker(
+        config,
+        mockDatabase as Parameters<typeof HealthChecker>[1]
+      );
       await checker.start();
 
       expect(mockDatabase.vacuum).not.toHaveBeenCalled();
@@ -258,7 +273,10 @@ describe('HealthChecker', () => {
         endpoints: ['http://test.com/health'],
       };
 
-      const checker = new HealthChecker(config, mockDatabase as any);
+      const checker = new HealthChecker(
+        config,
+        mockDatabase as Parameters<typeof HealthChecker>[1]
+      );
       await checker.runHealthCheck();
 
       expect(mockApiMonitor.checkEndpoints).toHaveBeenCalledWith(['http://test.com/health']);

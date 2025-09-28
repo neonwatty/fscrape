@@ -4,6 +4,68 @@
 
 import type { ForumPost, Comment, User, ScrapeResult } from '../types/core.js';
 
+interface ExtendedForumPost extends ForumPost {
+  ranking?: {
+    position: number;
+    percentile: number;
+  };
+  mentions?: string[];
+  links?: string[];
+}
+
+interface ExtendedComment extends Comment {
+  mentions?: string[];
+  links?: string[];
+}
+
+interface ExtendedUser extends User {
+  ranking?: number;
+}
+
+interface TransformStatistics {
+  posts: {
+    total: number;
+    averageScore: number;
+    averageComments: number;
+    topScore: number;
+    platforms: Record<string, number>;
+  };
+  comments: {
+    total: number;
+    averageScore: number;
+    averageDepth: number;
+  };
+  users: {
+    total: number;
+    averageKarma: number;
+    topKarma: number;
+  };
+}
+
+interface ExtendedMetadata {
+  scrapedAt: Date | string | number;
+  totalPosts: number;
+  totalComments?: number;
+  platform: 'reddit' | 'hackernews' | 'discourse' | 'lemmy' | 'lobsters' | 'custom';
+  query?: string;
+  subreddit?: string;
+  category?: string;
+  statistics?: TransformStatistics;
+  exportedAt?: string;
+  processingTime?: number;
+  groupedByPlatform?: Record<string, { posts: ForumPost[]; comments: Comment[]; users: User[] }>;
+  groupedByDate?: Record<string, ForumPost[]>;
+  groupedByAuthor?: Record<string, ForumPost[]>;
+}
+
+interface _ExtendedScrapeResult
+  extends Omit<ScrapeResult, 'metadata' | 'posts' | 'comments' | 'users'> {
+  posts: ExtendedForumPost[];
+  comments?: ExtendedComment[];
+  users?: ExtendedUser[];
+  metadata: ExtendedMetadata;
+}
+
 export interface TransformOptions {
   // Field transformations
   truncateContent?: number;
@@ -64,7 +126,7 @@ export class DataTransformer {
 
     // Add statistics if requested
     if (this.options.addStatistics) {
-      (transformed.metadata as any).statistics = this.generateStatistics(data);
+      (transformed.metadata as ExtendedMetadata).statistics = this.generateStatistics(data);
     }
 
     // Group data if requested
@@ -80,7 +142,7 @@ export class DataTransformer {
    */
   transformPosts(posts: ForumPost[]): ForumPost[] {
     return posts.map((post, index) => {
-      let transformed: any = { ...post };
+      let transformed: ExtendedForumPost = { ...post };
 
       // Apply custom transform if provided
       if (this.options.transformPost) {
@@ -141,7 +203,7 @@ export class DataTransformer {
    */
   transformComments(comments: Comment[]): Comment[] {
     return comments.map((comment) => {
-      let transformed: any = { ...comment };
+      let transformed: ExtendedComment = { ...comment };
 
       // Apply custom transform if provided
       if (this.options.transformComment) {
@@ -176,7 +238,7 @@ export class DataTransformer {
    */
   transformUsers(users: User[]): User[] {
     return users.map((user, index) => {
-      let transformed: any = { ...user };
+      let transformed: ExtendedUser = { ...user };
 
       // Apply custom transform if provided
       if (this.options.transformUser) {
@@ -206,18 +268,18 @@ export class DataTransformer {
   /**
    * Transform metadata
    */
-  private transformMetadata(data: ScrapeResult): any {
+  private transformMetadata(data: ScrapeResult): ExtendedMetadata {
     const metadata = { ...data.metadata };
 
     // Add timestamps if requested
     if (this.options.addTimestamps) {
-      (metadata as any).exportedAt = new Date().toISOString();
-      (metadata as any).processingTime = Date.now();
+      (metadata as ExtendedMetadata).exportedAt = new Date().toISOString();
+      (metadata as ExtendedMetadata).processingTime = Date.now();
     }
 
     // Transform existing dates
     if (metadata.scrapedAt) {
-      (metadata as any).scrapedAt = this.transformDate(metadata.scrapedAt);
+      (metadata as ExtendedMetadata).scrapedAt = this.transformDate(metadata.scrapedAt);
     }
 
     return metadata;
@@ -321,7 +383,7 @@ export class DataTransformer {
   /**
    * Generate statistics for the data
    */
-  private generateStatistics(data: ScrapeResult): any {
+  private generateStatistics(data: ScrapeResult): TransformStatistics {
     const posts = data.posts;
     const comments = data.comments || [];
     const users = data.users || [];
@@ -355,7 +417,8 @@ export class DataTransformer {
    */
   private groupData(data: ScrapeResult): ScrapeResult {
     if (this.options.groupByPlatform) {
-      const grouped: any = {};
+      const grouped: Record<string, { posts: ForumPost[]; comments: Comment[]; users: User[] }> =
+        {};
 
       data.posts.forEach((post) => {
         if (!grouped[post.platform]) {
@@ -369,11 +432,11 @@ export class DataTransformer {
       });
 
       // Add grouped structure to metadata
-      (data.metadata as any).groupedByPlatform = grouped;
+      (data.metadata as ExtendedMetadata).groupedByPlatform = grouped;
     }
 
     if (this.options.groupByDate) {
-      const grouped: any = {};
+      const grouped: Record<string, ForumPost[]> = {};
 
       data.posts.forEach((post) => {
         const date = new Date(post.createdAt).toISOString().split('T')[0];
@@ -385,11 +448,11 @@ export class DataTransformer {
         }
       });
 
-      (data.metadata as any).groupedByDate = grouped;
+      (data.metadata as ExtendedMetadata).groupedByDate = grouped;
     }
 
     if (this.options.groupByAuthor) {
-      const grouped: any = {};
+      const grouped: Record<string, ForumPost[]> = {};
 
       data.posts.forEach((post) => {
         if (!grouped[post.author]) {
@@ -398,7 +461,7 @@ export class DataTransformer {
         grouped[post.author].push(post);
       });
 
-      (data.metadata as any).groupedByAuthor = grouped;
+      (data.metadata as ExtendedMetadata).groupedByAuthor = grouped;
     }
 
     return data;
@@ -524,7 +587,10 @@ export class DataTransformer {
   /**
    * Count occurrences by field value
    */
-  private countByField(items: any[], field: string): Record<string, number> {
+  private countByField(
+    items: Array<Record<string, unknown>>,
+    field: string
+  ): Record<string, number> {
     const counts: Record<string, number> = {};
     items.forEach((item) => {
       const value = item[field];

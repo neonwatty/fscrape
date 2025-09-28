@@ -210,7 +210,7 @@ export class ExportManager {
   /**
    * Generate metadata for export
    */
-  private generateMetadata(data: ScrapeResult): any {
+  private generateMetadata(data: ScrapeResult): Record<string, unknown> {
     return {
       exportDate: new Date().toISOString(),
       totalCount: data.posts.length,

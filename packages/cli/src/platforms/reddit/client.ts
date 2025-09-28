@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { logger } from '../../utils/logger.js';
 import { RedditAuth, type RedditAuthConfig } from './auth.js';
 import { RedditEndpoints, QueryParams, REDDIT_BASE_URL } from './endpoints.js';
@@ -52,8 +51,8 @@ export interface RedditPost {
   is_video: boolean;
   is_self: boolean;
   thumbnail?: string;
-  preview?: any;
-  media?: any;
+  preview?: Record<string, unknown>;
+  media?: Record<string, unknown>;
   over_18: boolean;
   spoiler: boolean;
   locked: boolean;
@@ -191,7 +190,9 @@ export class RedditClient {
           const error = new Error(
             `Reddit API error: ${response.status} ${response.statusText} - ${errorText}`
           );
-          (error as any).statusCode = response.status;
+          if (error && typeof error === 'object' && 'statusCode' in error) {
+            (error as { statusCode: number }).statusCode = response.status;
+          }
           throw error;
         }
 

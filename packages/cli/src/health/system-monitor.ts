@@ -223,7 +223,7 @@ export class SystemMonitor {
 
     cpus.forEach((cpu) => {
       for (const type in cpu.times) {
-        totalTick += (cpu.times as any)[type];
+        totalTick += (cpu.times as Record<string, number>)[type];
       }
       totalIdle += cpu.times.idle;
     });

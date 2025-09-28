@@ -9,6 +9,7 @@ import { DatabaseManager } from '../../database/database.js';
 import { ExportManager } from '../../export/export-manager.js';
 import type { FilterOptions } from '../../export/filters.js';
 import type { TransformOptions } from '../../export/transformers.js';
+import type { Platform, Comment, User } from '../../types/core.js';
 import { formatError } from '../validation.js';
 import { dirname, extname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
@@ -135,8 +136,13 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
     // await dbManager.initialize();
 
     // Build query options
-    const queryOptions: any = {
-      platform: options.platform,
+    const queryOptions: {
+      platform?: Platform;
+      limit?: number;
+      startDate?: Date;
+      endDate?: Date;
+    } = {
+      platform: options.platform as Platform | undefined,
       limit: options.limit,
     };
 
@@ -158,7 +164,7 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
     }
 
     // Query comments if requested
-    let comments: any[] = [];
+    let comments: Comment[] = [];
     if (options.includeComments && posts.length > 0) {
       console.log(chalk.gray('  Querying comments...'));
       const postIds = posts.map((p) => p.id);
@@ -168,7 +174,7 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
     }
 
     // Query users if requested
-    let users: any[] = [];
+    let users: User[] = [];
     if (options.includeUsers) {
       console.log(chalk.gray('  Querying users...'));
       const userIds = new Set<string>();
@@ -255,8 +261,8 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
         totalPosts: posts.length,
         totalComments: comments.length,
         totalUsers: users.length,
-        platform: (options.platform as any) || 'reddit',
-        query: queryOptions,
+        platform: (options.platform as Platform) || 'reddit',
+        query: JSON.stringify(queryOptions),
       },
     };
 
@@ -294,7 +300,16 @@ async function handleExport(options: ExportCommandOptions): Promise<void> {
 /**
  * Handle export comments subcommand
  */
-async function handleExportComments(options: any): Promise<void> {
+interface ExportCommentsOptions {
+  database?: string;
+  format?: string;
+  output?: string;
+  platform?: string;
+  postId?: string;
+  limit?: number;
+}
+
+async function handleExportComments(options: ExportCommentsOptions): Promise<void> {
   try {
     console.log(chalk.cyan('📦 Exporting comments...'));
 
@@ -307,8 +322,12 @@ async function handleExportComments(options: any): Promise<void> {
     // await dbManager.initialize();
 
     // Query comments
-    const queryOptions: any = {
-      platform: options.platform,
+    const queryOptions: {
+      platform?: Platform;
+      limit?: number;
+      postIds?: string[];
+    } = {
+      platform: options.platform as Platform | undefined,
       limit: options.limit,
     };
 
@@ -341,7 +360,7 @@ async function handleExportComments(options: any): Promise<void> {
         comments,
         users: [],
         metadata: {
-          platform: (options.platform as any) || 'reddit',
+          platform: (options.platform as Platform) || 'reddit',
           totalPosts: 0,
           totalComments: comments.length,
           scrapedAt: new Date(),
@@ -362,7 +381,16 @@ async function handleExportComments(options: any): Promise<void> {
 /**
  * Handle export users subcommand
  */
-async function handleExportUsers(options: any): Promise<void> {
+interface ExportUsersOptions {
+  database?: string;
+  format?: string;
+  output?: string;
+  platform?: string;
+  minKarma?: number;
+  limit?: number;
+}
+
+async function handleExportUsers(options: ExportUsersOptions): Promise<void> {
   try {
     console.log(chalk.cyan('📦 Exporting users...'));
 
@@ -375,8 +403,12 @@ async function handleExportUsers(options: any): Promise<void> {
     // await dbManager.initialize();
 
     // Query users
-    const queryOptions: any = {
-      platform: options.platform,
+    const queryOptions: {
+      platform?: Platform;
+      limit?: number;
+      minKarma?: number;
+    } = {
+      platform: options.platform as Platform | undefined,
       limit: options.limit,
     };
 
@@ -409,7 +441,7 @@ async function handleExportUsers(options: any): Promise<void> {
         comments: [],
         users,
         metadata: {
-          platform: (options.platform as any) || 'reddit',
+          platform: (options.platform as Platform) || 'reddit',
           totalPosts: 0,
           scrapedAt: new Date(),
         },
