@@ -314,7 +314,8 @@ export class RedditScraper extends BasePlatform {
     } catch (error) {
       // Check both the error message and details for not found/network errors
       const errorMessage = (error as { message?: string })?.message?.toLowerCase() || '';
-      const detailsMessage = (error as { details?: { message?: string } })?.details?.message?.toLowerCase() || '';
+      const detailsMessage =
+        (error as { details?: { message?: string } })?.details?.message?.toLowerCase() || '';
 
       if (
         errorMessage.includes('not found') ||
@@ -371,9 +372,11 @@ export class RedditScraper extends BasePlatform {
     } catch (error) {
       // Check both the error message and details for not found errors
       const errorMessage = (error as { message?: string })?.message?.toLowerCase() || '';
-      const detailsMessage = (error as { details?: { message?: string } })?.details?.message?.toLowerCase() || '';
+      const detailsMessage =
+        (error as { details?: { message?: string } })?.details?.message?.toLowerCase() || '';
       const statusCode = (error as { statusCode?: number })?.statusCode;
-      const detailsStatusCode = (error as { details?: { statusCode?: number } })?.details?.statusCode;
+      const detailsStatusCode = (error as { details?: { statusCode?: number } })?.details
+        ?.statusCode;
 
       if (
         statusCode === 404 ||
