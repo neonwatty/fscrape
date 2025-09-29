@@ -2,32 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, X, Home, FileText, BarChart3, GitCompare } from 'lucide-react';
+import { Menu, X, Home, FileText, GitCompare } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Posts', href: '/posts', icon: FileText },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Compare', href: '/compare', icon: GitCompare },
 ];
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  // Update active index based on current pathname
-  useEffect(() => {
-    const index = navigation.findIndex((item) => item.href === pathname);
-    if (index !== -1) {
-      setActiveIndex(index);
-    }
-  }, [pathname]);
 
   // Close menu when route changes
   useEffect(() => {

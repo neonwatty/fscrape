@@ -2,14 +2,13 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Home, FileText, BarChart3, GitCompare, Menu } from 'lucide-react';
+import { Home, FileText, GitCompare, Menu } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useTouchGestures } from '@/lib/hooks/useTouchGestures';
 
 const navigationItems = [
   { name: 'Home', href: '/', icon: Home, label: 'Dashboard' },
   { name: 'Posts', href: '/posts', icon: FileText, label: 'Posts' },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3, label: 'Analytics' },
   { name: 'Compare', href: '/compare', icon: GitCompare, label: 'Compare' },
 ];
 

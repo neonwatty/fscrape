@@ -5,12 +5,11 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { MobileNav } from './MobileNav';
 import { ThemeToggle } from './ThemeToggle';
-import { Home, FileText, BarChart3, GitCompare, Search, Bell, Settings } from 'lucide-react';
+import { Home, FileText, GitCompare, Search, Bell, Settings } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Posts', href: '/posts', icon: FileText },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Compare', href: '/compare', icon: GitCompare },
 ];
 
