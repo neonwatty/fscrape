@@ -253,7 +253,7 @@ export class JsonExporter {
 
     // Format date fields in metadata
     if (metadata.scrapedAt) {
-      transformed.scrapedAt = this.formatDate(metadata.scrapedAt);
+      transformed.scrapedAt = this.formatDate(metadata.scrapedAt as Date);
     }
 
     return transformed;
@@ -281,7 +281,7 @@ export class JsonExporter {
   /**
    * Stringify data with formatting options
    */
-  private stringify(data: Record<string, unknown>): string {
+  private stringify(data: Record<string, unknown> | unknown[]): string {
     if (this.options.compress) {
       return JSON.stringify(data);
     }

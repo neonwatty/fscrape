@@ -54,7 +54,7 @@ export function useServiceWorker() {
         const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
         // Register the service worker
         registration = await navigator.serviceWorker.register(`${basePath}/sw.js`, {
-          scope: basePath || '/',
+          scope: basePath ? `${basePath}/` : '/',
         });
 
         console.log('[PWA] Service worker registered:', registration);

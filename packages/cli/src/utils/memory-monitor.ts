@@ -75,7 +75,7 @@ export class MemoryMonitor {
             this.gcStats.count++;
             this.gcStats.duration += entry.duration;
             this.gcStats.lastRun = Date.now();
-            const gcEntry = entry as PerformanceEntry & { kind?: number };
+            const gcEntry = entry as any;
             this.gcStats.type = gcEntry.kind ? String(gcEntry.kind) : 'unknown';
           }
         }

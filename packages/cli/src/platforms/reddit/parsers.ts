@@ -18,14 +18,14 @@ export class RedditParsers {
 
     // Extract from preview
     if (post.preview?.images) {
-      for (const image of post.preview.images) {
+      for (const image of post.preview.images as any[]) {
         if (image.source?.url) {
           urls.push(this.decodeRedditUrl(image.source.url));
         }
 
         // Add resolutions
         if (image.resolutions) {
-          for (const resolution of image.resolutions) {
+          for (const resolution of image.resolutions as any[]) {
             if (resolution.url) {
               urls.push(this.decodeRedditUrl(resolution.url));
             }
@@ -35,8 +35,8 @@ export class RedditParsers {
     }
 
     // Extract video URLs
-    if (post.media?.reddit_video?.fallback_url) {
-      urls.push(post.media.reddit_video.fallback_url);
+    if ((post.media as any)?.reddit_video?.fallback_url) {
+      urls.push((post.media as any).reddit_video.fallback_url);
     }
 
     // Extract gallery URLs if present
@@ -105,14 +105,14 @@ export class RedditParsers {
     const awards: Record<string, number> = {};
 
     if (data.all_awardings) {
-      for (const award of data.all_awardings) {
+      for (const award of data.all_awardings as any[]) {
         awards[award.name] = award.count || 1;
       }
     }
 
     // Legacy awards
     if (data.gilded) {
-      awards['Gold'] = data.gilded;
+      awards['Gold'] = data.gilded as number;
     }
 
     return awards;

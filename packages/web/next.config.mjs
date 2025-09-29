@@ -22,7 +22,7 @@ const nextConfig = {
 
   // GitHub Pages deployment paths
   basePath: process.env.NODE_ENV === 'production' ? '/fscrape' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/fscrape' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/fscrape/' : '',
 
   // Environment variables
   env: {

@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.next/
+out/
+dist/
+
+# Testing
+coverage/
+playwright-report/
+test-results/
+
+# Public vendor files
+public/sql-js/
+public/sw.js
+
+# Scripts that use CommonJS
+scripts/
+
+# Config files
+next.config.js
+next.config.mjs
+tailwind.config.js
+postcss.config.js
+vitest.config.ts
+playwright.config.ts
+next-env.d.ts
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
