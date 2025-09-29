@@ -3,7 +3,10 @@ import { ReactElement, ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { vi, expect } from 'vitest';
-import '@testing-library/jest-dom/vitest';
+import * as matchers from '@testing-library/jest-dom/matchers';
+
+// Extend Vitest matchers with jest-dom matchers
+expect.extend(matchers);
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
