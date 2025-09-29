@@ -24,7 +24,7 @@ vi.mock('../../utils/advanced-logger', () => ({
 describe('ApiMonitor', () => {
   let apiMonitor: ApiMonitor;
   let config: HealthCheckConfig;
-  let mockFetch: ReturnType<typeof vi.mocked>;
+  let mockFetch: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,12 +39,12 @@ describe('ApiMonitor', () => {
     };
 
     apiMonitor = new ApiMonitor(config);
-    mockFetch = vi.mocked(fetch);
+    mockFetch = vi.mocked(fetch) as any;
   });
 
   describe('Endpoint Checking', () => {
     it('should check single endpoint successfully', async () => {
-      mockFetch.mockResolvedValue({
+      (mockFetch as any).mockResolvedValue({
         status: 200,
         headers: new Map([['content-type', 'application/json']]),
       });
@@ -64,7 +64,7 @@ describe('ApiMonitor', () => {
 
     it('should detect slow response', async () => {
       // Mock slow response
-      mockFetch.mockImplementation(
+      (mockFetch as any).mockImplementation(
         () =>
           new Promise((resolve) => {
             setTimeout(() => {
@@ -94,7 +94,7 @@ describe('ApiMonitor', () => {
     });
 
     it('should handle unexpected status code', async () => {
-      mockFetch.mockResolvedValue({
+      (mockFetch as any).mockResolvedValue({
         status: 500,
         headers: new Map(),
       });
@@ -112,7 +112,7 @@ describe('ApiMonitor', () => {
     });
 
     it('should handle endpoint timeout', async () => {
-      mockFetch.mockRejectedValue(new Error('The operation was aborted'));
+      (mockFetch as any).mockRejectedValue(new Error('The operation was aborted'));
 
       const endpoint: ApiEndpoint = {
         url: 'http://test.com/health',
@@ -128,7 +128,7 @@ describe('ApiMonitor', () => {
     });
 
     it('should handle network errors', async () => {
-      mockFetch.mockRejectedValue(new Error('Network error'));
+      (mockFetch as any).mockRejectedValue(new Error('Network error'));
 
       const endpoint: ApiEndpoint = {
         url: 'http://test.com/health',
@@ -142,7 +142,7 @@ describe('ApiMonitor', () => {
     });
 
     it('should check multiple endpoints', async () => {
-      mockFetch.mockResolvedValue({
+      (mockFetch as any).mockResolvedValue({
         status: 200,
         headers: new Map(),
       });
@@ -160,7 +160,7 @@ describe('ApiMonitor', () => {
     });
 
     it('should handle string endpoints', async () => {
-      mockFetch.mockResolvedValue({
+      (mockFetch as any).mockResolvedValue({
         status: 200,
         headers: new Map(),
       });
@@ -174,7 +174,7 @@ describe('ApiMonitor', () => {
 
   describe('Internal API Checks', () => {
     it('should check internal APIs', async () => {
-      mockFetch
+      (mockFetch as any)
         .mockResolvedValueOnce({ status: 401, headers: new Map() }) // Reddit
         .mockResolvedValueOnce({ status: 200, headers: new Map() }); // HackerNews
 
@@ -190,7 +190,7 @@ describe('ApiMonitor', () => {
 
   describe('Statistics', () => {
     it('should track endpoint statistics', async () => {
-      mockFetch.mockResolvedValue({
+      (mockFetch as any).mockResolvedValue({
         status: 200,
         headers: new Map(),
       });
@@ -203,7 +203,7 @@ describe('ApiMonitor', () => {
       await apiMonitor.checkEndpoint(endpoint);
       await apiMonitor.checkEndpoint(endpoint);
 
-      const stats = apiMonitor.getStats('test-api') as Record<string, unknown>;
+      const stats = apiMonitor.getStats('test-api') as any;
 
       expect(stats.totalChecks).toBe(2);
       expect(stats.successfulChecks).toBe(2);
@@ -212,7 +212,7 @@ describe('ApiMonitor', () => {
     });
 
     it('should calculate availability', async () => {
-      mockFetch
+      (mockFetch as any)
         .mockResolvedValueOnce({ status: 200, headers: new Map() })
         .mockRejectedValueOnce(new Error('Failed'))
         .mockResolvedValueOnce({ status: 200, headers: new Map() });
@@ -233,7 +233,7 @@ describe('ApiMonitor', () => {
 
     it('should calculate average response time', async () => {
       // Mock with a small delay to ensure responseTime > 0
-      mockFetch.mockImplementation(
+      (mockFetch as any).mockImplementation(
         () =>
           new Promise((resolve) => {
             setTimeout(() => {
@@ -259,7 +259,7 @@ describe('ApiMonitor', () => {
     });
 
     it('should reset statistics', async () => {
-      mockFetch.mockResolvedValue({
+      (mockFetch as any).mockResolvedValue({
         status: 200,
         headers: new Map(),
       });
@@ -272,13 +272,13 @@ describe('ApiMonitor', () => {
       await apiMonitor.checkEndpoint(endpoint);
       apiMonitor.resetStats('test-api');
 
-      const stats = apiMonitor.getStats('test-api') as Record<string, unknown>;
+      const stats = apiMonitor.getStats('test-api') as any;
 
       expect(stats.totalChecks).toBe(0);
     });
 
     it('should reset all statistics', async () => {
-      mockFetch.mockResolvedValue({
+      (mockFetch as any).mockResolvedValue({
         status: 200,
         headers: new Map(),
       });
@@ -286,7 +286,7 @@ describe('ApiMonitor', () => {
       await apiMonitor.checkEndpoints(['http://test1.com', 'http://test2.com']);
       apiMonitor.resetStats();
 
-      const allStats = apiMonitor.getStats() as Map<string, Record<string, unknown>>;
+      const allStats = apiMonitor.getStats() as any;
 
       expect(allStats.size).toBe(0);
     });
@@ -295,7 +295,7 @@ describe('ApiMonitor', () => {
   describe('Health Summary', () => {
     it('should provide health summary', async () => {
       // Mock with a small delay to ensure responseTime > 0
-      mockFetch
+      (mockFetch as any)
         .mockImplementationOnce(
           () =>
             new Promise((resolve) => {
@@ -340,7 +340,7 @@ describe('ApiMonitor', () => {
 
   describe('Custom Headers and Methods', () => {
     it('should use custom headers', async () => {
-      mockFetch.mockResolvedValue({
+      (mockFetch as any).mockResolvedValue({
         status: 200,
         headers: new Map(),
       });
@@ -365,7 +365,7 @@ describe('ApiMonitor', () => {
     });
 
     it('should use custom HTTP method', async () => {
-      mockFetch.mockResolvedValue({
+      (mockFetch as any).mockResolvedValue({
         status: 200,
         headers: new Map(),
       });

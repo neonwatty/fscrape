@@ -159,9 +159,9 @@ export class DataTransformer {
       }
 
       // Date transformations
-      transformed.createdAt = this.transformDate(post.createdAt);
+      transformed.createdAt = this.transformDate(post.createdAt) as any;
       if (post.updatedAt) {
-        transformed.updatedAt = this.transformDate(post.updatedAt);
+        transformed.updatedAt = this.transformDate(post.updatedAt) as any;
       }
 
       // URL transformations
@@ -216,9 +216,9 @@ export class DataTransformer {
       }
 
       // Date transformations
-      transformed.createdAt = this.transformDate(comment.createdAt);
+      transformed.createdAt = this.transformDate(comment.createdAt) as any;
       if (comment.updatedAt) {
-        transformed.updatedAt = this.transformDate(comment.updatedAt);
+        transformed.updatedAt = this.transformDate(comment.updatedAt) as any;
       }
 
       // Anonymize author if requested
@@ -253,7 +253,7 @@ export class DataTransformer {
 
       // Date transformations
       if (user.createdAt) {
-        transformed.createdAt = this.transformDate(user.createdAt);
+        transformed.createdAt = this.transformDate(user.createdAt) as any;
       }
 
       // Add rankings if requested
@@ -268,21 +268,21 @@ export class DataTransformer {
   /**
    * Transform metadata
    */
-  private transformMetadata(data: ScrapeResult): ExtendedMetadata {
-    const metadata = { ...data.metadata };
+  private transformMetadata(data: ScrapeResult): ScrapeResult['metadata'] {
+    const metadata = { ...data.metadata } as any;
 
     // Add timestamps if requested
     if (this.options.addTimestamps) {
-      (metadata as ExtendedMetadata).exportedAt = new Date().toISOString();
-      (metadata as ExtendedMetadata).processingTime = Date.now();
+      metadata.exportedAt = new Date().toISOString();
+      metadata.processingTime = Date.now();
     }
 
     // Transform existing dates
     if (metadata.scrapedAt) {
-      (metadata as ExtendedMetadata).scrapedAt = this.transformDate(metadata.scrapedAt);
+      metadata.scrapedAt = this.transformDate(metadata.scrapedAt);
     }
 
-    return metadata;
+    return metadata as ScrapeResult['metadata'];
   }
 
   /**
@@ -593,7 +593,7 @@ export class DataTransformer {
   ): Record<string, number> {
     const counts: Record<string, number> = {};
     items.forEach((item) => {
-      const value = item[field];
+      const value = item[field] as string;
       counts[value] = (counts[value] || 0) + 1;
     });
     return counts;

@@ -276,8 +276,8 @@ class EnhancedLogger implements Logger {
   private extractMeta(args: unknown[]): Record<string, unknown> {
     if (args.length === 0) return {};
 
-    if (args.length === 1 && typeof args[0] === 'object' && !Array.isArray(args[0])) {
-      return args[0];
+    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0])) {
+      return args[0] as Record<string, unknown>;
     }
 
     return { data: args };
@@ -309,13 +309,13 @@ export function errorLoggingMiddleware(
     method: req.method,
     url: req.url,
     ip: req.ip,
-    userAgent: req.get('user-agent'),
+    userAgent: (req.get as any)?.('user-agent'),
     correlationId: req.id || req.correlationId,
   };
 
   logger.logError(err, metadata);
 
-  next(err);
+  next();
 }
 
 /**

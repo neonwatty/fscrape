@@ -284,11 +284,11 @@ export abstract class BasePlatform {
    * Helper to handle API errors consistently
    */
   protected handleApiError(error: unknown, context: string): never {
-    const message = error.message || 'Unknown error';
+    const message = (error as any)?.message || 'Unknown error';
     this.logger.error(`${context}: ${message}`, error);
 
     const scrapeError: ScrapeError = {
-      code: error.code || 'UNKNOWN_ERROR',
+      code: (error as any)?.code || 'UNKNOWN_ERROR',
       message: `${this.platform} API error in ${context}: ${message}`,
       details: error,
       timestamp: new Date(),
@@ -304,7 +304,7 @@ export abstract class BasePlatform {
    */
   protected isRetryableError(error: unknown): boolean {
     // Check for common retryable error conditions
-    if (error.code) {
+    if ((error as any)?.code) {
       const retryableCodes = [
         'ETIMEDOUT',
         'ECONNRESET',
@@ -314,12 +314,12 @@ export abstract class BasePlatform {
         '503',
         '504',
       ];
-      return retryableCodes.includes(error.code.toString());
+      return retryableCodes.includes((error as any).code.toString());
     }
 
-    if (error.statusCode) {
+    if ((error as any)?.statusCode) {
       // Retry on rate limits and server errors
-      return error.statusCode === 429 || (error.statusCode >= 500 && error.statusCode < 600);
+      return (error as any).statusCode === 429 || ((error as any).statusCode >= 500 && (error as any).statusCode < 600);
     }
 
     return false;

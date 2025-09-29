@@ -515,7 +515,7 @@ export class SessionManager extends EventEmitter {
   } {
     const session = this.stateManager.getSession(sessionId);
     const progress = this.progressTracker.getProgress(sessionId);
-    return { session, progress };
+    return { session, progress: progress as any };
   }
 
   /**

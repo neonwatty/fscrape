@@ -277,7 +277,7 @@ export class ErrorHandler {
         const fallback = this.getFallbackForService(operationName) || context?.fallback;
         if (fallback) {
           this.notify(`Using fallback for degraded service: ${operationName}`, 'info');
-          return await fallback();
+          return (await fallback()) as T;
         }
       }
 
@@ -529,14 +529,14 @@ export class ErrorHandler {
         const fallback = this.getFallbackForService(context?.name || '') || context?.fallback;
         if (fallback) {
           errorLogger.info('Using fallback strategy');
-          return fallback();
+          return fallback() as T;
         }
         throw error;
       }
 
       case RecoveryStrategy.IGNORE:
         errorLogger.debug('Ignoring error as per recovery strategy');
-        return undefined as unknown;
+        return undefined as T;
 
       case RecoveryStrategy.TERMINATE:
       default:
@@ -759,20 +759,20 @@ export function withErrorHandling<T extends (...args: unknown[]) => Promise<unkn
 export function HandleErrors(options?: {
   strategy?: RecoveryStrategy;
   fallback?: () => unknown;
-}): PropertyDescriptor {
+}): any {
   return function (
-    target: Record<string, unknown>,
+    target: any,
     propertyKey: string | symbol,
     descriptor?: PropertyDescriptor
-  ): PropertyDescriptor {
+  ): any {
     // TypeScript 5+ decorators
     if (typeof propertyKey === 'symbol' || arguments.length === 2) {
       const method = target;
-      return async function (this: Record<string, unknown>, ...args: unknown[]) {
+      return async function (this: any, ...args: unknown[]) {
         const className = this?.constructor?.name || 'Unknown';
         const methodName = `${className}.${String(propertyKey)}`;
 
-        return globalErrorHandler.handle(() => method.apply(this, args), {
+        return globalErrorHandler.handle(() => (method as any).apply(this, args), {
           name: methodName,
           fallback: options?.fallback || undefined,
           metadata: { className, methodName },
