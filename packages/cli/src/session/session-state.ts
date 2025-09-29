@@ -381,7 +381,7 @@ export class SessionStateManager {
       if (parsed.errors && Array.isArray(parsed.errors)) {
         parsed.errors = parsed.errors.map((error: Record<string, unknown>) => ({
           ...error,
-          timestamp: new Date(error.timestamp),
+          timestamp: new Date(error.timestamp as any),
         }));
       }
 

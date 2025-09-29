@@ -55,7 +55,7 @@ describe('SystemMonitor', () => {
         speed: 2400,
         times: { user: 1000, nice: 0, sys: 500, idle: 8500, irq: 0 },
       },
-    ] as unknown);
+    ] as any);
 
     vi.mocked(os.totalmem).mockReturnValue(16 * 1024 * 1024 * 1024); // 16GB
     vi.mocked(os.freemem).mockReturnValue(8 * 1024 * 1024 * 1024); // 8GB free
@@ -71,7 +71,7 @@ describe('SystemMonitor', () => {
           cidr: '192.168.1.100/24',
         },
       ],
-    } as unknown);
+    } as any);
 
     // Mock process functions
     vi.spyOn(process, 'uptime').mockReturnValue(3600);
@@ -94,7 +94,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as unknown);
+      } as any);
 
       const results = await systemMonitor.checkSystem();
 
@@ -113,7 +113,7 @@ describe('SystemMonitor', () => {
           speed: 2400,
           times: { user: 9000, nice: 0, sys: 500, idle: 500, irq: 0 },
         },
-      ] as unknown);
+      ] as any);
 
       const results = await systemMonitor.checkSystem();
       const cpuCheck = results.find((r) => r.name === 'system:cpu');
@@ -139,7 +139,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 50000, // Only 5% available
-      } as unknown);
+      } as any);
 
       const results = await systemMonitor.checkSystem();
       const diskCheck = results.find((r) => r.name === 'system:disk');
@@ -191,7 +191,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as unknown);
+      } as any);
 
       const metrics = await systemMonitor.collectMetrics();
 
@@ -244,7 +244,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as unknown);
+      } as any);
 
       // checkSystem calls collectMetrics and adds to history
       await systemMonitor.checkSystem();
@@ -260,7 +260,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as unknown);
+      } as any);
 
       // Add more than max history size (100)
       for (let i = 0; i < 105; i++) {
@@ -277,7 +277,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as unknown);
+      } as any);
 
       await systemMonitor.checkSystem();
       await systemMonitor.checkSystem();
@@ -300,7 +300,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as unknown);
+      } as any);
 
       await systemMonitor.collectMetrics();
       systemMonitor.clearHistory();
@@ -317,7 +317,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as unknown);
+      } as any);
 
       const isHealthy = await systemMonitor.isSystemHealthy();
 
@@ -333,7 +333,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as unknown);
+      } as any);
 
       const isHealthy = await systemMonitor.isSystemHealthy();
 
@@ -359,7 +359,7 @@ describe('SystemMonitor', () => {
         blocks: 1000000,
         bsize: 4096,
         bavail: 500000,
-      } as unknown);
+      } as any);
 
       const metrics = await systemMonitor.getCurrentMetrics();
 

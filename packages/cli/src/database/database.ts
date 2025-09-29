@@ -720,7 +720,7 @@ export class DatabaseManager {
       postQuery += ' ORDER BY created_at DESC LIMIT ?';
       params.push(limit);
 
-      posts = this.db.prepare(postQuery).all(...params);
+      posts = this.db.prepare(postQuery).all(...params) as PostRow[];
 
       // Search comments by content
       let commentQuery = `
@@ -737,7 +737,7 @@ export class DatabaseManager {
       commentQuery += ' ORDER BY created_at DESC LIMIT ?';
       commentParams.push(limit);
 
-      comments = this.db.prepare(commentQuery).all(...commentParams);
+      comments = this.db.prepare(commentQuery).all(...commentParams) as CommentRow[];
     } else {
       // Return recent posts and comments
       let postQuery = 'SELECT * FROM posts';
@@ -751,7 +751,7 @@ export class DatabaseManager {
       postQuery += ' ORDER BY created_at DESC LIMIT ?';
       params.push(limit);
 
-      posts = this.db.prepare(postQuery).all(...params);
+      posts = this.db.prepare(postQuery).all(...params) as PostRow[];
 
       let commentQuery = 'SELECT * FROM comments';
       const commentParams: unknown[] = [];
@@ -764,7 +764,7 @@ export class DatabaseManager {
       commentQuery += ' ORDER BY created_at DESC LIMIT ?';
       commentParams.push(limit);
 
-      comments = this.db.prepare(commentQuery).all(...commentParams);
+      comments = this.db.prepare(commentQuery).all(...commentParams) as CommentRow[];
     }
 
     return { posts, comments };
@@ -836,7 +836,7 @@ export class DatabaseManager {
     return {
       id: row.id,
       postId: row.post_id,
-      parentId: row.parent_id,
+      parentId: row.parent_id || null,
       author: row.author,
       authorId: row.author_id || undefined,
       content: row.content,
@@ -851,9 +851,9 @@ export class DatabaseManager {
   private mapRowToSession(row: SessionRow): SessionInfo {
     const session: SessionInfo = {
       id: row.id,
-      sessionId: row.id, // Use numeric id as sessionId
+      sessionId: String(row.id), // Convert numeric id to string
       platform: row.platform as Platform,
-      status: row.status,
+      status: row.status as 'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled',
       totalItemsScraped: 0, // Not in current schema
       startedAt: new Date(row.started_at),
       lastActivityAt: row.started_at ? new Date(row.started_at) : new Date(),

@@ -597,7 +597,7 @@ export class RedditScraper extends BasePlatform {
       case 'controversial':
         return 'controversial';
       case 'old':
-        return 'old';
+        return 'old' as any;
       default:
         return 'confidence';
     }

@@ -108,7 +108,7 @@ export class MarkdownExporter {
     }
 
     if (metadata.scrapedAt) {
-      metaItems.push(`**Scraped At:** ${this.formatDate(metadata.scrapedAt)}`);
+      metaItems.push(`**Scraped At:** ${this.formatDate(metadata.scrapedAt as Date)}`);
     }
 
     if (metadata.query) {

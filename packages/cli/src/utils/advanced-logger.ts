@@ -230,7 +230,7 @@ function createTransport(config: TransportConfig): winston.transport {
       });
 
     default:
-      throw new Error(`Unknown transport type: ${(config as Record<string, unknown>).type}`);
+      throw new Error(`Unknown transport type: ${config.type}`);
   }
 }
 
@@ -453,7 +453,7 @@ export class AdvancedLogger {
    */
   removeTransport(transportName: string): void {
     const transport = this.winston.transports.find(
-      (t) => (t as Record<string, unknown>).name === transportName
+      (t) => (t as any).name === transportName
     );
     if (transport) {
       this.winston.remove(transport);
@@ -463,9 +463,9 @@ export class AdvancedLogger {
   /**
    * Query logs (if using file transport)
    */
-  async query(options: Record<string, unknown>): Promise<unknown> {
+  async query(options: any): Promise<unknown> {
     return new Promise((resolve, reject) => {
-      this.winston.query(options, (err, results) => {
+      this.winston.query(options as any, (err, results) => {
         if (err) reject(err);
         else resolve(results);
       });
@@ -579,12 +579,12 @@ export function requestLoggingMiddleware(options?: {
 
   return (req: Record<string, unknown>, res: Record<string, unknown>, next: () => void) => {
     // Skip excluded paths
-    if (req.path && config.excludePaths.some((path) => req.path.startsWith(path))) {
+    if ((req.path as string) && config.excludePaths.some((path) => (req.path as string).startsWith(path))) {
       return next();
     }
 
     const startTime = Date.now();
-    const requestId = req.id || (req.headers && req.headers['x-request-id']) || generateRequestId();
+    const requestId = req.id || (req.headers && (req.headers as any)['x-request-id']) || generateRequestId();
 
     // Create child logger with request context
     const childLogger = logger.child({ requestId });
@@ -592,10 +592,10 @@ export function requestLoggingMiddleware(options?: {
 
     // Log request
     const requestMeta: LogMetadata = {
-      method: req.method,
-      url: req.url,
-      ip: req.ip || (req.connection && req.connection.remoteAddress),
-      userAgent: req.headers && req.headers['user-agent'],
+      method: req.method as string,
+      url: req.url as string,
+      ip: (req.ip as string) || (req.connection && (req.connection as any).remoteAddress),
+      userAgent: req.headers && (req.headers as any)['user-agent'],
       requestId,
     };
 
@@ -615,12 +615,12 @@ export function requestLoggingMiddleware(options?: {
       const duration = Date.now() - startTime;
 
       childLogger.http('Request completed', {
-        statusCode: res.statusCode,
+        statusCode: res.statusCode as number,
         duration,
         requestId,
       });
 
-      originalSend.call(this, data);
+      (originalSend as any).call(this, data);
     };
 
     next();
@@ -639,7 +639,7 @@ function generateRequestId(): string {
  */
 function sanitizeBody(body: unknown): unknown {
   const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'authorization'];
-  const sanitized = { ...body };
+  const sanitized = { ...(body as any) };
 
   sensitiveFields.forEach((field) => {
     if (sanitized[field]) {
@@ -675,8 +675,8 @@ export function setupGlobalErrorLogging(): void {
   // Handle unhandled promise rejections
   process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
     logger.critical('Unhandled Promise Rejection', {
-      reason: reason?.message || reason,
-      stack: reason?.stack,
+      reason: (reason as any)?.message || reason,
+      stack: (reason as any)?.stack,
       promise: promise.toString(),
     });
   });

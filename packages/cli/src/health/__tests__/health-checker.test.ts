@@ -68,7 +68,7 @@ describe('HealthChecker', () => {
     };
 
     mockSystemMonitor = {
-      checkSystem: vi.fn().mockResolvedValue([
+      checkAll: vi.fn().mockResolvedValue([
         {
           name: 'system:cpu',
           status: 'pass',
@@ -82,12 +82,10 @@ describe('HealthChecker', () => {
       ]),
     };
 
-    (ApiMonitor as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => mockApiMonitor);
-    (SystemMonitor as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      () => mockSystemMonitor
-    );
+    (ApiMonitor as any).mockImplementation(() => mockApiMonitor);
+    (SystemMonitor as any).mockImplementation(() => mockSystemMonitor);
 
-    healthChecker = new HealthChecker({}, mockDatabase as Parameters<typeof HealthChecker>[1]);
+    healthChecker = new HealthChecker({}, mockDatabase as any);
   });
 
   afterEach(() => {
@@ -117,7 +115,7 @@ describe('HealthChecker', () => {
     });
 
     it('should detect degraded status on warnings', async () => {
-      mockSystemMonitor.checkSystem.mockResolvedValue([
+      mockSystemMonitor.checkAll.mockResolvedValue([
         {
           name: 'system:cpu',
           status: 'warning',
@@ -187,10 +185,7 @@ describe('HealthChecker', () => {
         interval: 1000,
       };
 
-      const checker = new HealthChecker(
-        config,
-        mockDatabase as Parameters<typeof HealthChecker>[1]
-      );
+      const checker = new HealthChecker(config, mockDatabase as any);
       await checker.start();
 
       // Initial check
@@ -209,10 +204,7 @@ describe('HealthChecker', () => {
         enabled: false,
       };
 
-      const checker = new HealthChecker(
-        config,
-        mockDatabase as Parameters<typeof HealthChecker>[1]
-      );
+      const checker = new HealthChecker(config, mockDatabase as any);
       await checker.start();
 
       expect(mockDatabase.vacuum).not.toHaveBeenCalled();
@@ -273,10 +265,7 @@ describe('HealthChecker', () => {
         endpoints: ['http://test.com/health'],
       };
 
-      const checker = new HealthChecker(
-        config,
-        mockDatabase as Parameters<typeof HealthChecker>[1]
-      );
+      const checker = new HealthChecker(config, mockDatabase as any);
       await checker.runHealthCheck();
 
       expect(mockApiMonitor.checkEndpoints).toHaveBeenCalledWith(['http://test.com/health']);
