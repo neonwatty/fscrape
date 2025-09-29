@@ -49,6 +49,15 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Copy SQL.js WASM files
+        run: |
+          mkdir -p packages/web/out/sql-js
+          cp node_modules/sql.js/dist/sql-wasm.wasm packages/web/out/sql-js/
+          cp node_modules/sql.js/dist/sql-wasm.js packages/web/out/sql-js/
+          echo "Copied SQL.js WASM files"
+          echo "WASM file size: $(du -h packages/web/out/sql-js/sql-wasm.wasm | cut -f1)"
+          echo "JS file size: $(du -h packages/web/out/sql-js/sql-wasm.js | cut -f1)"
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
