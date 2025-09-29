@@ -43,7 +43,7 @@ describe('HealthChecker', () => {
     checkEndpoints: ReturnType<typeof vi.fn>;
   };
   let mockSystemMonitor: {
-    checkAll: ReturnType<typeof vi.fn>;
+    checkSystem: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -68,7 +68,7 @@ describe('HealthChecker', () => {
     };
 
     mockSystemMonitor = {
-      checkAll: vi.fn().mockResolvedValue([
+      checkSystem: vi.fn().mockResolvedValue([
         {
           name: 'system:cpu',
           status: 'pass',
@@ -115,7 +115,7 @@ describe('HealthChecker', () => {
     });
 
     it('should detect degraded status on warnings', async () => {
-      mockSystemMonitor.checkAll.mockResolvedValue([
+      mockSystemMonitor.checkSystem.mockResolvedValue([
         {
           name: 'system:cpu',
           status: 'warning',
