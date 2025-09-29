@@ -7,11 +7,13 @@ import { TrendChart } from '@/components/dashboard/TrendChart';
 import { RecentPostsTable } from '@/components/dashboard/RecentPostsTable';
 import { PlatformSelector } from '@/components/dashboard/PlatformSelector';
 import { PlatformPicker } from '@/components/dashboard/PlatformPicker';
+import { HeatMap } from '@/components/charts/HeatMap';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { createSampleDatabase } from '@/lib/db/sample-database';
+import { getPosts } from '@/lib/db/queries';
 import {
   Database,
   Upload,
@@ -22,6 +24,7 @@ import {
   Users,
   MessageSquare,
   Loader2,
+  Clock,
 } from 'lucide-react';
 
 // Loading skeleton components
@@ -426,6 +429,23 @@ function DashboardContent() {
               </>
             )}
           </div>
+        </section>
+
+        {/* Posting Time Heatmap Section */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-xl font-semibold">Posting Time Analysis</h2>
+          </div>
+          <Suspense fallback={<ChartSkeleton />}>
+            <HeatMap
+              posts={getPosts({})}
+              title="Posting Time Heatmap"
+              description="Discover optimal posting times based on engagement metrics"
+              showFilters={true}
+              showOptimalTimes={true}
+            />
+          </Suspense>
         </section>
 
         {/* Recent Posts Section */}
