@@ -452,4 +452,5 @@ Maintained by the Forum Scraper team. See [CONTRIBUTORS](CONTRIBUTORS.md) for a 
 - Built with [Next.js](https://nextjs.org/)
 - UI components from [shadcn/ui](https://ui.shadcn.com/)
 - Icons from [Lucide](https://lucide.dev/)
+
 # Fix applied: Updated service worker scope and database schema validation
