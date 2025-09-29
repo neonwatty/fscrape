@@ -319,7 +319,10 @@ export abstract class BasePlatform {
 
     if ((error as any)?.statusCode) {
       // Retry on rate limits and server errors
-      return (error as any).statusCode === 429 || ((error as any).statusCode >= 500 && (error as any).statusCode < 600);
+      return (
+        (error as any).statusCode === 429 ||
+        ((error as any).statusCode >= 500 && (error as any).statusCode < 600)
+      );
     }
 
     return false;

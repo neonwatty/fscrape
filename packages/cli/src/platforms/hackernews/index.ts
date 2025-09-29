@@ -12,7 +12,7 @@ export { HackerNewsParsers, HackerNewsValidators } from './parsers.js';
 
 // Import for platform constructor
 import { HackerNewsScraper } from './scraper.js';
-import type { PlatformConstructor } from '../platform-factory.js';
+// import type { PlatformConstructor } from '../platform-factory.js';
 import type { BasePlatform, BasePlatformConfig, ScrapeOptions } from '../base-platform.js';
 import type { RateLimiter } from '../../scrapers/rate-limiter.js';
 import type winston from 'winston';
@@ -25,7 +25,7 @@ export const HackerNewsPlatform: any = class implements BasePlatform {
   private scraper: HackerNewsScraper;
   public readonly platform = 'hackernews' as const;
 
-  constructor(_platform: string, config: BasePlatformConfig, logger?: winston.Logger) {
+  constructor(_platform: string, config: BasePlatformConfig, _logger?: winston.Logger) {
     this.scraper = new HackerNewsScraper({
       ...config,
     } as any);
@@ -44,7 +44,7 @@ export const HackerNewsPlatform: any = class implements BasePlatform {
     return this.scraper.scrapePosts(category, options);
   }
 
-  async scrapePost(postId: string, options?: ScrapeOptions): Promise<any> {
+  async scrapePost(postId: string, _options?: ScrapeOptions): Promise<any> {
     return this.scraper.scrapePost(postId);
   }
 

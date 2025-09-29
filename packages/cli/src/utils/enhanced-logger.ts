@@ -276,7 +276,12 @@ class EnhancedLogger implements Logger {
   private extractMeta(args: unknown[]): Record<string, unknown> {
     if (args.length === 0) return {};
 
-    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0])) {
+    if (
+      args.length === 1 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      !Array.isArray(args[0])
+    ) {
       return args[0] as Record<string, unknown>;
     }
 
