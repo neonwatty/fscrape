@@ -27,17 +27,16 @@ const DEFAULT_CONFIG: Required<DatabaseConfig> = {
 
 // Schema validation queries
 const SCHEMA_CHECKS = {
-  tables: ['posts', 'authors'],
+  tables: ['posts', 'users'],
   postsColumns: [
     'id',
     'platform',
     'title',
     'author',
-    'created_utc',
+    'created_at',
     'score',
-    'num_comments',
+    'comment_count',
     'url',
-    'permalink',
   ],
 };
 
@@ -201,35 +200,51 @@ export async function createEmptyDatabase(config: DatabaseConfig = {}): Promise<
     // Create new empty database
     const newDb = new sqlJs.Database();
 
-    // Create schema
+    // Create schema matching CLI schema
     newDb.run(`
       CREATE TABLE IF NOT EXISTS posts (
-        id TEXT PRIMARY KEY,
-        subreddit TEXT,
-        title TEXT,
-        author TEXT,
-        body TEXT,
-        created_utc INTEGER,
-        score INTEGER,
-        num_comments INTEGER,
-        url TEXT,
-        permalink TEXT,
-        platform TEXT DEFAULT 'reddit'
+        id TEXT NOT NULL,
+        platform TEXT NOT NULL CHECK(platform IN ('reddit', 'hackernews')),
+        platform_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT,
+        url TEXT NOT NULL,
+        author TEXT NOT NULL,
+        author_id TEXT,
+        score INTEGER NOT NULL DEFAULT 0,
+        comment_count INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER,
+        scraped_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        metadata TEXT,
+        PRIMARY KEY (platform, platform_id),
+        UNIQUE(id),
+        CHECK(length(title) > 0),
+        CHECK(created_at > 0)
       );
 
-      CREATE TABLE IF NOT EXISTS authors (
-        username TEXT PRIMARY KEY,
-        total_posts INTEGER,
-        total_score INTEGER,
-        first_seen INTEGER,
-        last_seen INTEGER,
-        platform TEXT DEFAULT 'reddit'
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT NOT NULL,
+        platform TEXT NOT NULL CHECK(platform IN ('reddit', 'hackernews')),
+        username TEXT NOT NULL,
+        karma INTEGER,
+        post_count INTEGER DEFAULT 0,
+        comment_count INTEGER DEFAULT 0,
+        created_at INTEGER,
+        last_seen_at INTEGER,
+        scraped_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        metadata TEXT,
+        PRIMARY KEY (platform, id),
+        UNIQUE(platform, username),
+        CHECK(length(username) > 0)
       );
 
-      CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_utc);
-      CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author);
-      CREATE INDEX IF NOT EXISTS idx_posts_subreddit ON posts(subreddit);
       CREATE INDEX IF NOT EXISTS idx_posts_platform ON posts(platform);
+      CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author);
+      CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_posts_score ON posts(score DESC);
+      CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+      CREATE INDEX IF NOT EXISTS idx_users_platform ON users(platform);
     `);
 
     return newDb;

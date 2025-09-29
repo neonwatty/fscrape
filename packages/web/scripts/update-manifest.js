@@ -13,28 +13,28 @@ manifest.start_url = basePath + '/';
 manifest.scope = basePath + '/';
 
 // Update icons
-manifest.icons = manifest.icons.map(icon => ({
+manifest.icons = manifest.icons.map((icon) => ({
   ...icon,
-  src: basePath + icon.src
+  src: basePath + icon.src,
 }));
 
 // Update screenshots
 if (manifest.screenshots) {
-  manifest.screenshots = manifest.screenshots.map(screenshot => ({
+  manifest.screenshots = manifest.screenshots.map((screenshot) => ({
     ...screenshot,
-    src: basePath + screenshot.src
+    src: basePath + screenshot.src,
   }));
 }
 
 // Update shortcuts
 if (manifest.shortcuts) {
-  manifest.shortcuts = manifest.shortcuts.map(shortcut => ({
+  manifest.shortcuts = manifest.shortcuts.map((shortcut) => ({
     ...shortcut,
     url: basePath + shortcut.url,
-    icons: shortcut.icons?.map(icon => ({
+    icons: shortcut.icons?.map((icon) => ({
       ...icon,
-      src: basePath + icon.src
-    }))
+      src: basePath + icon.src,
+    })),
   }));
 }
 

@@ -2,8 +2,8 @@
   "name": "Forum Scraper Data Explorer",
   "short_name": "FScrape",
   "description": "Analyze and visualize forum data with powerful analytics tools",
-  "start_url": "/fscrape/",
-  "scope": "/fscrape/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "display_override": [
     "window-controls-overlay",
