@@ -128,7 +128,7 @@ const nextConfig = {
         const fs = require('fs');
         const path = require('path');
 
-        const sqlJsSource = path.join(process.cwd(), 'node_modules/sql.js/dist');
+        const sqlJsSource = path.join(process.cwd(), '../../node_modules/sql.js/dist');
         const sqlJsTarget = path.join(process.cwd(), 'public/sql-js');
 
         try {

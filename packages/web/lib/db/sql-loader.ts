@@ -66,11 +66,15 @@ async function initializeSqlJs(wasmPath: string): Promise<SqlJsStatic> {
       error: errorMessage,
       wasmPath,
       userAgent: navigator.userAgent,
-      location: window.location.href
+      location: window.location.href,
     });
 
     // Check if this is a WASM loading issue
-    if (errorMessage.includes('fetch') || errorMessage.includes('404') || errorMessage.includes('WASM')) {
+    if (
+      errorMessage.includes('fetch') ||
+      errorMessage.includes('404') ||
+      errorMessage.includes('WASM')
+    ) {
       throw new Error(
         `Failed to load SQL.js WASM files from ${wasmPath}. Check that sql-wasm.wasm and sql-wasm.js are accessible at this path. Original error: ${errorMessage}`
       );
