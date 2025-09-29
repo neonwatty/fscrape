@@ -1,8 +1,9 @@
 import { Database } from 'sql.js';
 
 export async function createSampleDatabase(): Promise<Database> {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
   const SQL = await (window as any).initSqlJs({
-    locateFile: (file: string) => `/sql-js/${file}`,
+    locateFile: (file: string) => `${basePath}/sql-js/${file}`,
   });
 
   const db = new (SQL as any).Database();

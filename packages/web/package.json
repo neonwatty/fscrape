@@ -65,7 +65,7 @@
     "prepush": "npm run test:run",
     "// Lifecycle Hooks": "==================================================",
     "prebuild": "npm run check-all",
-    "postbuild": "cp .nojekyll out/ 2>/dev/null || true && echo 'Build completed successfully!'",
+    "postbuild": "cp .nojekyll out/ 2>/dev/null || true && mkdir -p out/sql-js && cp node_modules/sql.js/dist/sql-wasm.* out/sql-js/ 2>/dev/null || echo 'SQL.js files not found' && echo 'Build completed successfully!'",
     "postinstall": "playwright install-deps 2>/dev/null || true",
     "// Legacy (for backwards compatibility)": "==================================================",
     "jest": "jest",

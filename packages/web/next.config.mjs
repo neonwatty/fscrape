@@ -122,6 +122,36 @@ const nextConfig = {
         path: false,
         crypto: false,
       };
+
+      // Copy SQL.js WASM files during production build
+      if (!dev && process.env.NODE_ENV === 'production') {
+        const fs = require('fs');
+        const path = require('path');
+
+        const sqlJsSource = path.join(process.cwd(), 'node_modules/sql.js/dist');
+        const sqlJsTarget = path.join(process.cwd(), 'public/sql-js');
+
+        try {
+          if (!fs.existsSync(sqlJsTarget)) {
+            fs.mkdirSync(sqlJsTarget, { recursive: true });
+          }
+
+          const wasmFile = path.join(sqlJsSource, 'sql-wasm.wasm');
+          const jsFile = path.join(sqlJsSource, 'sql-wasm.js');
+
+          if (fs.existsSync(wasmFile)) {
+            fs.copyFileSync(wasmFile, path.join(sqlJsTarget, 'sql-wasm.wasm'));
+            console.log('✓ Copied sql-wasm.wasm to public/sql-js/');
+          }
+
+          if (fs.existsSync(jsFile)) {
+            fs.copyFileSync(jsFile, path.join(sqlJsTarget, 'sql-wasm.js'));
+            console.log('✓ Copied sql-wasm.js to public/sql-js/');
+          }
+        } catch (error) {
+          console.warn('Warning: Could not copy SQL.js WASM files:', error.message);
+        }
+      }
     }
 
     // Production optimizations

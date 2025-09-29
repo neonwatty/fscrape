@@ -48,20 +48,35 @@ async function initializeSqlJs(wasmPath: string): Promise<SqlJsStatic> {
   }
 
   try {
+    console.log(`Initializing SQL.js with WASM path: ${wasmPath}`);
+
     SQL = await initSqlJs({
       locateFile: (file: string) => {
-        // Support both local and CDN paths
-        if (wasmPath.startsWith('http')) {
-          return `${wasmPath}${file}`;
-        }
-        return `${wasmPath}${file}`;
+        const fullPath = wasmPath.startsWith('http') ? `${wasmPath}${file}` : `${wasmPath}${file}`;
+        console.log(`SQL.js locating file: ${file} -> ${fullPath}`);
+        return fullPath;
       },
     });
+
+    console.log('SQL.js initialized successfully');
     return SQL;
   } catch (error) {
-    throw new Error(
-      `Failed to initialize SQL.js: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('SQL.js initialization failed:', {
+      error: errorMessage,
+      wasmPath,
+      userAgent: navigator.userAgent,
+      location: window.location.href
+    });
+
+    // Check if this is a WASM loading issue
+    if (errorMessage.includes('fetch') || errorMessage.includes('404') || errorMessage.includes('WASM')) {
+      throw new Error(
+        `Failed to load SQL.js WASM files from ${wasmPath}. Check that sql-wasm.wasm and sql-wasm.js are accessible at this path. Original error: ${errorMessage}`
+      );
+    }
+
+    throw new Error(`Failed to initialize SQL.js: ${errorMessage}`);
   }
 }
 
