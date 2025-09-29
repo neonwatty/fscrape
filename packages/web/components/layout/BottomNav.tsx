@@ -160,28 +160,3 @@ export function BottomNav({ onMenuClick, className }: BottomNavProps) {
     </nav>
   );
 }
-
-// Bottom navigation with page indicators for swipe navigation
-export function BottomNavWithIndicator({ className }: { className?: string }) {
-  const pathname = usePathname();
-  const activeIndex = navigationItems.findIndex((item) => item.href === pathname);
-
-  return (
-    <div className={cn('fixed bottom-0 left-0 right-0 z-40', className)}>
-      {/* Page indicators */}
-      <div className="flex justify-center items-center gap-1.5 pb-2">
-        {navigationItems.map((_, index) => (
-          <div
-            key={index}
-            className={cn(
-              'h-1 rounded-full transition-all duration-300',
-              index === activeIndex ? 'w-6 bg-primary' : 'w-1 bg-muted-foreground/30'
-            )}
-          />
-        ))}
-      </div>
-
-      <BottomNav />
-    </div>
-  );
-}
