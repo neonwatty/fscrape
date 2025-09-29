@@ -452,9 +452,7 @@ export class AdvancedLogger {
    * Remove a transport by name
    */
   removeTransport(transportName: string): void {
-    const transport = this.winston.transports.find(
-      (t) => (t as any).name === transportName
-    );
+    const transport = this.winston.transports.find((t) => (t as any).name === transportName);
     if (transport) {
       this.winston.remove(transport);
     }
@@ -579,12 +577,16 @@ export function requestLoggingMiddleware(options?: {
 
   return (req: Record<string, unknown>, res: Record<string, unknown>, next: () => void) => {
     // Skip excluded paths
-    if ((req.path as string) && config.excludePaths.some((path) => (req.path as string).startsWith(path))) {
+    if (
+      (req.path as string) &&
+      config.excludePaths.some((path) => (req.path as string).startsWith(path))
+    ) {
       return next();
     }
 
     const startTime = Date.now();
-    const requestId = req.id || (req.headers && (req.headers as any)['x-request-id']) || generateRequestId();
+    const requestId =
+      req.id || (req.headers && (req.headers as any)['x-request-id']) || generateRequestId();
 
     // Create child logger with request context
     const childLogger = logger.child({ requestId });

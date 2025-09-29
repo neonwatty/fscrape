@@ -144,7 +144,7 @@ export class ConfigManager {
         if (typeof overrideValue === 'object' && !Array.isArray(overrideValue)) {
           // Recursively merge nested objects
           merged[key as keyof ScraperConfig] = {
-            ...((base as Record<string, unknown>)[key] as Record<string, unknown> || {}),
+            ...(((base as Record<string, unknown>)[key] as Record<string, unknown>) || {}),
             ...overrideValue,
           } as any;
         } else {
