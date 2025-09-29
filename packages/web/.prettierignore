@@ -24,6 +24,9 @@ coverage/
 *.sqlite
 *.sqlite3
 
+# SQL.js library files
+public/sql-js/
+
 # Environment
 .env
 .env.local
