@@ -1,0 +1,101 @@
+/**
+ * Content script styles
+ * Injected into Reddit pages
+ */
+
+/* Pin button container */
+#fscrape-pin-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999999;
+}
+
+/* Pin button base styles */
+.fscrape-pin-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+}
+
+.fscrape-pin-button:hover {
+  background: #2563eb;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.fscrape-pin-button:active {
+  transform: translateY(0);
+}
+
+/* Pinned state */
+.fscrape-pin-button-pinned {
+  background: #10b981;
+}
+
+.fscrape-pin-button-pinned:hover {
+  background: #059669;
+}
+
+/* Loading state */
+.fscrape-pin-button-loading {
+  background: #6b7280;
+  cursor: not-allowed;
+}
+
+.fscrape-pin-button-loading:hover {
+  background: #6b7280;
+  transform: none;
+}
+
+/* Pin icon */
+.fscrape-pin-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Pin text */
+.fscrape-pin-text {
+  line-height: 1;
+}
+
+/* Loading spinner */
+.fscrape-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: fscrape-spin 0.6s linear infinite;
+}
+
+@keyframes fscrape-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .fscrape-pin-button {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  #fscrape-pin-container {
+    bottom: 16px;
+    right: 16px;
+  }
+}
