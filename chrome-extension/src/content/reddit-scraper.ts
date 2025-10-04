@@ -111,20 +111,33 @@ export class RedditScraper {
     try {
       const postId = el.getAttribute('id');
       const subreddit = el.getAttribute('subreddit-prefixed-name')?.replace('r/', '');
-      const author = el.getAttribute('author');
+      let author = el.getAttribute('author');
       const createdTimestamp = el.getAttribute('created-timestamp');
 
-      if (!postId || !subreddit || !author || !createdTimestamp) {
+      if (!postId || !subreddit || !createdTimestamp) {
         return null;
+      }
+
+      // Handle deleted/removed authors
+      if (!author || author === '[deleted]' || author === '[removed]') {
+        author = '[deleted]';
       }
 
       // Extract title
       const titleEl = el.querySelector('h3, [slot="title"]');
-      const title = titleEl?.textContent?.trim() || '';
+      const title = titleEl?.textContent?.trim() || '[no title]';
 
-      // Extract score and comments
-      const score = parseInt(el.getAttribute('score') || '0');
-      const commentCount = parseInt(el.getAttribute('comment-count') || '0');
+      // Validate essential fields
+      if (!title || title === '[no title]') {
+        console.warn(`Post ${postId} has no title, skipping`);
+        return null;
+      }
+
+      // Extract score and comments (with validation)
+      const scoreAttr = el.getAttribute('score');
+      const commentAttr = el.getAttribute('comment-count');
+      const score = scoreAttr ? Math.max(0, parseInt(scoreAttr)) : 0;
+      const commentCount = commentAttr ? Math.max(0, parseInt(commentAttr)) : 0;
 
       // Extract URL/permalink
       const permalink = el.getAttribute('content-href') || el.getAttribute('permalink') || '';
@@ -209,11 +222,20 @@ export class RedditScraper {
 
       // Extract title
       const titleEl = el.querySelector('h3, [data-testid="post-title"]');
-      const title = titleEl?.textContent?.trim() || '';
+      const title = titleEl?.textContent?.trim() || '[no title]';
 
-      // Extract author
+      // Validate title
+      if (!title || title === '[no title]') {
+        console.warn(`Post ${postId} has no title, skipping`);
+        return null;
+      }
+
+      // Extract author (handle deleted/removed)
       const authorLink = el.querySelector('a[href^="/user/"], a[href^="/u/"]');
-      const author = authorLink?.textContent?.replace(/^u\//, '').trim() || '[deleted]';
+      let author = authorLink?.textContent?.replace(/^u\//, '').trim() || '[deleted]';
+      if (author === '[deleted]' || author === '[removed]') {
+        author = '[deleted]';
+      }
 
       // Extract score
       const scoreEl = el.querySelector('[id^="vote-arrows"] div');
@@ -287,15 +309,26 @@ export class RedditScraper {
     try {
       const postId = el.getAttribute('data-fullname');
       const subreddit = el.getAttribute('data-subreddit');
-      const author = el.getAttribute('data-author');
+      let author = el.getAttribute('data-author');
 
-      if (!postId || !subreddit || !author) {
+      if (!postId || !subreddit) {
         return null;
+      }
+
+      // Handle deleted/removed authors
+      if (!author || author === '[deleted]' || author === '[removed]') {
+        author = '[deleted]';
       }
 
       // Extract title
       const titleEl = el.querySelector('a.title');
-      const title = titleEl?.textContent?.trim() || '';
+      const title = titleEl?.textContent?.trim() || '[no title]';
+
+      // Validate title
+      if (!title || title === '[no title]') {
+        console.warn(`Post ${postId} has no title, skipping`);
+        return null;
+      }
 
       // Extract score
       const scoreEl = el.querySelector('.score.unvoted');

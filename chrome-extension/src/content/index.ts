@@ -49,40 +49,51 @@ class ContentScript {
    * Start scraping on current page
    */
   private async start(): Promise<void> {
-    // Check if we're on a subreddit page
-    const subreddit = this.scraper.getCurrentSubreddit();
+    try {
+      // Check if we're on a subreddit page
+      const subreddit = this.scraper.getCurrentSubreddit();
 
-    if (!subreddit) {
-      console.log('Not on a subreddit page, skipping');
-      return;
-    }
+      if (!subreddit) {
+        console.log('Not on a subreddit page, skipping');
+        return;
+      }
 
-    console.log(`On subreddit: r/${subreddit}`);
+      console.log(`On subreddit: r/${subreddit}`);
 
-    // Check if subreddit is pinned
-    const isPinned = await this.checkIfPinned(subreddit);
+      // Check for restricted access (private, quarantined, banned)
+      if (this.isRestrictedSubreddit()) {
+        console.warn(`r/${subreddit} appears to be private, quarantined, or restricted`);
+        // Still allow pinning, but user may not see posts
+      }
 
-    // Inject pin button with callback
-    this.uiInjector.inject(subreddit, async (pinned: boolean) => {
-      if (pinned) {
-        console.log(`r/${subreddit} pinned, starting to track posts as you scroll...`);
+      // Check if subreddit is pinned
+      const isPinned = await this.checkIfPinned(subreddit);
+
+      // Inject pin button with callback
+      this.uiInjector.inject(subreddit, async (pinned: boolean) => {
+        if (pinned) {
+          console.log(`r/${subreddit} pinned, starting to track posts as you scroll...`);
+          this.scrollObserver.start();
+          await this.updatePostCount(subreddit);
+        } else {
+          console.log(`r/${subreddit} unpinned, stopping scroll observer`);
+          this.scrollObserver.stop();
+          this.uiInjector.updatePostCount(0);
+        }
+      });
+
+      // Start scroll observer if already pinned
+      if (isPinned) {
+        console.log(`r/${subreddit} is already pinned, tracking posts as you scroll...`);
         this.scrollObserver.start();
+        // Fetch and display total post count from storage
         await this.updatePostCount(subreddit);
       } else {
-        console.log(`r/${subreddit} unpinned, stopping scroll observer`);
-        this.scrollObserver.stop();
-        this.uiInjector.updatePostCount(0);
+        console.log(`r/${subreddit} is not pinned, waiting for user to pin`);
       }
-    });
-
-    // Start scroll observer if already pinned
-    if (isPinned) {
-      console.log(`r/${subreddit} is already pinned, tracking posts as you scroll...`);
-      this.scrollObserver.start();
-      // Fetch and display total post count from storage
-      await this.updatePostCount(subreddit);
-    } else {
-      console.log(`r/${subreddit} is not pinned, waiting for user to pin`);
+    } catch (error) {
+      console.error('Error starting content script:', error);
+      // Don't crash - continue running in degraded state
     }
   }
 
@@ -127,38 +138,84 @@ class ContentScript {
   }
 
   /**
-   * Check if subreddit is pinned
+   * Check if current subreddit is restricted (private, quarantined, banned)
    */
-  private async checkIfPinned(subreddit: string): Promise<boolean> {
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: MessageType.GET_PINNED_STATUS,
-        payload: { subreddit },
-      });
+  private isRestrictedSubreddit(): boolean {
+    // Check for common Reddit restriction indicators
+    const indicators = [
+      'This community is private',
+      'This community is quarantined',
+      'This subreddit was banned',
+      'You must be invited to visit',
+      'This community has been banned',
+      'r/all does not allow',
+    ];
 
-      return response?.success && response?.data?.isPinned;
-    } catch (error) {
-      console.error('Error checking pinned status:', error);
-      return false;
-    }
+    const bodyText = document.body.textContent || '';
+    return indicators.some((indicator) => bodyText.includes(indicator));
   }
 
   /**
-   * Fetch and update post count from storage
+   * Check if subreddit is pinned (with retry logic)
+   */
+  private async checkIfPinned(subreddit: string): Promise<boolean> {
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: MessageType.GET_PINNED_STATUS,
+          payload: { subreddit },
+        });
+
+        return response?.success && response?.data?.isPinned;
+      } catch (error) {
+        lastError = error as Error;
+        console.warn(`Error checking pinned status (attempt ${attempt}/${maxRetries}):`, error);
+
+        // Wait before retry (exponential backoff)
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+        }
+      }
+    }
+
+    console.error('Failed to check pinned status after retries:', lastError);
+    return false;
+  }
+
+  /**
+   * Fetch and update post count from storage (with retry logic)
    */
   private async updatePostCount(subreddit: string): Promise<void> {
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: MessageType.GET_SUBREDDIT_POST_COUNT,
-        payload: { subreddit },
-      });
+    const maxRetries = 3;
+    let lastError: Error | null = null;
 
-      if (response?.success) {
-        this.uiInjector.updatePostCount(response.data.count);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: MessageType.GET_SUBREDDIT_POST_COUNT,
+          payload: { subreddit },
+        });
+
+        if (response?.success) {
+          this.uiInjector.updatePostCount(response.data.count);
+          return;
+        }
+      } catch (error) {
+        lastError = error as Error;
+        console.warn(`Error fetching post count (attempt ${attempt}/${maxRetries}):`, error);
+
+        // Wait before retry
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+        }
       }
-    } catch (error) {
-      console.error('Error fetching post count:', error);
     }
+
+    console.error('Failed to fetch post count after retries:', lastError);
+    // Don't throw - just log and continue with 0 count
   }
 }
 
