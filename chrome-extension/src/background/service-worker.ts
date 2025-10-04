@@ -85,11 +85,19 @@ async function handleMessage(message: Message, _sender: chrome.runtime.MessageSe
       const subreddits = await storage.getAllSubreddits();
       const pinnedSubreddits = subreddits.filter((s) => s.is_pinned);
 
+      // Estimate storage usage (rough calculation)
+      // Average post size: ~1-2KB, subreddit metadata: ~500 bytes
+      const estimatedPostsSize = totalPosts * 1.5; // KB
+      const estimatedSubsSize = subreddits.length * 0.5; // KB
+      const totalStorageKB = estimatedPostsSize + estimatedSubsSize;
+      const totalStorageMB = totalStorageKB / 1024;
+
       return {
         total_posts: totalPosts,
         total_subreddits: subreddits.length,
         pinned_subreddits: pinnedSubreddits.length,
         last_scraped_at: Math.max(...subreddits.map((s) => s.last_scraped_at), 0),
+        storage_used_mb: totalStorageMB,
       };
     }
 
