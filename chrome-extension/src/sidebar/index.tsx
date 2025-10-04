@@ -14,7 +14,8 @@ type SortDirection = 'asc' | 'desc';
 
 // Simple Bar Chart Component
 function BarChart({ data, title }: { data: { label: string; value: number; color?: string }[]; title: string }) {
-  const maxValue = Math.max(...data.map(d => d.value));
+  if (data.length === 0) return null;
+  const maxValue = Math.max(...data.map(d => d.value), 1); // Ensure at least 1 to avoid division by 0
 
   return (
     <div className="chart-container">
@@ -44,13 +45,16 @@ function BarChart({ data, title }: { data: { label: string; value: number; color
 function TrendChart({ data }: { data: { date: string; count: number }[] }) {
   if (data.length === 0) return null;
 
-  const maxCount = Math.max(...data.map(d => d.count));
+  const maxCount = Math.max(...data.map(d => d.count), 1); // Ensure at least 1 to avoid division by 0
   const width = 600;
   const height = 200;
   const padding = 40;
 
   const points = data.map((d, i) => {
-    const x = padding + (i / (data.length - 1)) * (width - padding * 2);
+    // Handle single data point case
+    const x = data.length === 1
+      ? width / 2
+      : padding + (i / (data.length - 1)) * (width - padding * 2);
     const y = height - padding - (d.count / maxCount) * (height - padding * 2);
     return `${x},${y}`;
   }).join(' ');
@@ -88,7 +92,9 @@ function TrendChart({ data }: { data: { date: string; count: number }[] }) {
 
         {/* Points */}
         {data.map((d, i) => {
-          const x = padding + (i / (data.length - 1)) * (width - padding * 2);
+          const x = data.length === 1
+            ? width / 2
+            : padding + (i / (data.length - 1)) * (width - padding * 2);
           const y = height - padding - (d.count / maxCount) * (height - padding * 2);
           return (
             <circle
