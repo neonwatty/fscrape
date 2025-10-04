@@ -12,6 +12,99 @@ interface SidebarData {
 type SortField = 'created_at' | 'score' | 'comment_count' | 'title';
 type SortDirection = 'asc' | 'desc';
 
+// Simple Bar Chart Component
+function BarChart({ data, title }: { data: { label: string; value: number; color?: string }[]; title: string }) {
+  const maxValue = Math.max(...data.map(d => d.value));
+
+  return (
+    <div className="chart-container">
+      <h3 className="chart-title">{title}</h3>
+      <div className="bar-chart">
+        {data.map((item, index) => (
+          <div key={index} className="bar-item">
+            <div className="bar-label">{item.label}</div>
+            <div className="bar-wrapper">
+              <div
+                className="bar-fill"
+                style={{
+                  width: `${(item.value / maxValue) * 100}%`,
+                  backgroundColor: item.color || '#3b82f6',
+                }}
+              />
+              <span className="bar-value">{item.value.toLocaleString()}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Simple Line Chart Component
+function TrendChart({ data }: { data: { date: string; count: number }[] }) {
+  if (data.length === 0) return null;
+
+  const maxCount = Math.max(...data.map(d => d.count));
+  const width = 600;
+  const height = 200;
+  const padding = 40;
+
+  const points = data.map((d, i) => {
+    const x = padding + (i / (data.length - 1)) * (width - padding * 2);
+    const y = height - padding - (d.count / maxCount) * (height - padding * 2);
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <div className="chart-container">
+      <h3 className="chart-title">Posts Over Time</h3>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} className="trend-chart">
+        {/* Grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
+          <line
+            key={ratio}
+            x1={padding}
+            y1={padding + (1 - ratio) * (height - padding * 2)}
+            x2={width - padding}
+            y2={padding + (1 - ratio) * (height - padding * 2)}
+            stroke="#e5e7eb"
+            strokeWidth="1"
+          />
+        ))}
+
+        {/* Area fill */}
+        <polygon
+          points={`${padding},${height - padding} ${points} ${width - padding},${height - padding}`}
+          fill="rgba(59, 130, 246, 0.1)"
+        />
+
+        {/* Line */}
+        <polyline
+          points={points}
+          fill="none"
+          stroke="#3b82f6"
+          strokeWidth="2"
+        />
+
+        {/* Points */}
+        {data.map((d, i) => {
+          const x = padding + (i / (data.length - 1)) * (width - padding * 2);
+          const y = height - padding - (d.count / maxCount) * (height - padding * 2);
+          return (
+            <circle
+              key={i}
+              cx={x}
+              cy={y}
+              r="3"
+              fill="#3b82f6"
+            />
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 function Sidebar() {
   const [data, setData] = useState<SidebarData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,6 +216,44 @@ function Sidebar() {
     currentPage * postsPerPage
   );
 
+  // Chart data calculations
+  const chartData = useMemo(() => {
+    if (!data) return null;
+
+    // Subreddit breakdown (top 10)
+    const subredditCounts = data.subreddits
+      .sort((a, b) => b.post_count - a.post_count)
+      .slice(0, 10)
+      .map(sub => ({
+        label: `r/${sub.name}`,
+        value: sub.post_count,
+      }));
+
+    // Posts over time (group by day, last 30 days)
+    const now = Date.now();
+    const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
+    const postsByDay = new Map<string, number>();
+
+    data.posts.forEach(post => {
+      if (post.created_at >= thirtyDaysAgo) {
+        const date = new Date(post.created_at).toLocaleDateString();
+        postsByDay.set(date, (postsByDay.get(date) || 0) + 1);
+      }
+    });
+
+    const trendData = Array.from(postsByDay.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(-14); // Last 14 days
+
+    // Top posts by engagement
+    const topPosts = [...data.posts]
+      .sort((a, b) => (b.score + b.comment_count) - (a.score + a.comment_count))
+      .slice(0, 5);
+
+    return { subredditCounts, trendData, topPosts };
+  }, [data]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -197,6 +328,46 @@ function Sidebar() {
           <div className="stat-value">{data.stats.pinned_subreddits}</div>
         </div>
       </div>
+
+      {/* Charts */}
+      {chartData && (
+        <div className="charts-section">
+          {chartData.trendData.length > 0 && <TrendChart data={chartData.trendData} />}
+
+          {chartData.subredditCounts.length > 0 && (
+            <BarChart data={chartData.subredditCounts} title="Top Subreddits" />
+          )}
+
+          {chartData.topPosts.length > 0 && (
+            <div className="chart-container">
+              <h3 className="chart-title">Most Engaged Posts</h3>
+              <div className="top-posts-list">
+                {chartData.topPosts.map((post, index) => (
+                  <div key={post.id} className="top-post-item">
+                    <div className="top-post-rank">{index + 1}</div>
+                    <div className="top-post-content">
+                      <a
+                        href={post.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="top-post-title"
+                      >
+                        {post.title}
+                      </a>
+                      <div className="top-post-meta">
+                        <span className="top-post-subreddit">r/{post.subreddit}</span>
+                        <span className="top-post-engagement">
+                          ↑ {formatNumber(post.score)} · 💬 {formatNumber(post.comment_count)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="filters">
