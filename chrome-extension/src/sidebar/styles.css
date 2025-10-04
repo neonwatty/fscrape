@@ -91,7 +91,7 @@ body {
 /* Filters */
 .filters {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 12px;
   margin-bottom: 16px;
 }

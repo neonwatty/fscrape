@@ -11,6 +11,7 @@ interface SidebarData {
 
 type SortField = 'created_at' | 'score' | 'comment_count' | 'title';
 type SortDirection = 'asc' | 'desc';
+type DateRange = '7d' | '30d' | '90d' | 'all';
 
 // Simple Bar Chart Component
 function BarChart({ data, title }: { data: { label: string; value: number; color?: string }[]; title: string }) {
@@ -119,6 +120,7 @@ function Sidebar() {
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubreddit, setSelectedSubreddit] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<DateRange>('all');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -162,6 +164,24 @@ function Sidebar() {
     if (!data) return [];
 
     let filtered = [...data.posts];
+
+    // Date range filter
+    if (dateRange !== 'all') {
+      const now = Date.now();
+      const cutoff = (() => {
+        switch (dateRange) {
+          case '7d':
+            return now - 7 * 24 * 60 * 60 * 1000;
+          case '30d':
+            return now - 30 * 24 * 60 * 60 * 1000;
+          case '90d':
+            return now - 90 * 24 * 60 * 60 * 1000;
+          default:
+            return 0;
+        }
+      })();
+      filtered = filtered.filter((post) => post.created_at >= cutoff);
+    }
 
     // Search filter
     if (searchQuery) {
@@ -213,7 +233,7 @@ function Sidebar() {
     });
 
     return filtered;
-  }, [data, searchQuery, selectedSubreddit, sortField, sortDirection]);
+  }, [data, searchQuery, selectedSubreddit, dateRange, sortField, sortDirection]);
 
   // Pagination
   const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
@@ -389,6 +409,20 @@ function Sidebar() {
         />
 
         <select
+          value={dateRange}
+          onChange={(e) => {
+            setDateRange(e.target.value as DateRange);
+            setCurrentPage(1);
+          }}
+          className="filter-select"
+        >
+          <option value="all">All Time</option>
+          <option value="7d">Last 7 Days</option>
+          <option value="30d">Last 30 Days</option>
+          <option value="90d">Last 90 Days</option>
+        </select>
+
+        <select
           value={selectedSubreddit}
           onChange={(e) => {
             setSelectedSubreddit(e.target.value);
@@ -413,6 +447,7 @@ function Sidebar() {
             onClick={() => {
               setSearchQuery('');
               setSelectedSubreddit('all');
+              setDateRange('all');
             }}
             className="btn-clear"
           >
