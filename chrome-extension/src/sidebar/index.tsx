@@ -1,6 +1,12 @@
 import { createRoot } from 'react-dom/client';
 import { useState, useEffect, useMemo } from 'react';
 import { MessageType, type Stats, type Subreddit, type Post } from '../shared/types';
+import {
+  generateEngagementHeatmap,
+  getOptimalPostingTimes,
+  getHeatmapColorValue,
+  type HeatmapFilters,
+} from './lib/heatmap-utils';
 import './styles.css';
 
 interface SidebarData {
@@ -108,6 +114,181 @@ function TrendChart({ data }: { data: { date: string; count: number }[] }) {
           );
         })}
       </svg>
+    </div>
+  );
+}
+
+// Engagement Heatmap Component
+function HeatMapChart({ posts }: { posts: Post[] }) {
+  const [metric, setMetric] = useState<HeatmapFilters['metric']>('avgEngagement');
+  const [showOptimal, setShowOptimal] = useState(false);
+
+  const heatmapData = useMemo(() => {
+    return generateEngagementHeatmap(posts, { metric, minPosts: 0 });
+  }, [posts, metric]);
+
+  const optimalTimes = useMemo(() => {
+    return getOptimalPostingTimes(heatmapData, metric, 5);
+  }, [heatmapData, metric]);
+
+  const maxValue = useMemo(() => {
+    return Math.max(
+      ...heatmapData.map((d) =>
+        metric === 'posts' ? d.posts :
+        metric === 'avgScore' ? d.avgScore :
+        metric === 'avgComments' ? d.avgComments : d.avgEngagement
+      ),
+      1
+    );
+  }, [heatmapData, metric]);
+
+  if (posts.length === 0) return null;
+
+  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const hourLabels = Array.from({ length: 24 }, (_, i) => i);
+
+  const formatHour = (hour: number) => {
+    if (hour === 0) return '12a';
+    if (hour < 12) return `${hour}a`;
+    if (hour === 12) return '12p';
+    return `${hour - 12}p`;
+  };
+
+  const getCellData = (day: number, hour: number) => {
+    return heatmapData.find((d) => d.day === day && d.hour === hour);
+  };
+
+  const cellSize = 16;
+  const labelWidth = 40;
+  const topMargin = 20;
+
+  return (
+    <div className="chart-container">
+      <div className="heatmap-header">
+        <h3 className="chart-title">Engagement Heatmap</h3>
+        <div className="heatmap-controls">
+          <select
+            value={metric}
+            onChange={(e) => setMetric(e.target.value as HeatmapFilters['metric'])}
+            className="heatmap-select"
+          >
+            <option value="avgEngagement">Engagement</option>
+            <option value="posts">Post Count</option>
+            <option value="avgScore">Avg Score</option>
+            <option value="avgComments">Avg Comments</option>
+          </select>
+          <button
+            onClick={() => setShowOptimal(!showOptimal)}
+            className={`heatmap-toggle ${showOptimal ? 'active' : ''}`}
+          >
+            {showOptimal ? 'Hide' : 'Show'} Optimal Times
+          </button>
+        </div>
+      </div>
+
+      {showOptimal && optimalTimes.length > 0 && (
+        <div className="optimal-times">
+          <h4 className="optimal-times-title">Top 5 Optimal Posting Times</h4>
+          {optimalTimes.map((slot, index) => (
+            <div key={`${slot.day}-${slot.hour}`} className="optimal-time-slot">
+              <div className="optimal-rank">{index + 1}</div>
+              <div className="optimal-info">
+                <div className="optimal-time">
+                  {slot.day} at {slot.hour}
+                </div>
+                <div className="optimal-desc">{slot.recommendation}</div>
+              </div>
+              <div className={`optimal-badge ${slot.performance}`}>
+                {slot.performance}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="heatmap-scroll">
+        <svg
+          width={labelWidth + hourLabels.length * cellSize}
+          height={topMargin + dayLabels.length * cellSize}
+          className="heatmap-svg"
+        >
+          {/* Hour labels */}
+          {hourLabels.map((hour) => (
+            <text
+              key={`hour-${hour}`}
+              x={labelWidth + hour * cellSize + cellSize / 2}
+              y={topMargin - 5}
+              textAnchor="middle"
+              fontSize="10"
+              fill="#6b7280"
+            >
+              {hour % 3 === 0 ? formatHour(hour) : ''}
+            </text>
+          ))}
+
+          {/* Day labels and cells */}
+          {dayLabels.map((day, dayIndex) => (
+            <g key={`day-${dayIndex}`}>
+              {/* Day label */}
+              <text
+                x={labelWidth - 5}
+                y={topMargin + dayIndex * cellSize + cellSize / 2 + 4}
+                textAnchor="end"
+                fontSize="12"
+                fill="#374151"
+                fontWeight="500"
+              >
+                {day}
+              </text>
+
+              {/* Hour cells */}
+              {hourLabels.map((hour) => {
+                const cellData = getCellData(dayIndex, hour);
+                const value = cellData
+                  ? metric === 'posts' ? cellData.posts :
+                    metric === 'avgScore' ? cellData.avgScore :
+                    metric === 'avgComments' ? cellData.avgComments : cellData.avgEngagement
+                  : 0;
+                const color = getHeatmapColorValue(value, maxValue, metric);
+
+                return (
+                  <g key={`cell-${dayIndex}-${hour}`}>
+                    <rect
+                      x={labelWidth + hour * cellSize}
+                      y={topMargin + dayIndex * cellSize}
+                      width={cellSize - 1}
+                      height={cellSize - 1}
+                      fill={color}
+                      rx="2"
+                      className="heatmap-cell"
+                    >
+                      <title>
+                        {cellData
+                          ? `${day} ${formatHour(hour)}\nPosts: ${cellData.posts}\nAvg Score: ${cellData.avgScore.toFixed(0)}\nAvg Comments: ${cellData.avgComments.toFixed(0)}`
+                          : `${day} ${formatHour(hour)}: No data`}
+                      </title>
+                    </rect>
+                  </g>
+                );
+              })}
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      <div className="heatmap-legend">
+        <span className="heatmap-legend-label">Less</span>
+        <div className="heatmap-legend-colors">
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
+            <div
+              key={i}
+              className="heatmap-legend-color"
+              style={{ backgroundColor: getHeatmapColorValue(ratio * maxValue, maxValue, metric) }}
+            />
+          ))}
+        </div>
+        <span className="heatmap-legend-label">More</span>
+      </div>
     </div>
   );
 }
@@ -358,6 +539,8 @@ function Sidebar() {
       {/* Charts */}
       {chartData && (
         <div className="charts-section">
+          {data.posts.length > 0 && <HeatMapChart posts={data.posts} />}
+
           {chartData.trendData.length > 0 && <TrendChart data={chartData.trendData} />}
 
           {chartData.subredditCounts.length > 0 && (
