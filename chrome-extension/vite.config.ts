@@ -13,13 +13,5 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src')
     }
-  },
-  build: {
-    rollupOptions: {
-      input: {
-        popup: path.resolve(__dirname, 'src/popup/index.html'),
-        sidebar: path.resolve(__dirname, 'src/sidebar/index.html'),
-      }
-    }
   }
 });

@@ -66,25 +66,28 @@ export const DEFAULT_SETTINGS = {
 } as const;
 
 // Message types for communication between content script and background
-export enum MessageType {
+export const MessageType = {
   // Content script → Background
-  SAVE_POST = 'SAVE_POST',
-  TOGGLE_PIN = 'TOGGLE_PIN',
-  GET_PINNED_STATUS = 'GET_PINNED_STATUS',
+  SAVE_POST: 'SAVE_POST',
+  TOGGLE_PIN: 'TOGGLE_PIN',
+  GET_PINNED_STATUS: 'GET_PINNED_STATUS',
+  GET_SUBREDDIT_POST_COUNT: 'GET_SUBREDDIT_POST_COUNT',
 
   // Background → Content script
-  PINNED_STATUS = 'PINNED_STATUS',
+  PINNED_STATUS: 'PINNED_STATUS',
 
   // Popup/Sidebar → Background
-  GET_STATS = 'GET_STATS',
-  GET_SUBREDDITS = 'GET_SUBREDDITS',
-  GET_POSTS = 'GET_POSTS',
-  DELETE_POST = 'DELETE_POST',
-  DELETE_ALL_DATA = 'DELETE_ALL_DATA',
-  EXPORT_DATA = 'EXPORT_DATA',
-  UPDATE_SETTINGS = 'UPDATE_SETTINGS',
-  GET_SETTINGS = 'GET_SETTINGS',
-}
+  GET_STATS: 'GET_STATS',
+  GET_SUBREDDITS: 'GET_SUBREDDITS',
+  GET_POSTS: 'GET_POSTS',
+  DELETE_POST: 'DELETE_POST',
+  DELETE_ALL_DATA: 'DELETE_ALL_DATA',
+  EXPORT_DATA: 'EXPORT_DATA',
+  UPDATE_SETTINGS: 'UPDATE_SETTINGS',
+  GET_SETTINGS: 'GET_SETTINGS',
+} as const;
+
+export type MessageType = typeof MessageType[keyof typeof MessageType];
 
 export interface Message {
   type: MessageType;
@@ -92,19 +95,19 @@ export interface Message {
 }
 
 export interface SavePostMessage extends Message {
-  type: MessageType.SAVE_POST;
+  type: typeof MessageType.SAVE_POST;
   payload: Post;
 }
 
 export interface TogglePinMessage extends Message {
-  type: MessageType.TOGGLE_PIN;
+  type: typeof MessageType.TOGGLE_PIN;
   payload: {
     subreddit: string;
   };
 }
 
 export interface GetPinnedStatusMessage extends Message {
-  type: MessageType.GET_PINNED_STATUS;
+  type: typeof MessageType.GET_PINNED_STATUS;
   payload: {
     subreddit: string;
   };

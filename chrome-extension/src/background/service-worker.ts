@@ -41,7 +41,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
   return true;
 });
 
-async function handleMessage(message: Message, sender: chrome.runtime.MessageSender) {
+async function handleMessage(message: Message, _sender: chrome.runtime.MessageSender) {
   // Ensure data manager is initialized
   if (!dataManager) {
     const storage = await StorageManager.getInstance();
@@ -54,9 +54,11 @@ async function handleMessage(message: Message, sender: chrome.runtime.MessageSen
   switch (message.type) {
     case MessageType.SAVE_POST: {
       const post = message.payload;
-      await dataManager.savePost(post);
-      console.log(`Saved post: ${post.id} from r/${post.subreddit}`);
-      return { postId: post.id };
+      const wasNew = await dataManager.savePost(post);
+      if (wasNew) {
+        console.log(`Saved post: ${post.id} from r/${post.subreddit}`);
+      }
+      return { postId: post.id, wasNew };
     }
 
     case MessageType.TOGGLE_PIN: {
@@ -70,6 +72,12 @@ async function handleMessage(message: Message, sender: chrome.runtime.MessageSen
       const { subreddit } = message.payload;
       const isPinned = await dataManager.isPinned(subreddit);
       return { subreddit, isPinned };
+    }
+
+    case MessageType.GET_SUBREDDIT_POST_COUNT: {
+      const { subreddit } = message.payload;
+      const count = await storage.countPostsBySubreddit(subreddit);
+      return { subreddit, count };
     }
 
     case MessageType.GET_STATS: {

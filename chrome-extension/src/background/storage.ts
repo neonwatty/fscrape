@@ -2,7 +2,7 @@
  * Storage Manager - IndexedDB wrapper with CRUD operations
  */
 
-import { Post, Subreddit, Settings } from '../shared/types';
+import type { Post, Subreddit, Settings } from '../shared/types';
 import { DBSchema } from '../shared/db-schema';
 import { STORE_NAMES, INDEX_NAMES, DEFAULT_QUERY_LIMIT } from '../shared/constants';
 

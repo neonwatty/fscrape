@@ -4,7 +4,7 @@
  */
 
 import { StorageManager } from './storage';
-import type { Post, Subreddit } from '../shared/types';
+import type { Post } from '../shared/types';
 import { DEFAULT_SETTINGS, SETTINGS_KEYS } from '../shared/types';
 
 export class DataManager {
@@ -16,14 +16,15 @@ export class DataManager {
 
   /**
    * Save a post (with deduplication)
+   * @returns true if post was saved, false if it already existed
    */
-  async savePost(post: Post): Promise<void> {
+  async savePost(post: Post): Promise<boolean> {
     // Check if post already exists
     const existing = await this.storage.getPostById(post.id);
 
     if (existing) {
       console.log(`Post ${post.id} already exists, skipping`);
-      return;
+      return false;
     }
 
     // Save post
@@ -34,6 +35,8 @@ export class DataManager {
 
     // Enforce limits
     await this.enforceSubredditLimit(post.subreddit);
+
+    return true;
   }
 
   /**

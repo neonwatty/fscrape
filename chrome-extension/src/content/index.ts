@@ -6,6 +6,7 @@
 import { RedditScraper } from './reddit-scraper';
 import { ScrollObserver } from './scroll-observer';
 import { UIInjector } from './ui-injector';
+import { MessageType } from '../shared/types';
 import './styles.css';
 
 console.log('fscrape content script loaded');
@@ -14,11 +15,16 @@ class ContentScript {
   private scraper: RedditScraper;
   private scrollObserver: ScrollObserver;
   private uiInjector: UIInjector;
-  private currentSubreddit: string | null = null;
 
   constructor() {
     this.scraper = new RedditScraper();
-    this.scrollObserver = new ScrollObserver(this.scraper);
+    this.scrollObserver = new ScrollObserver(
+      this.scraper,
+      (count) => {
+        // Update UI with new post count
+        this.uiInjector.updatePostCount(count);
+      }
+    );
     this.uiInjector = new UIInjector();
   }
 
@@ -52,18 +58,29 @@ class ContentScript {
     }
 
     console.log(`On subreddit: r/${subreddit}`);
-    this.currentSubreddit = subreddit;
 
     // Check if subreddit is pinned
     const isPinned = await this.checkIfPinned(subreddit);
 
-    // Inject pin button
-    this.uiInjector.inject(subreddit);
+    // Inject pin button with callback
+    this.uiInjector.inject(subreddit, async (pinned: boolean) => {
+      if (pinned) {
+        console.log(`r/${subreddit} pinned, starting to track posts as you scroll...`);
+        this.scrollObserver.start();
+        await this.updatePostCount(subreddit);
+      } else {
+        console.log(`r/${subreddit} unpinned, stopping scroll observer`);
+        this.scrollObserver.stop();
+        this.uiInjector.updatePostCount(0);
+      }
+    });
 
-    // Start scroll observer if pinned
+    // Start scroll observer if already pinned
     if (isPinned) {
-      console.log(`r/${subreddit} is pinned, starting scroll observer`);
+      console.log(`r/${subreddit} is already pinned, tracking posts as you scroll...`);
       this.scrollObserver.start();
+      // Fetch and display total post count from storage
+      await this.updatePostCount(subreddit);
     } else {
       console.log(`r/${subreddit} is not pinned, waiting for user to pin`);
     }
@@ -115,7 +132,7 @@ class ContentScript {
   private async checkIfPinned(subreddit: string): Promise<boolean> {
     try {
       const response = await chrome.runtime.sendMessage({
-        type: 'GET_PINNED_STATUS',
+        type: MessageType.GET_PINNED_STATUS,
         payload: { subreddit },
       });
 
@@ -123,6 +140,24 @@ class ContentScript {
     } catch (error) {
       console.error('Error checking pinned status:', error);
       return false;
+    }
+  }
+
+  /**
+   * Fetch and update post count from storage
+   */
+  private async updatePostCount(subreddit: string): Promise<void> {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: MessageType.GET_SUBREDDIT_POST_COUNT,
+        payload: { subreddit },
+      });
+
+      if (response?.success) {
+        this.uiInjector.updatePostCount(response.data.count);
+      }
+    } catch (error) {
+      console.error('Error fetching post count:', error);
     }
   }
 }
