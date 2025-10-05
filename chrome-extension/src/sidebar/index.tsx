@@ -293,6 +293,103 @@ function HeatMapChart({ posts }: { posts: Post[] }) {
   );
 }
 
+// Multi-Select Subreddit Filter Component
+function SubredditMultiSelect({
+  subreddits,
+  selected,
+  onChange,
+}: {
+  subreddits: Subreddit[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleSubreddit = (subredditName: string) => {
+    if (selected.includes(subredditName)) {
+      onChange(selected.filter((s) => s !== subredditName));
+    } else {
+      onChange([...selected, subredditName]);
+    }
+  };
+
+  const selectAll = () => {
+    onChange(subreddits.map((s) => s.name));
+  };
+
+  const clearAll = () => {
+    onChange([]);
+  };
+
+  const displayText =
+    selected.length === 0
+      ? 'All Subreddits'
+      : selected.length === 1
+      ? `r/${selected[0]}`
+      : `${selected.length} subreddits selected`;
+
+  return (
+    <div className="subreddit-multiselect">
+      <button
+        className="multiselect-trigger"
+        onClick={() => setIsOpen(!isOpen)}
+        type="button"
+      >
+        {displayText}
+        <span className="multiselect-arrow">{isOpen ? '▲' : '▼'}</span>
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="multiselect-backdrop" onClick={() => setIsOpen(false)} />
+          <div className="multiselect-dropdown">
+            <div className="multiselect-header">
+              <button onClick={selectAll} className="multiselect-action" type="button">
+                Select All
+              </button>
+              <button onClick={clearAll} className="multiselect-action" type="button">
+                Clear All
+              </button>
+            </div>
+            <div className="multiselect-list">
+              {subreddits.map((sub) => (
+                <label key={sub.name} className="multiselect-option">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(sub.name)}
+                    onChange={() => toggleSubreddit(sub.name)}
+                  />
+                  <span className="multiselect-label">
+                    r/{sub.name} ({sub.post_count})
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {selected.length > 0 && (
+        <div className="multiselect-pills">
+          {selected.map((name) => (
+            <span key={name} className="subreddit-pill">
+              r/{name}
+              <button
+                onClick={() => toggleSubreddit(name)}
+                className="pill-remove"
+                type="button"
+                aria-label={`Remove r/${name}`}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Sidebar() {
   const [data, setData] = useState<SidebarData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -300,7 +397,7 @@ function Sidebar() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSubreddit, setSelectedSubreddit] = useState<string>('all');
+  const [selectedSubreddits, setSelectedSubreddits] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange>('all');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -377,8 +474,8 @@ function Sidebar() {
     }
 
     // Subreddit filter
-    if (selectedSubreddit !== 'all') {
-      filtered = filtered.filter((post) => post.subreddit === selectedSubreddit);
+    if (selectedSubreddits.length > 0) {
+      filtered = filtered.filter((post) => selectedSubreddits.includes(post.subreddit));
     }
 
     // Sort
@@ -414,7 +511,7 @@ function Sidebar() {
     });
 
     return filtered;
-  }, [data, searchQuery, selectedSubreddit, dateRange, sortField, sortDirection]);
+  }, [data, searchQuery, selectedSubreddits, dateRange, sortField, sortDirection]);
 
   // Pagination
   const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
@@ -427,21 +524,26 @@ function Sidebar() {
   const chartData = useMemo(() => {
     if (!data) return null;
 
-    // Subreddit breakdown (top 10)
-    const subredditCounts = data.subreddits
-      .sort((a, b) => b.post_count - a.post_count)
+    // Subreddit breakdown (top 10) - based on filtered posts
+    const subredditPostCounts = new Map<string, number>();
+    filteredPosts.forEach(post => {
+      subredditPostCounts.set(post.subreddit, (subredditPostCounts.get(post.subreddit) || 0) + 1);
+    });
+
+    const subredditCounts = Array.from(subredditPostCounts.entries())
+      .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
-      .map(sub => ({
-        label: `r/${sub.name}`,
-        value: sub.post_count,
+      .map(([name, count]) => ({
+        label: `r/${name}`,
+        value: count,
       }));
 
-    // Posts over time (group by day, last 30 days)
+    // Posts over time (group by day, last 30 days) - based on filtered posts
     const now = Date.now();
     const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
     const postsByDay = new Map<string, number>();
 
-    data.posts.forEach(post => {
+    filteredPosts.forEach(post => {
       if (post.created_at >= thirtyDaysAgo) {
         const date = new Date(post.created_at).toLocaleDateString();
         postsByDay.set(date, (postsByDay.get(date) || 0) + 1);
@@ -453,13 +555,13 @@ function Sidebar() {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(-14); // Last 14 days
 
-    // Top posts by engagement
-    const topPosts = [...data.posts]
+    // Top posts by engagement - based on filtered posts
+    const topPosts = [...filteredPosts]
       .sort((a, b) => (b.score + b.comment_count) - (a.score + a.comment_count))
       .slice(0, 5);
 
     return { subredditCounts, trendData, topPosts };
-  }, [data]);
+  }, [data, filteredPosts]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -539,7 +641,7 @@ function Sidebar() {
       {/* Charts */}
       {chartData && (
         <div className="charts-section">
-          {data.posts.length > 0 && <HeatMapChart posts={data.posts} />}
+          {filteredPosts.length > 0 && <HeatMapChart posts={filteredPosts} />}
 
           {chartData.trendData.length > 0 && <TrendChart data={chartData.trendData} />}
 
@@ -605,21 +707,14 @@ function Sidebar() {
           <option value="90d">Last 90 Days</option>
         </select>
 
-        <select
-          value={selectedSubreddit}
-          onChange={(e) => {
-            setSelectedSubreddit(e.target.value);
+        <SubredditMultiSelect
+          subreddits={data.subreddits}
+          selected={selectedSubreddits}
+          onChange={(selected) => {
+            setSelectedSubreddits(selected);
             setCurrentPage(1);
           }}
-          className="filter-select"
-        >
-          <option value="all">All Subreddits</option>
-          {data.subreddits.map((sub) => (
-            <option key={sub.name} value={sub.name}>
-              r/{sub.name} ({sub.post_count})
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       {/* Results Count */}
@@ -629,7 +724,7 @@ function Sidebar() {
           <button
             onClick={() => {
               setSearchQuery('');
-              setSelectedSubreddit('all');
+              setSelectedSubreddits([]);
               setDateRange('all');
             }}
             className="btn-clear"
