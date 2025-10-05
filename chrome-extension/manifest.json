@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "fscrape - Reddit Data Collector",
+  "name": "fscrape - Reddit Post Tracker",
   "version": "1.0.0",
-  "description": "Collect and visualize Reddit data while browsing",
+  "description": "Track Reddit posts effortlessly as you browse and analyze engagement patterns",
   "permissions": [
     "storage",
     "unlimitedStorage",
