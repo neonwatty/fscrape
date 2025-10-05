@@ -6,6 +6,7 @@
 import { RedditScraper } from './reddit-scraper';
 import { ScrollObserver } from './scroll-observer';
 import { UIInjector } from './ui-injector';
+import { Onboarding } from './onboarding';
 import { MessageType } from '../shared/types';
 import './styles.css';
 
@@ -33,6 +34,9 @@ class ContentScript {
    */
   async init(): Promise<void> {
     console.log('Initializing fscrape content script');
+
+    // Show welcome modal if first time
+    await Onboarding.showWelcomeIfNeeded();
 
     // Wait for page to be ready
     if (document.readyState === 'loading') {
@@ -81,6 +85,20 @@ class ContentScript {
           this.uiInjector.updatePostCount(0);
         }
       });
+
+      // Add onboarding highlight if first time
+      if (!isPinned) {
+        const shouldShowPrompt = await Onboarding.showPinPromptIfNeeded();
+        if (shouldShowPrompt) {
+          // Wait for button to render, then highlight it
+          setTimeout(() => {
+            const buttonElement = document.querySelector('#fscrape-pin-container button');
+            if (buttonElement instanceof HTMLElement) {
+              Onboarding.addPinButtonHighlight(buttonElement);
+            }
+          }, 500);
+        }
+      }
 
       // Start scroll observer if already pinned
       if (isPinned) {
