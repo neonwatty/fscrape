@@ -379,4 +379,497 @@ export class StorageManager {
       request.onerror = () => reject(request.error);
     });
   }
+
+  // ==================== LIBRARY - SAVED POSTS ====================
+
+  /**
+   * Add or update a saved post
+   */
+  async addSavedPost(post: import('../shared/types').SavedPost): Promise<void> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.SAVED_POSTS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.SAVED_POSTS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.put(post);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get saved post by ID
+   */
+  async getSavedPost(id: string): Promise<import('../shared/types').SavedPost | null> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.SAVED_POSTS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.SAVED_POSTS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.get(id);
+
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get all saved posts (with optional limit)
+   */
+  async getAllSavedPosts(limit?: number): Promise<import('../shared/types').SavedPost[]> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.SAVED_POSTS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.SAVED_POSTS);
+    const index = store.index(INDEX_NAMES.SAVED_POSTS_BY_SAVED_AT);
+
+    const posts: import('../shared/types').SavedPost[] = [];
+
+    return new Promise((resolve, reject) => {
+      const request = index.openCursor(null, 'prev'); // Newest first
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
+        if (cursor && (!limit || posts.length < limit)) {
+          posts.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(posts);
+        }
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get saved posts by folder
+   */
+  async getSavedPostsByFolder(
+    folderId: string,
+    limit?: number
+  ): Promise<import('../shared/types').SavedPost[]> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.SAVED_POSTS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.SAVED_POSTS);
+    const index = store.index(INDEX_NAMES.SAVED_POSTS_BY_FOLDER);
+
+    const posts: import('../shared/types').SavedPost[] = [];
+
+    return new Promise((resolve, reject) => {
+      const range = IDBKeyRange.only(folderId);
+      const request = index.openCursor(range, 'prev');
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
+        if (cursor && (!limit || posts.length < limit)) {
+          posts.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(posts);
+        }
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get saved posts by tag
+   */
+  async getSavedPostsByTag(
+    tag: string,
+    limit?: number
+  ): Promise<import('../shared/types').SavedPost[]> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.SAVED_POSTS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.SAVED_POSTS);
+    const index = store.index(INDEX_NAMES.SAVED_POSTS_BY_TAGS);
+
+    const posts: import('../shared/types').SavedPost[] = [];
+
+    return new Promise((resolve, reject) => {
+      const range = IDBKeyRange.only(tag);
+      const request = index.openCursor(range, 'prev');
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
+        if (cursor && (!limit || posts.length < limit)) {
+          posts.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(posts);
+        }
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get favorited posts
+   */
+  async getFavoritedPosts(limit?: number): Promise<import('../shared/types').SavedPost[]> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.SAVED_POSTS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.SAVED_POSTS);
+    const index = store.index(INDEX_NAMES.SAVED_POSTS_BY_FAVORITED);
+
+    const posts: import('../shared/types').SavedPost[] = [];
+
+    return new Promise((resolve, reject) => {
+      const range = IDBKeyRange.only(true);
+      const request = index.openCursor(range, 'prev');
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
+        if (cursor && (!limit || posts.length < limit)) {
+          posts.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(posts);
+        }
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get unread posts
+   */
+  async getUnreadPosts(limit?: number): Promise<import('../shared/types').SavedPost[]> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.SAVED_POSTS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.SAVED_POSTS);
+    const index = store.index(INDEX_NAMES.SAVED_POSTS_BY_READ);
+
+    const posts: import('../shared/types').SavedPost[] = [];
+
+    return new Promise((resolve, reject) => {
+      const range = IDBKeyRange.only(false);
+      const request = index.openCursor(range, 'prev');
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+
+        if (cursor && (!limit || posts.length < limit)) {
+          posts.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(posts);
+        }
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Update a saved post
+   */
+  async updateSavedPost(
+    id: string,
+    updates: Partial<import('../shared/types').SavedPost>
+  ): Promise<void> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.SAVED_POSTS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.SAVED_POSTS);
+
+    return new Promise((resolve, reject) => {
+      // Get existing post
+      const getRequest = store.get(id);
+
+      getRequest.onsuccess = () => {
+        const existingPost = getRequest.result;
+
+        if (!existingPost) {
+          reject(new Error(`SavedPost with id ${id} not found`));
+          return;
+        }
+
+        // Merge updates
+        const updatedPost = { ...existingPost, ...updates };
+
+        // Save updated post
+        const putRequest = store.put(updatedPost);
+
+        putRequest.onsuccess = () => resolve();
+        putRequest.onerror = () => reject(putRequest.error);
+      };
+
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  }
+
+  /**
+   * Delete a saved post
+   */
+  async deleteSavedPost(id: string): Promise<void> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.SAVED_POSTS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.SAVED_POSTS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.delete(id);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get total saved post count
+   */
+  async getTotalSavedPostCount(): Promise<number> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.SAVED_POSTS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.SAVED_POSTS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.count();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // ==================== LIBRARY - TAGS ====================
+
+  /**
+   * Add or update a tag
+   */
+  async addTag(tag: import('../shared/types').Tag): Promise<void> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.TAGS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.TAGS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.put(tag);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get tag by name
+   */
+  async getTag(name: string): Promise<import('../shared/types').Tag | null> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.TAGS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.TAGS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.get(name);
+
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get all tags
+   */
+  async getAllTags(): Promise<import('../shared/types').Tag[]> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.TAGS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.TAGS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Update a tag
+   */
+  async updateTag(name: string, updates: Partial<import('../shared/types').Tag>): Promise<void> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.TAGS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.TAGS);
+
+    return new Promise((resolve, reject) => {
+      const getRequest = store.get(name);
+
+      getRequest.onsuccess = () => {
+        const existingTag = getRequest.result;
+
+        if (!existingTag) {
+          reject(new Error(`Tag with name ${name} not found`));
+          return;
+        }
+
+        const updatedTag = { ...existingTag, ...updates };
+        const putRequest = store.put(updatedTag);
+
+        putRequest.onsuccess = () => resolve();
+        putRequest.onerror = () => reject(putRequest.error);
+      };
+
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  }
+
+  /**
+   * Delete a tag
+   */
+  async deleteTag(name: string): Promise<void> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.TAGS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.TAGS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.delete(name);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Increment tag post count
+   */
+  async incrementTagCount(name: string): Promise<void> {
+    const tag = await this.getTag(name);
+    if (tag) {
+      await this.updateTag(name, { post_count: tag.post_count + 1 });
+    }
+  }
+
+  /**
+   * Decrement tag post count
+   */
+  async decrementTagCount(name: string): Promise<void> {
+    const tag = await this.getTag(name);
+    if (tag && tag.post_count > 0) {
+      await this.updateTag(name, { post_count: tag.post_count - 1 });
+    }
+  }
+
+  // ==================== LIBRARY - FOLDERS ====================
+
+  /**
+   * Add or update a folder
+   */
+  async addFolder(folder: import('../shared/types').Folder): Promise<void> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.FOLDERS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.FOLDERS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.put(folder);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get folder by ID
+   */
+  async getFolder(id: string): Promise<import('../shared/types').Folder | null> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.FOLDERS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.FOLDERS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.get(id);
+
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get all folders
+   */
+  async getAllFolders(): Promise<import('../shared/types').Folder[]> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.FOLDERS, 'readonly');
+    const store = tx.objectStore(STORE_NAMES.FOLDERS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Update a folder
+   */
+  async updateFolder(
+    id: string,
+    updates: Partial<import('../shared/types').Folder>
+  ): Promise<void> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.FOLDERS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.FOLDERS);
+
+    return new Promise((resolve, reject) => {
+      const getRequest = store.get(id);
+
+      getRequest.onsuccess = () => {
+        const existingFolder = getRequest.result;
+
+        if (!existingFolder) {
+          reject(new Error(`Folder with id ${id} not found`));
+          return;
+        }
+
+        const updatedFolder = { ...existingFolder, ...updates, updated_at: Date.now() };
+        const putRequest = store.put(updatedFolder);
+
+        putRequest.onsuccess = () => resolve();
+        putRequest.onerror = () => reject(putRequest.error);
+      };
+
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  }
+
+  /**
+   * Delete a folder
+   */
+  async deleteFolder(id: string): Promise<void> {
+    const db = this.ensureDB();
+    const tx = db.transaction(STORE_NAMES.FOLDERS, 'readwrite');
+    const store = tx.objectStore(STORE_NAMES.FOLDERS);
+
+    return new Promise((resolve, reject) => {
+      const request = store.delete(id);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Increment folder post count
+   */
+  async incrementFolderCount(id: string): Promise<void> {
+    const folder = await this.getFolder(id);
+    if (folder) {
+      await this.updateFolder(id, { post_count: folder.post_count + 1 });
+    }
+  }
+
+  /**
+   * Decrement folder post count
+   */
+  async decrementFolderCount(id: string): Promise<void> {
+    const folder = await this.getFolder(id);
+    if (folder && folder.post_count > 0) {
+      await this.updateFolder(id, { post_count: folder.post_count - 1 });
+    }
+  }
 }

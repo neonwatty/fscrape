@@ -192,6 +192,216 @@ async function handleMessage(message: Message, _sender: chrome.runtime.MessageSe
       return { toggled: true };
     }
 
+    // ==================== LIBRARY - SAVED POSTS ====================
+
+    case MessageType.SAVE_POST_TO_LIBRARY: {
+      const savedPost = message.payload;
+      await storage.addSavedPost(savedPost);
+
+      // Update tag counts
+      for (const tagName of savedPost.tags) {
+        await storage.incrementTagCount(tagName);
+      }
+
+      // Update folder count
+      if (savedPost.folder_id) {
+        await storage.incrementFolderCount(savedPost.folder_id);
+      }
+
+      console.log(`Saved post to library: ${savedPost.id}`);
+      return { saved: true };
+    }
+
+    case MessageType.GET_SAVED_POST: {
+      const { id } = message.payload;
+      const post = await storage.getSavedPost(id);
+      return post;
+    }
+
+    case MessageType.GET_ALL_SAVED_POSTS: {
+      const { limit } = message.payload || {};
+      const posts = await storage.getAllSavedPosts(limit);
+      return posts;
+    }
+
+    case MessageType.GET_SAVED_POSTS_BY_FOLDER: {
+      const { folderId, limit } = message.payload;
+      const posts = await storage.getSavedPostsByFolder(folderId, limit);
+      return posts;
+    }
+
+    case MessageType.GET_SAVED_POSTS_BY_TAG: {
+      const { tag, limit } = message.payload;
+      const posts = await storage.getSavedPostsByTag(tag, limit);
+      return posts;
+    }
+
+    case MessageType.GET_FAVORITED_POSTS: {
+      const { limit } = message.payload || {};
+      const posts = await storage.getFavoritedPosts(limit);
+      return posts;
+    }
+
+    case MessageType.GET_UNREAD_POSTS: {
+      const { limit } = message.payload || {};
+      const posts = await storage.getUnreadPosts(limit);
+      return posts;
+    }
+
+    case MessageType.UPDATE_SAVED_POST: {
+      const { id, updates } = message.payload;
+      const oldPost = await storage.getSavedPost(id);
+
+      if (oldPost) {
+        // Handle tag count changes
+        if (updates.tags && JSON.stringify(updates.tags) !== JSON.stringify(oldPost.tags)) {
+          // Remove old tag counts
+          for (const tagName of oldPost.tags) {
+            if (!updates.tags.includes(tagName)) {
+              await storage.decrementTagCount(tagName);
+            }
+          }
+          // Add new tag counts
+          for (const tagName of updates.tags) {
+            if (!oldPost.tags.includes(tagName)) {
+              await storage.incrementTagCount(tagName);
+            }
+          }
+        }
+
+        // Handle folder count changes
+        if (updates.folder_id !== undefined && updates.folder_id !== oldPost.folder_id) {
+          if (oldPost.folder_id) {
+            await storage.decrementFolderCount(oldPost.folder_id);
+          }
+          if (updates.folder_id) {
+            await storage.incrementFolderCount(updates.folder_id);
+          }
+        }
+      }
+
+      await storage.updateSavedPost(id, updates);
+      return { updated: true };
+    }
+
+    case MessageType.DELETE_SAVED_POST: {
+      const { id } = message.payload;
+      const post = await storage.getSavedPost(id);
+
+      if (post) {
+        // Decrement tag counts
+        for (const tagName of post.tags) {
+          await storage.decrementTagCount(tagName);
+        }
+
+        // Decrement folder count
+        if (post.folder_id) {
+          await storage.decrementFolderCount(post.folder_id);
+        }
+
+        await storage.deleteSavedPost(id);
+        console.log(`Deleted saved post: ${id}`);
+      }
+
+      return { deleted: true };
+    }
+
+    case MessageType.TOGGLE_FAVORITE: {
+      const { id } = message.payload;
+      const post = await storage.getSavedPost(id);
+
+      if (post) {
+        await storage.updateSavedPost(id, { is_favorited: !post.is_favorited });
+        return { is_favorited: !post.is_favorited };
+      }
+
+      throw new Error('Post not found');
+    }
+
+    case MessageType.TOGGLE_READ: {
+      const { id } = message.payload;
+      const post = await storage.getSavedPost(id);
+
+      if (post) {
+        await storage.updateSavedPost(id, { is_read: !post.is_read });
+        return { is_read: !post.is_read };
+      }
+
+      throw new Error('Post not found');
+    }
+
+    // ==================== LIBRARY - TAGS ====================
+
+    case MessageType.CREATE_TAG: {
+      const tag = message.payload;
+      await storage.addTag(tag);
+      console.log(`Created tag: ${tag.name}`);
+      return { created: true };
+    }
+
+    case MessageType.GET_ALL_TAGS: {
+      const tags = await storage.getAllTags();
+      return tags;
+    }
+
+    case MessageType.UPDATE_TAG: {
+      const { name, updates } = message.payload;
+      await storage.updateTag(name, updates);
+      return { updated: true };
+    }
+
+    case MessageType.DELETE_TAG: {
+      const { name } = message.payload;
+      await storage.deleteTag(name);
+      console.log(`Deleted tag: ${name}`);
+      return { deleted: true };
+    }
+
+    // ==================== LIBRARY - FOLDERS ====================
+
+    case MessageType.CREATE_FOLDER: {
+      const folder = message.payload;
+      await storage.addFolder(folder);
+      console.log(`Created folder: ${folder.name}`);
+      return { created: true };
+    }
+
+    case MessageType.GET_ALL_FOLDERS: {
+      const folders = await storage.getAllFolders();
+      return folders;
+    }
+
+    case MessageType.UPDATE_FOLDER: {
+      const { id, updates } = message.payload;
+      await storage.updateFolder(id, updates);
+      return { updated: true };
+    }
+
+    case MessageType.DELETE_FOLDER: {
+      const { id } = message.payload;
+      await storage.deleteFolder(id);
+      console.log(`Deleted folder: ${id}`);
+      return { deleted: true };
+    }
+
+    // ==================== LIBRARY - STATS ====================
+
+    case MessageType.GET_LIBRARY_STATS: {
+      const totalSaved = await storage.getTotalSavedPostCount();
+      const tags = await storage.getAllTags();
+      const folders = await storage.getAllFolders();
+      const favorited = await storage.getFavoritedPosts();
+      const unread = await storage.getUnreadPosts();
+
+      return {
+        total_saved: totalSaved,
+        total_tags: tags.length,
+        total_folders: folders.length,
+        favorited: favorited.length,
+        unread: unread.length,
+      };
+    }
+
     default:
       throw new Error(`Unknown message type: ${message.type}`);
   }

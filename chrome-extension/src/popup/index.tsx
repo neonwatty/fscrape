@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { useState, useEffect } from 'react';
-import { MessageType, type Stats, type Subreddit } from '../shared/types';
+import { MessageType, type Stats, type Subreddit, type LibraryStats } from '../shared/types';
 import { Settings } from './components/Settings';
 import './styles.css';
 
@@ -13,6 +13,7 @@ type Tab = 'dashboard' | 'settings';
 function Popup() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [stats, setStats] = useState<PopupStats | null>(null);
+  const [libraryStats, setLibraryStats] = useState<LibraryStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +26,7 @@ function Popup() {
       setLoading(true);
       setError(null);
 
-      // Get stats
+      // Get analytics stats
       const statsResponse = await chrome.runtime.sendMessage({
         type: MessageType.GET_STATS,
       });
@@ -35,11 +36,21 @@ function Popup() {
         type: MessageType.GET_SUBREDDITS,
       });
 
+      // Get library stats
+      const libraryStatsResponse = await chrome.runtime.sendMessage({
+        type: MessageType.GET_LIBRARY_STATS,
+      });
+
       if (statsResponse?.success && subredditsResponse?.success) {
         setStats({
           ...statsResponse.data,
           subreddits: subredditsResponse.data.subreddits || [],
         });
+
+        // Set library stats if available
+        if (libraryStatsResponse?.success) {
+          setLibraryStats(libraryStatsResponse.data);
+        }
       } else {
         setError('Failed to load stats');
       }
@@ -261,40 +272,83 @@ function Popup() {
         <>
       {/* Dashboard Stats Content */}
 
-      {/* Stats Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon">📝</div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.total_posts.toLocaleString()}</div>
-            <div className="stat-label">Total Posts</div>
+      {/* Analytics Stats */}
+      <div className="section">
+        <h2 className="section-title">📊 Analytics</h2>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon">📝</div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.total_posts.toLocaleString()}</div>
+              <div className="stat-label">Total Posts</div>
+            </div>
           </div>
-        </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">📌</div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.pinned_subreddits}</div>
-            <div className="stat-label">Pinned</div>
+          <div className="stat-card">
+            <div className="stat-icon">📌</div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.pinned_subreddits}</div>
+              <div className="stat-label">Pinned</div>
+            </div>
           </div>
-        </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">🕐</div>
-          <div className="stat-content">
-            <div className="stat-value">{formatTimestamp(stats.last_scraped_at)}</div>
-            <div className="stat-label">Last Scrape</div>
+          <div className="stat-card">
+            <div className="stat-icon">🕐</div>
+            <div className="stat-content">
+              <div className="stat-value">{formatTimestamp(stats.last_scraped_at)}</div>
+              <div className="stat-label">Last Scrape</div>
+            </div>
           </div>
-        </div>
 
-        <div className="stat-card">
-          <div className="stat-icon">💾</div>
-          <div className="stat-content">
-            <div className="stat-value">{formatBytes(stats.storage_used_mb * 1024 * 1024)}</div>
-            <div className="stat-label">Storage</div>
+          <div className="stat-card">
+            <div className="stat-icon">💾</div>
+            <div className="stat-content">
+              <div className="stat-value">{formatBytes(stats.storage_used_mb * 1024 * 1024)}</div>
+              <div className="stat-label">Storage</div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Library Stats */}
+      {libraryStats && (
+        <div className="section">
+          <h2 className="section-title">📚 Library</h2>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon">💾</div>
+              <div className="stat-content">
+                <div className="stat-value">{libraryStats.total_saved.toLocaleString()}</div>
+                <div className="stat-label">Saved Posts</div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">⭐</div>
+              <div className="stat-content">
+                <div className="stat-value">{libraryStats.favorited.toLocaleString()}</div>
+                <div className="stat-label">Favorites</div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">🔖</div>
+              <div className="stat-content">
+                <div className="stat-value">{libraryStats.total_tags.toLocaleString()}</div>
+                <div className="stat-label">Tags</div>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">📁</div>
+              <div className="stat-content">
+                <div className="stat-value">{libraryStats.total_folders.toLocaleString()}</div>
+                <div className="stat-label">Folders</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pinned Subreddits */}
       {pinnedSubreddits.length > 0 && (
@@ -322,9 +376,16 @@ function Popup() {
 
       {/* Actions */}
       <div className="actions">
-        <button onClick={openSidebar} className="btn btn-primary">
-          📊 View Dashboard
-        </button>
+        <div className="action-buttons">
+          <button onClick={openSidebar} className="btn btn-primary">
+            📊 Analytics
+          </button>
+          {libraryStats && libraryStats.total_saved > 0 && (
+            <button onClick={openSidebar} className="btn btn-primary">
+              📚 Library
+            </button>
+          )}
+        </div>
 
         <div className="export-group">
           <button onClick={handleExportJSON} className="btn btn-secondary">

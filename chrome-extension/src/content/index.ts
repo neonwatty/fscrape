@@ -6,6 +6,8 @@
 import { RedditScraper } from './reddit-scraper';
 import { ScrollObserver } from './scroll-observer';
 import { UIInjector } from './ui-injector';
+import { SaveButtonInjector } from './save-button';
+import { SaveModalManager } from './save-modal';
 import { Onboarding } from './onboarding';
 import { MessageType } from '../shared/types';
 import './styles.css';
@@ -16,6 +18,8 @@ class ContentScript {
   private scraper: RedditScraper;
   private scrollObserver: ScrollObserver;
   private uiInjector: UIInjector;
+  private saveButtonInjector: SaveButtonInjector;
+  private saveModalManager: SaveModalManager;
 
   constructor() {
     this.scraper = new RedditScraper();
@@ -27,6 +31,8 @@ class ContentScript {
       }
     );
     this.uiInjector = new UIInjector();
+    this.saveButtonInjector = new SaveButtonInjector();
+    this.saveModalManager = new SaveModalManager();
   }
 
   /**
@@ -109,6 +115,12 @@ class ContentScript {
       } else {
         console.log(`r/${subreddit} is not pinned, waiting for user to pin`);
       }
+
+      // Inject save buttons onto visible posts
+      this.injectSaveButtons();
+
+      // Watch for new posts being added (infinite scroll)
+      this.watchForNewPosts();
     } catch (error) {
       console.error('Error starting content script:', error);
       // Don't crash - continue running in degraded state
@@ -121,6 +133,88 @@ class ContentScript {
   private stop(): void {
     this.scrollObserver.stop();
     this.uiInjector.remove();
+    this.saveButtonInjector.removeAll();
+  }
+
+  /**
+   * Inject save buttons onto all visible posts
+   */
+  private injectSaveButtons(): void {
+    // Find all post elements on the page
+    const postElements = this.findAllPostElements();
+
+    postElements.forEach((element) => {
+      const post = this.scraper.extractPostFromElement(element);
+
+      if (post && !this.saveButtonInjector.hasButton(post.id)) {
+        this.saveButtonInjector.inject(
+          element,
+          post,
+          (clickedPost, wasAlreadySaved) => {
+            // If not already saved, show the modal
+            if (!wasAlreadySaved) {
+              this.saveModalManager.show(clickedPost);
+            }
+          }
+        );
+      }
+    });
+  }
+
+  /**
+   * Find all post elements on the current page
+   */
+  private findAllPostElements(): Element[] {
+    const uiVersion = this.scraper.detectRedditUI();
+
+    switch (uiVersion) {
+      case 'sh':
+        return Array.from(document.querySelectorAll('shreddit-post'));
+      case 'new':
+        return Array.from(document.querySelectorAll('[data-testid="post-container"]'));
+      case 'old':
+        return Array.from(document.querySelectorAll('.thing.link'));
+      default:
+        return [];
+    }
+  }
+
+  /**
+   * Watch for new posts being added to the page (infinite scroll)
+   */
+  private watchForNewPosts(): void {
+    const observer = new MutationObserver((mutations) => {
+      // Check if any new post elements were added
+      let foundNewPosts = false;
+
+      for (const mutation of mutations) {
+        if (mutation.addedNodes.length > 0) {
+          mutation.addedNodes.forEach((node) => {
+            if (node instanceof Element) {
+              // Check if the node itself is a post
+              if (this.scraper.isPostElement(node)) {
+                foundNewPosts = true;
+              }
+              // Check if the node contains posts
+              else if (this.findAllPostElements().some(el => node.contains(el))) {
+                foundNewPosts = true;
+              }
+            }
+          });
+        }
+      }
+
+      // If new posts were found, inject save buttons
+      if (foundNewPosts) {
+        setTimeout(() => this.injectSaveButtons(), 100);
+      }
+    });
+
+    // Observe the entire document for new posts
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
   }
 
   /**
