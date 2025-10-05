@@ -61,7 +61,7 @@ function Popup() {
     }
   };
 
-  const handleExport = async () => {
+  const handleExportJSON = async () => {
     try {
       const response = await chrome.runtime.sendMessage({
         type: MessageType.GET_POSTS,
@@ -85,6 +85,86 @@ function Popup() {
     } catch (err) {
       console.error('Export error:', err);
       alert('Failed to export data');
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: MessageType.GET_POSTS,
+        payload: { limit: 999999 },
+      });
+
+      if (response?.success) {
+        const posts = response.data.posts;
+
+        // CSV headers
+        const headers = ['id', 'subreddit', 'title', 'author', 'url', 'score', 'comment_count', 'created_at', 'scraped_at', 'flair', 'is_nsfw', 'is_locked', 'is_stickied'];
+
+        // Convert posts to CSV rows
+        const csvRows = [headers.join(',')];
+        posts.forEach((post: any) => {
+          const row = [
+            `"${(post.id || '').replace(/"/g, '""')}"`,
+            `"${(post.subreddit || '').replace(/"/g, '""')}"`,
+            `"${(post.title || '').replace(/"/g, '""')}"`,
+            `"${(post.author || '').replace(/"/g, '""')}"`,
+            `"${(post.url || '').replace(/"/g, '""')}"`,
+            post.score || 0,
+            post.comment_count || 0,
+            post.created_at || 0,
+            post.scraped_at || 0,
+            `"${(post.flair || '').replace(/"/g, '""')}"`,
+            post.is_nsfw ? 'true' : 'false',
+            post.is_locked ? 'true' : 'false',
+            post.is_stickied ? 'true' : 'false',
+          ];
+          csvRows.push(row.join(','));
+        });
+
+        const csvStr = csvRows.join('\n');
+        const csvBlob = new Blob([csvStr], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(csvBlob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `fscrape-export-${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Export CSV error:', err);
+      alert('Failed to export CSV');
+    }
+  };
+
+  const handleClearAllData = async () => {
+    const confirmed = confirm(
+      `⚠️ Are you sure you want to delete ALL tracked data?\n\n` +
+      `This will permanently delete:\n` +
+      `• ${stats?.total_posts.toLocaleString() || 0} posts\n` +
+      `• ${stats?.total_subreddits || 0} subreddit${stats?.total_subreddits === 1 ? '' : 's'}\n\n` +
+      `This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: MessageType.DELETE_ALL_DATA,
+      });
+
+      if (response?.success) {
+        alert('✅ All data has been cleared successfully');
+        await loadStats();
+      } else {
+        throw new Error(response?.error || 'Unknown error');
+      }
+    } catch (err) {
+      console.error('Clear data error:', err);
+      alert('❌ Failed to clear data: ' + (err as Error).message);
     }
   };
 
@@ -218,9 +298,21 @@ function Popup() {
         <button onClick={openSidebar} className="btn btn-primary">
           📊 View Dashboard
         </button>
-        <button onClick={handleExport} className="btn btn-secondary">
-          📥 Export Data
-        </button>
+
+        <div className="export-group">
+          <button onClick={handleExportJSON} className="btn btn-secondary">
+            📥 Export JSON
+          </button>
+          <button onClick={handleExportCSV} className="btn btn-secondary">
+            📊 Export CSV
+          </button>
+        </div>
+
+        {stats.total_posts > 0 && (
+          <button onClick={handleClearAllData} className="btn btn-danger">
+            🗑️ Clear All Data
+          </button>
+        )}
       </div>
 
       {/* Footer */}

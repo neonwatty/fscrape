@@ -195,6 +195,23 @@ body {
   font-size: 13px;
 }
 
+.btn-danger {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.btn-danger:hover {
+  background: #fecaca;
+  border-color: #fca5a5;
+}
+
+.export-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 /* Footer */
 .popup-footer {
   padding-top: 12px;
