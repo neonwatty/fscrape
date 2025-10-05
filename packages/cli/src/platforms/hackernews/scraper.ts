@@ -72,10 +72,6 @@ export class HackerNewsScraper {
       supportsRealtime: false,
       maxCommentDepth: 100,
       maxItemsPerRequest: 500,
-      rateLimit: {
-        requestsPerSecond: 1,
-        requestsPerMinute: 30,
-      },
     };
   }
 
@@ -124,7 +120,7 @@ export class HackerNewsScraper {
 
     try {
       const result = await this.scrapePosts(category, options);
-      return result.posts;
+      return Array.isArray(result) ? result : result.posts;
     } catch (error: unknown) {
       // Re-throw rate limiting errors
       if (error && typeof error === 'object' && 'response' in error) {
@@ -211,7 +207,7 @@ export class HackerNewsScraper {
 
       if (storyIds.length === 0) {
         this.logger.warn(`No stories found for ${storyType}`);
-        return this.createResult(posts, comments, Array.from(users.values()), errors, startTime);
+        return this.createResult(posts, comments, Array.from(users.values()), errors, startTime, category);
       }
 
       // Fetch stories in batches
@@ -279,7 +275,7 @@ export class HackerNewsScraper {
       });
     }
 
-    return this.createResult(posts, comments, Array.from(users.values()), errors, startTime);
+    return this.createResult(posts, comments, Array.from(users.values()), errors, startTime, category);
   }
 
   /**
@@ -385,7 +381,7 @@ export class HackerNewsScraper {
       });
     }
 
-    return this.createResult(posts, comments, Array.from(users.values()), errors, startTime);
+    return this.createResult(posts, comments, Array.from(users.values()), errors, startTime, undefined);
   }
 
   /**
@@ -451,23 +447,25 @@ export class HackerNewsScraper {
     // Use Algolia search if available in client
     if (this.client.searchStories) {
       try {
-        const results = await this.client.searchStories(query, options);
+        const results = await this.client.searchStories(query, options as Record<string, unknown>);
         const posts: ForumPost[] = [];
 
         for (const hit of results.hits) {
+          const hitData = hit as any;
           const post: ForumPost = {
-            id: hit.objectID,
+            id: hitData.objectID,
             platform: 'hackernews',
-            title: hit.title || '',
-            content: hit.story_text || '',
-            author: hit.author,
-            authorId: hit.author,
-            url: hit.url,
-            score: hit.points || 0,
-            commentCount: hit.num_comments || 0,
-            createdAt: new Date(hit.created_at_i * 1000),
-            category: 'story',
-            metadata: {},
+            title: hitData.title || '',
+            content: hitData.story_text || '',
+            author: hitData.author,
+            authorId: hitData.author,
+            url: hitData.url,
+            score: hitData.points || 0,
+            commentCount: hitData.num_comments || 0,
+            createdAt: new Date(hitData.created_at_i * 1000),
+            metadata: {
+              category: 'story',
+            },
           };
           posts.push(post);
         }
@@ -569,7 +567,7 @@ export class HackerNewsScraper {
       });
     }
 
-    return this.createResult(posts, comments, users, errors, startTime);
+    return this.createResult(posts, comments, users, errors, startTime, undefined);
   }
 
   /**
@@ -600,8 +598,8 @@ export class HackerNewsScraper {
       });
     }
 
-    // If sortBy is 'date', sort by date
-    if (options.sortBy === 'date') {
+    // If sortBy is 'new', sort by date
+    if (options.sortBy === 'new') {
       mockPosts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     }
 
@@ -761,24 +759,20 @@ export class HackerNewsScraper {
     posts: ForumPost[],
     comments: Comment[],
     users: User[],
-    errors: ScrapeError[],
-    startTime: number
+    _errors: ScrapeError[],
+    _startTime: number,
+    category?: string
   ): ScrapeResult {
     return {
       posts,
       comments,
       users,
-      errors,
       metadata: {
         platform: this.platform,
         scrapedAt: new Date(),
-        duration: Date.now() - startTime,
-        counts: {
-          posts: posts.length,
-          comments: comments.length,
-          users: users.length,
-          errors: errors.length,
-        },
+        totalPosts: posts.length,
+        totalComments: comments.length,
+        category: category,
       },
     };
   }
@@ -816,7 +810,7 @@ export class HackerNewsScraper {
   }> {
     // HackerNews doesn't have a native search API
     // This is a mock implementation for testing
-    const posts = await this.search(query, options);
+    const posts = await this.search(query, options as ScrapeOptions);
     return {
       posts,
       hasMore: false,

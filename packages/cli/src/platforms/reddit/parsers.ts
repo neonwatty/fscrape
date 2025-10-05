@@ -143,8 +143,8 @@ export class RedditParsers {
     if (!Array.isArray(rules)) return [];
 
     return rules.map((rule) => ({
-      name: rule.short_name || rule.kind || 'Rule',
-      description: rule.description || rule.violation_reason || '',
+      name: (rule.short_name as string) || (rule.kind as string) || 'Rule',
+      description: (rule.description as string) || (rule.violation_reason as string) || '',
     }));
   }
 
@@ -277,11 +277,11 @@ export class RedditParsers {
     originalAuthor: string;
     originalId: string;
   } | null {
-    if (!post.crosspost_parent_list || post.crosspost_parent_list.length === 0) {
+    if (!post.crosspost_parent_list || (post.crosspost_parent_list as any[]).length === 0) {
       return null;
     }
 
-    const original = post.crosspost_parent_list[0];
+    const original = (post.crosspost_parent_list as any[])[0];
 
     return {
       originalSubreddit: original.subreddit || '',

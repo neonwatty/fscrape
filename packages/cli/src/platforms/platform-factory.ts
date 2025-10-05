@@ -139,11 +139,11 @@ export class PlatformFactory {
         const platformSpecificConfig = platformConfig.config as Record<string, unknown>;
         finalConfig = {
           ...finalConfig,
-          clientId: platformSpecificConfig.clientId,
-          clientSecret: platformSpecificConfig.clientSecret,
-          apiKey: platformSpecificConfig.apiKey,
-          userAgent: platformSpecificConfig.userAgent || finalConfig.userAgent,
-          baseUrl: platformSpecificConfig.baseUrl,
+          clientId: platformSpecificConfig.clientId as string,
+          clientSecret: platformSpecificConfig.clientSecret as string,
+          apiKey: platformSpecificConfig.apiKey as string,
+          userAgent: (platformSpecificConfig.userAgent as string) || finalConfig.userAgent,
+          baseUrl: platformSpecificConfig.baseUrl as string,
         };
       }
     }

@@ -313,6 +313,6 @@ export class HealthChecker {
     this.apiMonitor = new ApiMonitor(this.config);
     this.systemMonitor = new SystemMonitor(this.config);
 
-    this.logger.info('Health checker reconfigured', this.config);
+    this.logger.info('Health checker reconfigured', this.config as unknown as Record<string, unknown>);
   }
 }

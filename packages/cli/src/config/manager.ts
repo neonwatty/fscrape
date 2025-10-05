@@ -135,7 +135,7 @@ export class ConfigManager {
     base: Partial<ScraperConfig>,
     override: Partial<ScraperConfig>
   ): Partial<ScraperConfig> {
-    const merged: Partial<ScraperConfig> = { ...base };
+    const merged = { ...base } as Record<string, any>;
 
     for (const key in override) {
       const overrideValue = (override as Record<string, unknown>)[key];
@@ -143,12 +143,12 @@ export class ConfigManager {
       if (overrideValue !== undefined && overrideValue !== null) {
         if (typeof overrideValue === 'object' && !Array.isArray(overrideValue)) {
           // Recursively merge nested objects
-          merged[key as keyof ScraperConfig] = {
+          merged[key] = {
             ...(((base as Record<string, unknown>)[key] as Record<string, unknown>) || {}),
             ...overrideValue,
-          } as any;
+          };
         } else {
-          merged[key as keyof ScraperConfig] = overrideValue as any;
+          merged[key] = overrideValue;
         }
       }
     }

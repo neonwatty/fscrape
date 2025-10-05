@@ -21,7 +21,7 @@ import type winston from 'winston';
  * HackerNews platform constructor for platform registry
  * Wraps HackerNewsScraper to match the expected PlatformConstructor interface
  */
-export const HackerNewsPlatform: any = class implements BasePlatform {
+export const HackerNewsPlatform: any = class {
   private scraper: HackerNewsScraper;
   public readonly platform = 'hackernews' as const;
 
@@ -40,8 +40,8 @@ export const HackerNewsPlatform: any = class implements BasePlatform {
     return this.scraper.initialize();
   }
 
-  async scrapePosts(category: string, options: ScrapeOptions): Promise<any> {
-    return this.scraper.scrapePosts(category, options);
+  async scrapePosts(options: ScrapeOptions = {}): Promise<any> {
+    return this.scraper.scrapePosts(options);
   }
 
   async scrapePost(postId: string, _options?: ScrapeOptions): Promise<any> {

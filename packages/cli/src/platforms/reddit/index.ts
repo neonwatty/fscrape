@@ -34,7 +34,7 @@ import { RedditPublicClient, type RedditPublicClientConfig } from './public-clie
  * Simple Reddit platform using public JSON endpoints
  * No authentication required!
  */
-export const RedditPlatform: PlatformConstructor = class implements BasePlatform {
+export const RedditPlatform: any = class {
   private client: RedditPublicClient;
   public readonly platform = 'reddit' as const;
 
@@ -69,7 +69,7 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
   }
 
   async scrapePosts(options?: ScrapeOptions) {
-    const subreddit = options?.subreddit || 'all';
+    const subreddit = (options as any)?.subreddit || 'all';
     const limit = options?.limit || 25;
     const sort = options?.sortBy || 'hot';
 
@@ -139,8 +139,8 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
   }
 
   async scrapeComments(postId: string, options?: ScrapeOptions) {
-    const subreddit = options?.subreddit || 'all';
-    const sort = options?.sort || 'best';
+    const subreddit = (options as any)?.subreddit || 'all';
+    const sort = (options as any)?.sort || 'best';
     const limit = options?.limit;
 
     try {
@@ -166,10 +166,10 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
         platform: 'reddit' as const,
         username: username,
         displayName: username,
-        karma: userData?.data?.total_karma || 0,
-        createdAt: userData?.data?.created_utc ? new Date(userData.data.created_utc * 1000) : null,
+        karma: (userData?.data as any)?.total_karma || 0,
+        createdAt: (userData?.data as any)?.created_utc ? new Date((userData.data as any).created_utc * 1000) : null,
         lastSeenAt: null,
-        metadata: userData?.data || {},
+        metadata: (userData?.data || {}) as Record<string, unknown>,
       };
     } catch (_error) {
       return null;
@@ -177,9 +177,9 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
   }
 
   async search(query: string, options?: ScrapeOptions) {
-    const subreddit = options?.subreddit || 'all';
+    const subreddit = (options as any)?.subreddit || 'all';
     const limit = options?.limit || 25;
-    const sort = options?.sort || 'relevance';
+    const sort = (options as any)?.sort || 'relevance';
 
     const listing = await this.client.searchSubreddit(subreddit, query, sort, limit);
     return listing.data.children.map((child) => this.client.convertPost(child.data));
@@ -213,8 +213,8 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
 
   async scrape(options?: ScrapeOptions) {
     // Generic scrape method - delegate to appropriate specific method
-    if (options?.subreddit) {
-      const posts = await this.scrapeCategory(options.subreddit, options);
+    if ((options as any)?.subreddit) {
+      const posts = await this.scrapeCategory((options as any).subreddit, options);
       return {
         posts,
         comments: [],
@@ -222,7 +222,7 @@ export const RedditPlatform: PlatformConstructor = class implements BasePlatform
           platform: 'reddit' as const,
           totalPosts: posts.length,
           scrapedAt: new Date(),
-          subreddit: options.subreddit,
+          subreddit: (options as any).subreddit,
         },
       };
     } else {

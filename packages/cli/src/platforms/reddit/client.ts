@@ -366,9 +366,9 @@ export class RedditClient {
       createdAt: new Date(post.created_utc * 1000),
       updatedAt: post.edited ? new Date((post.edited as number) * 1000) : undefined,
       platform: this.platform,
-      category: post.subreddit,
-      tags: post.link_flair_text ? [post.link_flair_text] : undefined,
       metadata: {
+        category: post.subreddit,
+        tags: post.link_flair_text ? [post.link_flair_text] : undefined,
         subreddit: post.subreddit,
         isVideo: post.is_video,
         isSelf: post.is_self,
