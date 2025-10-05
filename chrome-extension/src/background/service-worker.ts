@@ -5,7 +5,7 @@
 
 import { StorageManager } from './storage';
 import { DataManager } from './data-manager';
-import { MessageType, type Message } from '../shared/types';
+import { MessageType, type Message, SETTINGS_KEYS } from '../shared/types';
 
 console.log('Background service worker loaded');
 
@@ -21,6 +21,18 @@ chrome.runtime.onInstalled.addListener(async () => {
 
   // Initialize default settings
   await dataManager.initializeSettings();
+
+  // Check if sidebar should auto-open
+  const autoOpen = await storage.getSetting(SETTINGS_KEYS.SIDEBAR_AUTO_OPEN);
+  if (autoOpen) {
+    // Auto-open sidebar on install
+    const windows = await chrome.windows.getAll({ windowTypes: ['normal'] });
+    for (const window of windows) {
+      if (window.id) {
+        await chrome.sidePanel.open({ windowId: window.id }).catch(console.error);
+      }
+    }
+  }
 
   console.log('Storage and data manager initialized');
 });
@@ -137,8 +149,47 @@ async function handleMessage(message: Message, _sender: chrome.runtime.MessageSe
 
     case MessageType.UPDATE_SETTINGS: {
       const { key, value } = message.payload;
+      console.log('UPDATE_SETTINGS received:', { key, value });
       await storage.setSetting(key, value);
+
+      // Note: We cannot open the sidebar here because chrome.sidePanel.open()
+      // requires a user gesture. The sidebar is opened from the Settings component
+      // when the toggle is clicked (which has a user gesture).
+
       return { updated: true };
+    }
+
+    case MessageType.OPEN_SIDEBAR: {
+      const { windowId } = message.payload || {};
+      if (windowId) {
+        await chrome.sidePanel.open({ windowId });
+      } else {
+        const window = await chrome.windows.getCurrent();
+        if (window.id) {
+          await chrome.sidePanel.open({ windowId: window.id });
+        }
+      }
+      return { opened: true };
+    }
+
+    case MessageType.CLOSE_SIDEBAR: {
+      // Note: Chrome Side Panel API doesn't have a direct close method
+      // Users must close it manually from the browser UI
+      // This is more of a placeholder for future API updates
+      console.log('Close sidebar requested (manual close required)');
+      return { message: 'Sidebar must be closed manually by the user' };
+    }
+
+    case MessageType.TOGGLE_SIDEBAR: {
+      const { windowId } = message.payload || {};
+      const targetWindowId = windowId || (await chrome.windows.getCurrent()).id;
+
+      if (targetWindowId) {
+        // Side Panel API doesn't have a toggle method, so we'll just open it
+        // Users can close it manually
+        await chrome.sidePanel.open({ windowId: targetWindowId });
+      }
+      return { toggled: true };
     }
 
     default:

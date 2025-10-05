@@ -55,6 +55,8 @@ export const SETTINGS_KEYS = {
   DEFAULT_TIME_LIMIT_DAYS: 'default_time_limit_days',
   THEME: 'theme',
   ENABLE_NOTIFICATIONS: 'enable_notifications',
+  SIDEBAR_ALWAYS_VISIBLE: 'sidebar_always_visible',
+  SIDEBAR_AUTO_OPEN: 'sidebar_auto_open',
 } as const;
 
 // Default settings values
@@ -63,6 +65,8 @@ export const DEFAULT_SETTINGS = {
   [SETTINGS_KEYS.DEFAULT_TIME_LIMIT_DAYS]: null,
   [SETTINGS_KEYS.THEME]: 'system',
   [SETTINGS_KEYS.ENABLE_NOTIFICATIONS]: false,
+  [SETTINGS_KEYS.SIDEBAR_ALWAYS_VISIBLE]: false,
+  [SETTINGS_KEYS.SIDEBAR_AUTO_OPEN]: false,
 } as const;
 
 // Message types for communication between content script and background
@@ -85,6 +89,9 @@ export const MessageType = {
   EXPORT_DATA: 'EXPORT_DATA',
   UPDATE_SETTINGS: 'UPDATE_SETTINGS',
   GET_SETTINGS: 'GET_SETTINGS',
+  OPEN_SIDEBAR: 'OPEN_SIDEBAR',
+  CLOSE_SIDEBAR: 'CLOSE_SIDEBAR',
+  TOGGLE_SIDEBAR: 'TOGGLE_SIDEBAR',
 } as const;
 
 export type MessageType = typeof MessageType[keyof typeof MessageType];

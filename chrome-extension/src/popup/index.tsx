@@ -1,13 +1,17 @@
 import { createRoot } from 'react-dom/client';
 import { useState, useEffect } from 'react';
 import { MessageType, type Stats, type Subreddit } from '../shared/types';
+import { Settings } from './components/Settings';
 import './styles.css';
 
 interface PopupStats extends Stats {
   subreddits: Subreddit[];
 }
 
+type Tab = 'dashboard' | 'settings';
+
 function Popup() {
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [stats, setStats] = useState<PopupStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -234,6 +238,29 @@ function Popup() {
         <h1 className="popup-title">📊 fscrape</h1>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="tab-nav">
+        <button
+          className={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          📊 Dashboard
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+          onClick={() => setActiveTab('settings')}
+        >
+          ⚙️ Settings
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'settings' ? (
+        <Settings />
+      ) : (
+        <>
+      {/* Dashboard Stats Content */}
+
       {/* Stats Cards */}
       <div className="stats-grid">
         <div className="stat-card">
@@ -326,6 +353,8 @@ function Popup() {
           View on GitHub
         </a>
       </div>
+        </>
+      )}
     </div>
   );
 }

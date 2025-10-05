@@ -616,7 +616,12 @@ function Sidebar() {
     <div className="sidebar-container">
       {/* Header */}
       <div className="sidebar-header">
-        <h1 className="sidebar-title">📊 fscrape Dashboard</h1>
+        <div>
+          <h1 className="sidebar-title">📊 fscrape Dashboard</h1>
+          <p className="sidebar-subtitle">
+            💡 Tip: Configure sidebar persistence in extension settings
+          </p>
+        </div>
         <button onClick={loadData} className="btn-refresh" title="Refresh data">
           🔄
         </button>
