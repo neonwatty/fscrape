@@ -32,6 +32,11 @@ export function LibraryView({ onRefresh }: LibraryViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [showTagManager, setShowTagManager] = useState(false);
   const [editingTagColor, setEditingTagColor] = useState<{name: string, color: string} | null>(null);
+  const [showFolderManager, setShowFolderManager] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderDescription, setNewFolderDescription] = useState('');
   const postsPerPage = 20;
 
   const TAG_COLORS = [
@@ -222,6 +227,99 @@ export function LibraryView({ onRefresh }: LibraryViewProps) {
     } catch (err) {
       console.error('Error updating tag color:', err);
     }
+  };
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+
+    try {
+      const newFolder: Folder = {
+        id: crypto.randomUUID(),
+        name: newFolderName.trim(),
+        description: newFolderDescription.trim(),
+        post_count: 0,
+        created_at: Date.now(),
+        updated_at: Date.now(),
+      };
+
+      await chrome.runtime.sendMessage({
+        type: MessageType.CREATE_FOLDER,
+        payload: newFolder,
+      });
+
+      setFolders([...folders, newFolder]);
+      setNewFolderName('');
+      setNewFolderDescription('');
+      setShowFolderModal(false);
+      setEditingFolder(null);
+    } catch (err) {
+      console.error('Error creating folder:', err);
+    }
+  };
+
+  const handleUpdateFolder = async () => {
+    if (!editingFolder || !newFolderName.trim()) return;
+
+    try {
+      await chrome.runtime.sendMessage({
+        type: MessageType.UPDATE_FOLDER,
+        payload: {
+          id: editingFolder.id,
+          updates: {
+            name: newFolderName.trim(),
+            description: newFolderDescription.trim(),
+            updated_at: Date.now(),
+          },
+        },
+      });
+
+      setFolders(folders.map(f =>
+        f.id === editingFolder.id
+          ? { ...f, name: newFolderName.trim(), description: newFolderDescription.trim(), updated_at: Date.now() }
+          : f
+      ));
+      setNewFolderName('');
+      setNewFolderDescription('');
+      setShowFolderModal(false);
+      setEditingFolder(null);
+    } catch (err) {
+      console.error('Error updating folder:', err);
+    }
+  };
+
+  const handleDeleteFolder = async (folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+
+    if (!confirm(`Delete folder "${folder.name}"? Posts in this folder will not be deleted.`)) return;
+
+    try {
+      await chrome.runtime.sendMessage({
+        type: MessageType.DELETE_FOLDER,
+        payload: { id: folderId },
+      });
+
+      setFolders(folders.filter(f => f.id !== folderId));
+      if (selectedFolder === folderId) {
+        setSelectedFolder(null);
+        setFilterType('all');
+      }
+    } catch (err) {
+      console.error('Error deleting folder:', err);
+    }
+  };
+
+  const openFolderModal = (folder?: Folder) => {
+    if (folder) {
+      setEditingFolder(folder);
+      setNewFolderName(folder.name);
+      setNewFolderDescription(folder.description);
+    } else {
+      setEditingFolder(null);
+      setNewFolderName('');
+      setNewFolderDescription('');
+    }
+    setShowFolderModal(true);
   };
 
   const handleToggleRead = async (post: SavedPost) => {
@@ -464,29 +562,153 @@ export function LibraryView({ onRefresh }: LibraryViewProps) {
         )}
 
         {/* Folder Filter */}
-        {folders.length > 0 && (
-          <div className="folder-filter">
+        <div className="folder-filter">
+          <div className="filter-header">
             <label className="filter-label">Filter by Folder:</label>
-            <select
-              className="filter-select"
-              value={selectedFolder || ''}
-              onChange={(e) => {
-                const folderId = e.target.value || null;
-                setFilterType('folder');
-                setSelectedFolder(folderId);
-                setSelectedTag(null);
-                setCurrentPage(1);
-              }}
+            <button
+              className="manage-folders-btn"
+              onClick={() => setShowFolderManager(!showFolderManager)}
             >
-              <option value="">All Folders</option>
-              {folders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name} ({folder.post_count})
-                </option>
-              ))}
-            </select>
+              {showFolderManager ? '✓ Done' : '📁 Manage Folders'}
+            </button>
           </div>
-        )}
+
+          {folders.length > 0 && (
+            <div className="folder-pills">
+              <button
+                className={`folder-pill ${filterType === 'all' || filterType === 'favorites' || filterType === 'unread' || filterType === 'tag' ? '' : selectedFolder === null ? 'active' : ''}`}
+                onClick={() => {
+                  setFilterType('all');
+                  setSelectedFolder(null);
+                  setCurrentPage(1);
+                }}
+              >
+                All
+              </button>
+              {folders.map((folder) => (
+                <button
+                  key={folder.id}
+                  className={`folder-pill ${filterType === 'folder' && selectedFolder === folder.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setFilterType('folder');
+                    setSelectedFolder(folder.id);
+                    setSelectedTag(null);
+                    setCurrentPage(1);
+                  }}
+                >
+                  📁 {folder.name} ({folder.post_count})
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Folder Manager */}
+          {showFolderManager && (
+            <div className="folder-manager">
+              <div className="folder-manager-header">
+                <h3>Manage Folders</h3>
+                <button
+                  className="btn-create-folder"
+                  onClick={() => openFolderModal()}
+                >
+                  + New Folder
+                </button>
+              </div>
+
+              {folders.length === 0 ? (
+                <div className="folder-manager-empty">
+                  <p>No folders yet. Create one to organize your saved posts.</p>
+                </div>
+              ) : (
+                <div className="folder-manager-list">
+                  {folders.map((folder) => (
+                    <div key={folder.id} className="folder-manager-item">
+                      <div className="folder-manager-info">
+                        <div className="folder-manager-icon">📁</div>
+                        <div className="folder-manager-details">
+                          <span className="folder-manager-name">{folder.name}</span>
+                          {folder.description && (
+                            <span className="folder-manager-description">{folder.description}</span>
+                          )}
+                          <span className="folder-manager-meta">
+                            {folder.post_count} posts • Created {formatDate(folder.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="folder-manager-actions">
+                        <button
+                          className="folder-manager-edit-btn"
+                          onClick={() => openFolderModal(folder)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="folder-manager-delete-btn"
+                          onClick={() => handleDeleteFolder(folder.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Folder Create/Edit Modal */}
+          {showFolderModal && (
+            <div className="folder-modal-overlay" onClick={() => setShowFolderModal(false)}>
+              <div className="folder-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="folder-modal-header">
+                  <h3>{editingFolder ? 'Edit Folder' : 'Create New Folder'}</h3>
+                  <button
+                    className="folder-modal-close"
+                    onClick={() => setShowFolderModal(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="folder-modal-content">
+                  <div className="folder-modal-field">
+                    <label>Folder Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Python Tutorials"
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="folder-modal-field">
+                    <label>Description (optional)</label>
+                    <textarea
+                      placeholder="Add a description for this folder..."
+                      value={newFolderDescription}
+                      onChange={(e) => setNewFolderDescription(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                </div>
+                <div className="folder-modal-actions">
+                  <button
+                    className="btn-cancel"
+                    onClick={() => setShowFolderModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn-save"
+                    onClick={editingFolder ? handleUpdateFolder : handleCreateFolder}
+                    disabled={!newFolderName.trim()}
+                  >
+                    {editingFolder ? 'Update' : 'Create'} Folder
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Search and Sort */}

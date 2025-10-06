@@ -25,8 +25,12 @@ function SaveModal({ post, onClose, onSave }: SaveModalProps) {
   const [newTagName, setNewTagName] = useState<string>('');
   const [newTagColor, setNewTagColor] = useState<string>('#3b82f6');
   const [showTagInput, setShowTagInput] = useState<boolean>(false);
+  const [showFolderInput, setShowFolderInput] = useState<boolean>(false);
+  const [newFolderName, setNewFolderName] = useState<string>('');
+  const [newFolderDescription, setNewFolderDescription] = useState<string>('');
 
   const tagInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const TAG_COLORS = [
     '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b',
@@ -43,6 +47,12 @@ function SaveModal({ post, onClose, onSave }: SaveModalProps) {
       tagInputRef.current.focus();
     }
   }, [showTagInput]);
+
+  useEffect(() => {
+    if (showFolderInput && folderInputRef.current) {
+      folderInputRef.current.focus();
+    }
+  }, [showFolderInput]);
 
   const loadTagsAndFolders = async () => {
     try {
@@ -114,6 +124,50 @@ function SaveModal({ post, onClose, onSave }: SaveModalProps) {
       }
     } catch (error) {
       console.error('Error creating tag:', error);
+    }
+  };
+
+  const handleCreateNewFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) return;
+
+    // Check if folder already exists
+    if (availableFolders.some((f) => f.name.toLowerCase() === name.toLowerCase())) {
+      const existing = availableFolders.find((f) => f.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        setFolderId(existing.id);
+      }
+      setNewFolderName('');
+      setNewFolderDescription('');
+      setShowFolderInput(false);
+      return;
+    }
+
+    // Create new folder
+    const newFolder: Folder = {
+      id: crypto.randomUUID(),
+      name: name,
+      description: newFolderDescription.trim(),
+      post_count: 0,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    };
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: MessageType.CREATE_FOLDER,
+        payload: newFolder,
+      });
+
+      if (response?.success) {
+        setAvailableFolders([...availableFolders, newFolder]);
+        setFolderId(newFolder.id);
+        setNewFolderName('');
+        setNewFolderDescription('');
+        setShowFolderInput(false);
+      }
+    } catch (error) {
+      console.error('Error creating folder:', error);
     }
   };
 
@@ -279,18 +333,86 @@ function SaveModal({ post, onClose, onSave }: SaveModalProps) {
           {/* Folder Section */}
           <div className="fscrape-save-modal-section">
             <label className="fscrape-save-modal-label">Folder</label>
-            <select
-              className="fscrape-save-modal-select"
-              value={folderId || ''}
-              onChange={(e) => setFolderId(e.target.value || null)}
-            >
-              <option value="">No folder</option>
-              {availableFolders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
+
+            {showFolderInput ? (
+              <div className="fscrape-folder-create-inline">
+                <input
+                  ref={folderInputRef}
+                  type="text"
+                  placeholder="Folder name..."
+                  className="fscrape-folder-input"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleCreateNewFolder();
+                    } else if (e.key === 'Escape') {
+                      setNewFolderName('');
+                      setNewFolderDescription('');
+                      setShowFolderInput(false);
+                    }
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Description (optional)..."
+                  className="fscrape-folder-input"
+                  value={newFolderDescription}
+                  onChange={(e) => setNewFolderDescription(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleCreateNewFolder();
+                    } else if (e.key === 'Escape') {
+                      setNewFolderName('');
+                      setNewFolderDescription('');
+                      setShowFolderInput(false);
+                    }
+                  }}
+                />
+                <div className="fscrape-folder-create-buttons">
+                  <button
+                    type="button"
+                    className="fscrape-folder-btn-create"
+                    onClick={handleCreateNewFolder}
+                  >
+                    ✓ Create
+                  </button>
+                  <button
+                    type="button"
+                    className="fscrape-folder-btn-cancel"
+                    onClick={() => {
+                      setNewFolderName('');
+                      setNewFolderDescription('');
+                      setShowFolderInput(false);
+                    }}
+                  >
+                    × Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="fscrape-folder-select-wrapper">
+                <select
+                  className="fscrape-save-modal-select"
+                  value={folderId || ''}
+                  onChange={(e) => setFolderId(e.target.value || null)}
+                >
+                  <option value="">No folder</option>
+                  {availableFolders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="fscrape-folder-add-btn"
+                  onClick={() => setShowFolderInput(true)}
+                >
+                  + New Folder
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Notes Section */}
