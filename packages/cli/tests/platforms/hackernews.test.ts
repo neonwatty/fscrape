@@ -292,16 +292,16 @@ describe('HackerNewsScraper', () => {
 
     it('should scrape user profile', async () => {
       mockClient.getUser.mockResolvedValue(mockUser);
-      
+
       const user = await scraper.scrapeUser('testuser');
-      
+
       expect(user).toMatchObject({
         id: 'testuser',
         username: 'testuser',
         platform: 'hackernews',
         karma: 1500,
-        bio: expect.stringContaining('Test user bio'),
       });
+      expect(user?.metadata?.about).toContain('Test user bio');
     });
 
     it('should scrape user posts', async () => {
@@ -489,15 +489,15 @@ describe('HackerNewsScraper', () => {
         descendants: 5,
         type: 'story',
       };
-      
+
       mockClient.getItem.mockResolvedValue(askPost);
-      
+
       const post = await scraper.scrapePost('123');
-      
+
       expect(post).toMatchObject({
         content: 'Question content',
-        category: 'ask',
       });
+      expect(post?.metadata?.category).toBe('ask');
     });
 
     it('should handle Show HN posts', async () => {
@@ -510,15 +510,15 @@ describe('HackerNewsScraper', () => {
         score: 75,
         type: 'story',
       };
-      
+
       mockClient.getItem.mockResolvedValue(showPost);
-      
+
       const post = await scraper.scrapePost('123');
-      
+
       expect(post).toMatchObject({
-        category: 'show',
         url: 'https://myproject.com',
       });
+      expect(post?.metadata?.category).toBe('show');
     });
   });
 

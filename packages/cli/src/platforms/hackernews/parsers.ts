@@ -40,6 +40,7 @@ export class HackerNewsParsers {
         poll: item.poll,
         domain: this.extractDomain(item.url),
         storyType: storyType,
+        category: storyType,
         tags: this.extractTags(item),
       },
     };

@@ -66,8 +66,8 @@ describe('Reddit Platform Integration Tests', () => {
         title: expect.stringContaining('Mock hot post'),
         author: 'mock_user',
         platform: 'reddit',
-        category: 'programming',
       });
+      expect(posts[0].metadata?.category).toBe('programming');
     });
 
     it('should scrape a single post by ID', async () => {

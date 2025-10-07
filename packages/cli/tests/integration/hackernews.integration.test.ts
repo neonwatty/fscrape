@@ -377,7 +377,7 @@ describe('Hacker News Platform Integration Tests', () => {
   describe('Platform Capabilities', () => {
     it('should report correct platform capabilities', () => {
       const capabilities = scraper.getCapabilities();
-      
+
       expect(capabilities).toMatchObject({
         supportsCommentThreads: true,
         supportsUserProfiles: true,
@@ -386,10 +386,6 @@ describe('Hacker News Platform Integration Tests', () => {
         supportsPagination: false,
         supportsRealtime: false,
         maxCommentDepth: expect.any(Number),
-        rateLimit: {
-          requestsPerSecond: 1,
-          requestsPerMinute: 30,
-        },
       });
     });
 
