@@ -207,12 +207,16 @@ body {
 }
 
 .multiselect-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
   padding: 6px 12px;
   background: white;
   border: 1px solid #d1d5db;
   border-radius: 4px;
   font-size: 12px;
+  line-height: 1;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -309,11 +313,15 @@ body {
 }
 
 .btn-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 4px 12px;
   border: 1px solid #d1d5db;
   background: white;
   border-radius: 4px;
   font-size: 12px;
+  line-height: 1;
   color: #374151;
   cursor: pointer;
   transition: all 0.2s;
@@ -444,12 +452,16 @@ body {
 }
 
 .btn-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px 16px;
   border: 1px solid #d1d5db;
   background: white;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
+  line-height: 1;
   color: #374151;
   cursor: pointer;
   transition: all 0.2s;
