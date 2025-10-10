@@ -6,7 +6,7 @@
 /**
  * Token bucket configuration
  */
-export interface TokenBucketConfig {
+interface TokenBucketConfig {
   /** Maximum number of tokens in the bucket */
   capacity: number;
   /** Rate of token refill per second */
@@ -18,7 +18,7 @@ export interface TokenBucketConfig {
 /**
  * Token bucket state information
  */
-export interface TokenBucketState {
+interface TokenBucketState {
   /** Current number of tokens available */
   tokens: number;
   /** Maximum capacity */

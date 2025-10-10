@@ -5,7 +5,7 @@ import { AdvancedLogger } from '../utils/advanced-logger.js';
 const advancedLogger = new AdvancedLogger();
 import { HealthCheckResult, HealthCheckConfig } from './health-checker.js';
 
-export interface SystemMetrics {
+interface SystemMetrics {
   cpu: {
     usage: number;
     cores: number;

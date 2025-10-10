@@ -45,7 +45,7 @@ export enum RecoveryStrategy {
 /**
  * Error metadata interface
  */
-export interface ErrorMetadata {
+interface ErrorMetadata {
   timestamp: Date;
   correlationId?: string;
   userId?: string;
@@ -373,7 +373,7 @@ export class BusinessRuleError extends ValidationError {
 /**
  * Authentication errors
  */
-export class AuthenticationError extends BaseError {
+class AuthenticationError extends BaseError {
   constructor(message: string, code: string = 'AUTH_ERROR', originalError?: Error) {
     super(
       message,
@@ -443,7 +443,7 @@ export class ParsingError extends BaseError {
 /**
  * File system errors
  */
-export class FileSystemError extends BaseError {
+class FileSystemError extends BaseError {
   public readonly path: string | undefined;
   public readonly operation: string | undefined;
 
@@ -537,7 +537,7 @@ export class EnvironmentConfigError extends ConfigurationError {
 /**
  * Platform-specific errors
  */
-export class PlatformError extends BaseError {
+class PlatformError extends BaseError {
   public readonly platform: string;
   public readonly platformCode: string | undefined;
 

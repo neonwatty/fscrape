@@ -4,14 +4,14 @@ import { createLogger } from './enhanced-logger.js';
 import fs from 'fs/promises';
 import path from 'path';
 
-export interface CacheEntry<T = unknown> {
+interface CacheEntry<T = unknown> {
   key: string;
   value: T;
   timestamp: number;
   hits: number;
 }
 
-export interface CacheStats {
+interface CacheStats {
   hits: number;
   misses: number;
   size: number;
@@ -252,6 +252,6 @@ export class CacheManager<T = unknown> {
   }
 }
 
-export function createCacheManager<T = unknown>(config?: Partial<CacheConfig>): CacheManager<T> {
+function createCacheManager<T = unknown>(config?: Partial<CacheConfig>): CacheManager<T> {
   return new CacheManager<T>(config);
 }

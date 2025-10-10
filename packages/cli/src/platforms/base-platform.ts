@@ -56,7 +56,7 @@ export interface BasePlatformCapabilities {
 /**
  * Authentication state for the platform
  */
-export interface AuthenticationState {
+interface AuthenticationState {
   isAuthenticated: boolean;
   sessionState?: SessionState;
   expiresAt?: Date;

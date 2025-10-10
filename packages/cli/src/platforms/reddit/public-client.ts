@@ -19,7 +19,7 @@ export interface RedditPublicClientConfig {
 /**
  * Reddit JSON API response types
  */
-export interface RedditJsonListing<T> {
+interface RedditJsonListing<T> {
   kind: string;
   data: {
     children: Array<{
@@ -31,7 +31,7 @@ export interface RedditJsonListing<T> {
   };
 }
 
-export interface RedditJsonPost {
+interface RedditJsonPost {
   id: string;
   name: string;
   subreddit: string;
@@ -50,7 +50,7 @@ export interface RedditJsonPost {
   thumbnail?: string;
 }
 
-export interface RedditJsonComment {
+interface RedditJsonComment {
   id: string;
   name: string;
   author: string;

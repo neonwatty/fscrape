@@ -17,6 +17,7 @@
     "test:web": "npm run test --workspace=packages/web",
     "lint": "npm run lint --workspaces",
     "lint:fix": "npm run lint:fix --workspaces",
+    "knip": "knip",
     "typecheck": "npm run typecheck --workspaces",
     "clean": "npm run clean --workspaces && rm -rf node_modules",
     "clean:cli": "npm run clean --workspace=packages/cli",
@@ -48,6 +49,7 @@
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
+    "knip": "^5.64.3",
     "prettier": "^3.3.3",
     "typescript": "^5.5.4"
   }

@@ -27,7 +27,7 @@ export interface SessionInfo {
   lastError?: string;
 }
 
-export interface UpsertResult {
+interface UpsertResult {
   inserted: number;
   updated: number;
   errors: Array<{ item: unknown; error: string }>;

@@ -7,7 +7,7 @@ import type { Platform } from './core.js';
 /**
  * Base options shared by all commands
  */
-export interface BaseCommandOptions {
+interface BaseCommandOptions {
   database?: string;
   verbose?: boolean;
   config?: string;
@@ -16,7 +16,7 @@ export interface BaseCommandOptions {
 /**
  * Scrape command options
  */
-export interface ScrapeCommandOptions extends BaseCommandOptions {
+interface ScrapeCommandOptions extends BaseCommandOptions {
   platform?: Platform;
   limit?: number;
   includeComments?: boolean;
@@ -32,7 +32,7 @@ export interface ScrapeCommandOptions extends BaseCommandOptions {
 /**
  * List command options for posts
  */
-export interface ListPostsOptions extends BaseCommandOptions {
+interface ListPostsOptions extends BaseCommandOptions {
   limit?: number;
   offset?: number;
   platform?: Platform;
@@ -45,7 +45,7 @@ export interface ListPostsOptions extends BaseCommandOptions {
 /**
  * List command options for comments
  */
-export interface ListCommentsOptions extends BaseCommandOptions {
+interface ListCommentsOptions extends BaseCommandOptions {
   limit?: number;
   offset?: number;
   platform?: Platform;
@@ -56,7 +56,7 @@ export interface ListCommentsOptions extends BaseCommandOptions {
 /**
  * List command options for users
  */
-export interface ListUsersOptions extends BaseCommandOptions {
+interface ListUsersOptions extends BaseCommandOptions {
   limit?: number;
   offset?: number;
   platform?: Platform;
@@ -69,7 +69,7 @@ export interface ListUsersOptions extends BaseCommandOptions {
 /**
  * Stats command options
  */
-export interface StatsCommandOptions extends BaseCommandOptions {
+interface StatsCommandOptions extends BaseCommandOptions {
   platform?: Platform;
   format?: 'table' | 'json';
 }
@@ -77,7 +77,7 @@ export interface StatsCommandOptions extends BaseCommandOptions {
 /**
  * Search command options
  */
-export interface SearchCommandOptions extends BaseCommandOptions {
+interface SearchCommandOptions extends BaseCommandOptions {
   query: string;
   in?: string;
   platform?: Platform;
@@ -88,7 +88,7 @@ export interface SearchCommandOptions extends BaseCommandOptions {
 /**
  * Export command options
  */
-export interface ExportCommandOptions extends BaseCommandOptions {
+interface ExportCommandOptions extends BaseCommandOptions {
   platform?: Platform;
   format?: 'json' | 'csv' | 'markdown' | 'html';
   output?: string;
@@ -108,7 +108,7 @@ export interface ExportCommandOptions extends BaseCommandOptions {
 /**
  * Export comments command options
  */
-export interface ExportCommentsOptions extends BaseCommandOptions {
+interface ExportCommentsOptions extends BaseCommandOptions {
   platform?: Platform;
   format?: 'json' | 'csv' | 'markdown';
   output?: string;
@@ -119,7 +119,7 @@ export interface ExportCommentsOptions extends BaseCommandOptions {
 /**
  * Export users command options
  */
-export interface ExportUsersOptions extends BaseCommandOptions {
+interface ExportUsersOptions extends BaseCommandOptions {
   platform?: Platform;
   format?: 'json' | 'csv' | 'markdown';
   output?: string;
@@ -139,7 +139,7 @@ export interface StatusCommandOptions extends BaseCommandOptions {
 /**
  * Init command options
  */
-export interface InitCommandOptions extends BaseCommandOptions {
+interface InitCommandOptions extends BaseCommandOptions {
   force?: boolean;
   interactive?: boolean;
 }
@@ -147,7 +147,7 @@ export interface InitCommandOptions extends BaseCommandOptions {
 /**
  * Config command options
  */
-export interface ConfigCommandOptions extends BaseCommandOptions {
+interface ConfigCommandOptions extends BaseCommandOptions {
   list?: boolean;
   get?: string;
   set?: string;
@@ -159,7 +159,7 @@ export interface ConfigCommandOptions extends BaseCommandOptions {
 /**
  * Clean command options
  */
-export interface CleanCommandOptions extends BaseCommandOptions {
+interface CleanCommandOptions extends BaseCommandOptions {
   olderThan?: number;
   platform?: Platform;
   dryRun?: boolean;
@@ -168,7 +168,7 @@ export interface CleanCommandOptions extends BaseCommandOptions {
 /**
  * Batch command options
  */
-export interface BatchCommandOptions extends BaseCommandOptions {
+interface BatchCommandOptions extends BaseCommandOptions {
   interactive?: boolean;
   dryRun?: boolean;
   parallel?: boolean;
@@ -178,14 +178,14 @@ export interface BatchCommandOptions extends BaseCommandOptions {
 /**
  * Generic command options (for commands not yet typed)
  */
-export interface GenericCommandOptions extends BaseCommandOptions {
+interface GenericCommandOptions extends BaseCommandOptions {
   [key: string]: unknown;
 }
 
 /**
  * Type guard to check if options have a platform
  */
-export function hasPlatform(
+function hasPlatform(
   options: BaseCommandOptions
 ): options is BaseCommandOptions & { platform: Platform } {
   return 'platform' in options && typeof options.platform === 'string';
@@ -194,7 +194,7 @@ export function hasPlatform(
 /**
  * Type guard to check if options have a limit
  */
-export function hasLimit(
+function hasLimit(
   options: BaseCommandOptions
 ): options is BaseCommandOptions & { limit: number } {
   return 'limit' in options && typeof options.limit === 'number';
@@ -203,7 +203,7 @@ export function hasLimit(
 /**
  * Type guard to check if options have a format
  */
-export function hasFormat(
+function hasFormat(
   options: BaseCommandOptions
 ): options is BaseCommandOptions & { format: string } {
   return 'format' in options && typeof options.format === 'string';
@@ -212,7 +212,7 @@ export function hasFormat(
 /**
  * Normalize command options with defaults
  */
-export function normalizeOptions<T extends BaseCommandOptions>(
+function normalizeOptions<T extends BaseCommandOptions>(
   options: T,
   defaults: Partial<T>
 ): T {
@@ -222,7 +222,7 @@ export function normalizeOptions<T extends BaseCommandOptions>(
 /**
  * Validate required options are present
  */
-export function validateRequiredOptions<T extends BaseCommandOptions>(
+function validateRequiredOptions<T extends BaseCommandOptions>(
   options: T,
   required: (keyof T)[]
 ): void {

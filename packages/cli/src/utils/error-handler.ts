@@ -48,7 +48,7 @@ enum CircuitState {
 /**
  * Recovery context for error handling
  */
-export interface RecoveryContext {
+interface RecoveryContext {
   attempt: number;
   maxAttempts: number;
   delay: number;

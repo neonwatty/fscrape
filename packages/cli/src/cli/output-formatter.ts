@@ -8,8 +8,8 @@ import { table } from 'table';
 import ora, { Ora } from 'ora';
 import type { ForumPost, Comment } from '../types/core.js';
 
-export type OutputFormat = 'json' | 'csv' | 'table' | 'simple' | 'verbose';
-export type OutputLevel = 'quiet' | 'normal' | 'verbose' | 'debug';
+type OutputFormat = 'json' | 'csv' | 'table' | 'simple' | 'verbose';
+type OutputLevel = 'quiet' | 'normal' | 'verbose' | 'debug';
 
 export interface OutputOptions {
   format?: OutputFormat;
@@ -20,7 +20,7 @@ export interface OutputOptions {
   showStats?: boolean;
 }
 
-export interface BatchProgress {
+interface BatchProgress {
   total: number;
   completed: number;
   failed: number;

@@ -10,7 +10,7 @@ import winston from 'winston';
 /**
  * Metadata for registered platforms
  */
-export interface PlatformMetadata {
+interface PlatformMetadata {
   name: Platform;
   constructor: PlatformConstructor;
   capabilities: BasePlatformCapabilities;
@@ -24,7 +24,7 @@ export interface PlatformMetadata {
 /**
  * Plugin manifest for dynamic loading
  */
-export interface PluginManifest {
+interface PluginManifest {
   name: string;
   platform: Platform;
   version: string;

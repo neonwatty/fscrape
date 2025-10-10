@@ -7,7 +7,7 @@ import { BaseError } from '../utils/errors.js';
 /**
  * Union type for all possible errors in the application
  */
-export type AppError = Error | BaseError | NodeJS.ErrnoException | unknown;
+type AppError = Error | BaseError | NodeJS.ErrnoException | unknown;
 
 /**
  * Type guard for Node.js system errors (e.g., file system errors)
@@ -23,14 +23,14 @@ export function isNodeError(error: unknown): error is NodeJS.ErrnoException {
 /**
  * Type guard for BaseError instances
  */
-export function isBaseError(error: unknown): error is BaseError {
+function isBaseError(error: unknown): error is BaseError {
   return error instanceof BaseError;
 }
 
 /**
  * Type guard for standard Error instances
  */
-export function isError(error: unknown): error is Error {
+function isError(error: unknown): error is Error {
   return error instanceof Error;
 }
 
@@ -49,7 +49,7 @@ export function getErrorMessage(error: unknown): string {
 /**
  * Safely extract error code from unknown error type
  */
-export function getErrorCode(error: unknown): string | undefined {
+function getErrorCode(error: unknown): string | undefined {
   if (isBaseError(error)) return error.code;
   if (isNodeError(error)) return error.code;
   if (error && typeof error === 'object' && 'code' in error) {
@@ -61,7 +61,7 @@ export function getErrorCode(error: unknown): string | undefined {
 /**
  * Safely extract stack trace from unknown error type
  */
-export function getErrorStack(error: unknown): string | undefined {
+function getErrorStack(error: unknown): string | undefined {
   if (isError(error)) return error.stack;
   if (error && typeof error === 'object' && 'stack' in error) {
     return String((error as Record<string, unknown>).stack);
@@ -72,7 +72,7 @@ export function getErrorStack(error: unknown): string | undefined {
 /**
  * Check if error is retryable
  */
-export function isRetryableError(error: unknown): boolean {
+function isRetryableError(error: unknown): boolean {
   if (isBaseError(error)) return error.isRetryable;
 
   // Common retryable error codes
@@ -96,7 +96,7 @@ export function isRetryableError(error: unknown): boolean {
 /**
  * Format error for logging
  */
-export function formatError(error: unknown): string {
+function formatError(error: unknown): string {
   const message = getErrorMessage(error);
   const code = getErrorCode(error);
   const stack = getErrorStack(error);

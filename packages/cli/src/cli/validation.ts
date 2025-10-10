@@ -19,7 +19,7 @@ export const VALID_PLATFORMS: Platform[] = [
   'custom',
 ];
 
-export function validatePlatform(value: string): Platform {
+function validatePlatform(value: string): Platform {
   if (!VALID_PLATFORMS.includes(value as Platform)) {
     throw new Error(`Invalid platform: ${value}. Valid options: ${VALID_PLATFORMS.join(', ')}`);
   }
@@ -70,7 +70,7 @@ export function validatePositiveInt(value: string, name: string): number {
 /**
  * Date/time validation
  */
-export function validateDateTime(value: string): Date {
+function validateDateTime(value: string): Date {
   const date = new Date(value);
 
   if (isNaN(date.getTime())) {
@@ -83,7 +83,7 @@ export function validateDateTime(value: string): Date {
 /**
  * Scrape options schema
  */
-export const ScrapeOptionsSchema = z.object({
+const ScrapeOptionsSchema = z.object({
   platform: z.enum(['reddit', 'hackernews', 'discourse', 'lemmy', 'lobsters', 'custom']),
   limit: z.number().int().positive().optional(),
   sortBy: z.enum(['hot', 'new', 'top', 'controversial', 'old']).optional(),
@@ -96,12 +96,12 @@ export const ScrapeOptionsSchema = z.object({
   config: z.string().optional(),
 });
 
-export type ScrapeOptions = z.infer<typeof ScrapeOptionsSchema>;
+type ScrapeOptions = z.infer<typeof ScrapeOptionsSchema>;
 
 /**
  * Init options schema
  */
-export const InitOptionsSchema = z.object({
+const InitOptionsSchema = z.object({
   name: z.string().min(1),
   database: z.string().optional(),
   platform: z.enum(['reddit', 'hackernews', 'discourse', 'lemmy', 'lobsters', 'custom']).optional(),
@@ -113,7 +113,7 @@ export type InitOptions = z.infer<typeof InitOptionsSchema>;
 /**
  * Status options schema
  */
-export const StatusOptionsSchema = z.object({
+const StatusOptionsSchema = z.object({
   database: z.string().optional(),
   format: z.enum(['json', 'table', 'summary']).optional(),
   platform: z.enum(['reddit', 'hackernews', 'discourse', 'lemmy', 'lobsters', 'custom']).optional(),
@@ -170,7 +170,7 @@ export function validateStatusOptions(options: unknown): StatusOptions {
 /**
  * Check if running in TTY (interactive terminal)
  */
-export function isInteractive(): boolean {
+function isInteractive(): boolean {
   return process.stdin.isTTY && process.stdout.isTTY;
 }
 
@@ -200,7 +200,7 @@ export function formatError(error: Error | unknown): string {
 /**
  * Format Zod validation errors
  */
-export function formatZodError(error: z.ZodError): string {
+function formatZodError(error: z.ZodError): string {
   const issues = error.issues.map((issue) => {
     const path = issue.path.length > 0 ? `${issue.path.join('.')}: ` : '';
     return `  • ${path}${issue.message}`;
@@ -232,7 +232,7 @@ export function formatInfo(message: string): string {
 /**
  * Export options schema
  */
-export const ExportOptionsSchema = z
+const ExportOptionsSchema = z
   .object({
     database: z
       .string()
@@ -274,12 +274,12 @@ export const ExportOptionsSchema = z
     return true;
   });
 
-export type ExportOptions = z.infer<typeof ExportOptionsSchema>;
+type ExportOptions = z.infer<typeof ExportOptionsSchema>;
 
 /**
  * Clean options schema
  */
-export const CleanOptionsSchema = z
+const CleanOptionsSchema = z
   .object({
     database: z
       .string()
@@ -299,12 +299,12 @@ export const CleanOptionsSchema = z
     return true;
   });
 
-export type CleanOptions = z.infer<typeof CleanOptionsSchema>;
+type CleanOptions = z.infer<typeof CleanOptionsSchema>;
 
 /**
  * Config options schema
  */
-export const ConfigOptionsSchema = z
+const ConfigOptionsSchema = z
   .object({
     key: z.string().optional(),
     value: z.string().optional(),
@@ -331,12 +331,12 @@ export const ConfigOptionsSchema = z
     return true;
   });
 
-export type ConfigOptions = z.infer<typeof ConfigOptionsSchema>;
+type ConfigOptions = z.infer<typeof ConfigOptionsSchema>;
 
 /**
  * Validate and parse export options
  */
-export function validateExportOptions(options: unknown): ExportOptions {
+function validateExportOptions(options: unknown): ExportOptions {
   try {
     return ExportOptionsSchema.parse(options);
   } catch (error) {
@@ -366,7 +366,7 @@ export function validateCleanOptions(options: unknown): CleanOptions {
 /**
  * Validate and parse config options
  */
-export function validateConfigOptions(options: unknown): ConfigOptions {
+function validateConfigOptions(options: unknown): ConfigOptions {
   try {
     return ConfigOptionsSchema.parse(options);
   } catch (error) {
@@ -385,7 +385,7 @@ export function validateConfigOptions(options: unknown): ConfigOptions {
 /**
  * Validate file extension
  */
-export function validateFileExtension(path: string, validExtensions: string[]): string {
+function validateFileExtension(path: string, validExtensions: string[]): string {
   const ext = path.split('.').pop()?.toLowerCase();
   if (!ext || !validExtensions.includes(ext)) {
     throw new Error(`Invalid file extension. Expected one of: ${validExtensions.join(', ')}`);
@@ -396,7 +396,7 @@ export function validateFileExtension(path: string, validExtensions: string[]): 
 /**
  * Validate directory path (creates if doesn't exist)
  */
-export function validateDirectory(path: string, create = false): string {
+function validateDirectory(path: string, create = false): string {
   const resolvedPath = resolve(path);
 
   if (!existsSync(resolvedPath)) {
@@ -422,7 +422,7 @@ export function validateDirectory(path: string, create = false): string {
 /**
  * Validate database connection string
  */
-export function validateDatabaseConnection(connStr: string): string {
+function validateDatabaseConnection(connStr: string): string {
   // SQLite file path
   if (!connStr.includes('://')) {
     return validatePath(connStr, false);
@@ -444,7 +444,7 @@ export function validateDatabaseConnection(connStr: string): string {
 /**
  * Validate cron expression
  */
-export function validateCronExpression(expr: string): string {
+function validateCronExpression(expr: string): string {
   // Simple cron validation (5 or 6 fields)
   const parts = expr.split(' ');
   if (parts.length !== 5 && parts.length !== 6) {
@@ -534,7 +534,7 @@ export function validateCronExpression(expr: string): string {
 /**
  * Validate memory size string (e.g., "1GB", "512MB", "2048KB")
  */
-export function validateMemorySize(size: string): string {
+function validateMemorySize(size: string): string {
   const match = size.match(/^(\d+)(KB|MB|GB|TB)$/i);
   if (!match) {
     throw new Error(
@@ -585,7 +585,7 @@ export function validateMemorySize(size: string): string {
 /**
  * Create a platform validator for Commander.js
  */
-export function createPlatformValidator() {
+function createPlatformValidator() {
   return (value: string) => {
     return validatePlatform(value);
   };
@@ -594,7 +594,7 @@ export function createPlatformValidator() {
 /**
  * Create a URL validator for Commander.js
  */
-export function createUrlValidator() {
+function createUrlValidator() {
   return (value: string) => {
     return validateUrl(value);
   };
@@ -603,7 +603,7 @@ export function createUrlValidator() {
 /**
  * Create a path validator for Commander.js
  */
-export function createPathValidator(mustExist = false) {
+function createPathValidator(mustExist = false) {
   return (value: string) => {
     return validatePath(value, mustExist);
   };
@@ -612,7 +612,7 @@ export function createPathValidator(mustExist = false) {
 /**
  * Create a positive integer validator for Commander.js
  */
-export function createPositiveIntValidator(name: string, max?: number) {
+function createPositiveIntValidator(name: string, max?: number) {
   return (value: string) => {
     const num = validatePositiveInt(value, name);
     if (max && num > max) {
@@ -625,7 +625,7 @@ export function createPositiveIntValidator(name: string, max?: number) {
 /**
  * Create a date/time validator for Commander.js
  */
-export function createDateTimeValidator() {
+function createDateTimeValidator() {
   return (value: string) => {
     return validateDateTime(value);
   };
@@ -638,7 +638,7 @@ export function createDateTimeValidator() {
 /**
  * Batch operation options schema
  */
-export const BatchOptionsSchema = z.object({
+const BatchOptionsSchema = z.object({
   concurrency: z.number().int().min(1).max(100).default(5),
   batchSize: z.number().int().min(1).max(1000).default(100),
   delayMs: z.number().int().min(0).max(60000).default(0),
@@ -648,12 +648,12 @@ export const BatchOptionsSchema = z.object({
   progressInterval: z.number().int().min(100).max(10000).default(1000),
 });
 
-export type BatchOptions = z.infer<typeof BatchOptionsSchema>;
+type BatchOptions = z.infer<typeof BatchOptionsSchema>;
 
 /**
  * Filter criteria schema for queries
  */
-export const FilterCriteriaSchema = z
+const FilterCriteriaSchema = z
   .object({
     platforms: z
       .array(z.enum(['reddit', 'hackernews', 'discourse', 'lemmy', 'lobsters', 'custom']))
@@ -692,12 +692,12 @@ export const FilterCriteriaSchema = z
     return true;
   });
 
-export type FilterCriteria = z.infer<typeof FilterCriteriaSchema>;
+type FilterCriteria = z.infer<typeof FilterCriteriaSchema>;
 
 /**
  * Scheduling options schema
  */
-export const ScheduleOptionsSchema = z
+const ScheduleOptionsSchema = z
   .object({
     enabled: z.boolean().default(false),
     cron: z
@@ -728,12 +728,12 @@ export const ScheduleOptionsSchema = z
     return true;
   });
 
-export type ScheduleOptions = z.infer<typeof ScheduleOptionsSchema>;
+type ScheduleOptions = z.infer<typeof ScheduleOptionsSchema>;
 
 /**
  * Proxy configuration schema
  */
-export const ProxyConfigSchema = z
+const ProxyConfigSchema = z
   .object({
     enabled: z.boolean().default(false),
     host: z.string().optional(),
@@ -754,12 +754,12 @@ export const ProxyConfigSchema = z
     return true;
   });
 
-export type ProxyConfig = z.infer<typeof ProxyConfigSchema>;
+type ProxyConfig = z.infer<typeof ProxyConfigSchema>;
 
 /**
  * Performance monitoring options schema
  */
-export const PerformanceOptionsSchema = z.object({
+const PerformanceOptionsSchema = z.object({
   enabled: z.boolean().default(false),
   sampleRate: z.number().min(0).max(1).default(0.1),
   slowThresholdMs: z.number().int().positive().default(1000),
@@ -770,7 +770,7 @@ export const PerformanceOptionsSchema = z.object({
   metricsInterval: z.number().int().min(1000).default(60000),
 });
 
-export type PerformanceOptions = z.infer<typeof PerformanceOptionsSchema>;
+type PerformanceOptions = z.infer<typeof PerformanceOptionsSchema>;
 
 // ============================================================================
 // Combined Validation Utilities
@@ -779,7 +779,7 @@ export type PerformanceOptions = z.infer<typeof PerformanceOptionsSchema>;
 /**
  * Validate all CLI options at once
  */
-export function validateAllOptions(command: string, options: unknown): unknown {
+function validateAllOptions(command: string, options: unknown): unknown {
   switch (command) {
     case 'scrape':
       return validateScrapeOptions(options);
@@ -801,7 +801,7 @@ export function validateAllOptions(command: string, options: unknown): unknown {
 /**
  * Get validation schema for a command
  */
-export function getValidationSchema(command: string): z.ZodSchema {
+function getValidationSchema(command: string): z.ZodSchema {
   switch (command) {
     case 'scrape':
       return ScrapeOptionsSchema;
@@ -823,7 +823,7 @@ export function getValidationSchema(command: string): z.ZodSchema {
 /**
  * Validate options with custom error messages
  */
-export function validateWithCustomErrors<T>(
+function validateWithCustomErrors<T>(
   schema: z.ZodSchema<T>,
   data: unknown,
   customErrors?: Record<string, string>

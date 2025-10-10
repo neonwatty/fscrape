@@ -2,23 +2,6 @@
  * Reddit platform implementation exports
  */
 
-export { RedditScraper, type RedditScraperConfig } from './scraper.js';
-export { RedditClient, type RedditClientConfig } from './client.js';
-export { RedditAuth, type RedditAuthConfig } from './auth.js';
-export { RedditEndpoints, QueryParams, buildUrl, REDDIT_BASE_URL } from './endpoints.js';
-export { RedditParsers, RedditValidators } from './parsers.js';
-
-// Re-export types
-export type {
-  RedditPost,
-  RedditComment,
-  RedditUser,
-  RedditSubreddit,
-  RedditListing,
-} from './client.js';
-
-export type { RedditTokenResponse, RedditAuthState } from './auth.js';
-
 // Import for platform constructor
 // import { RedditScraper } from "./scraper.js";
 import type { PlatformConstructor } from '../platform-factory.js';
@@ -241,6 +224,3 @@ export const RedditPlatform: any = class {
     }
   }
 };
-
-// Default export for platform registration
-export default RedditPlatform;

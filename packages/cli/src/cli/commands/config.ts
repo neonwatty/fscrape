@@ -12,7 +12,7 @@ import { isNodeError } from '../../types/errors.js';
 import { homedir } from 'os';
 import { formatError } from '../validation.js';
 
-export interface ConfigOptions {
+interface ConfigOptions {
   config?: string;
   global?: boolean;
   reset?: boolean;

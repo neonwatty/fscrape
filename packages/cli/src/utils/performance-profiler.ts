@@ -3,13 +3,13 @@ import { performance, PerformanceObserver } from 'perf_hooks';
 import { createLogger } from './enhanced-logger.js';
 import { EventEmitter } from 'events';
 
-export interface PerformanceMark {
+interface PerformanceMark {
   name: string;
   timestamp: number;
   metadata?: Record<string, unknown>;
 }
 
-export interface PerformanceMeasure {
+interface PerformanceMeasure {
   name: string;
   duration: number;
   startTime: number;
@@ -17,21 +17,21 @@ export interface PerformanceMeasure {
   metadata?: Record<string, unknown>;
 }
 
-export interface PerformanceMetrics {
+interface PerformanceMetrics {
   marks: PerformanceMark[];
   measures: PerformanceMeasure[];
   resourceTimings: ResourceTiming[];
   summary: PerformanceSummary;
 }
 
-export interface ResourceTiming {
+interface ResourceTiming {
   name: string;
   duration: number;
   type: string;
   size?: number;
 }
 
-export interface PerformanceSummary {
+interface PerformanceSummary {
   totalDuration: number;
   averageDuration: number;
   minDuration: number;
@@ -40,7 +40,7 @@ export interface PerformanceSummary {
   timestamp: number;
 }
 
-export interface ProfileOptions {
+interface ProfileOptions {
   autoLog: boolean;
   thresholdMs: number;
   captureStackTrace: boolean;
@@ -351,6 +351,6 @@ export class PerformanceProfiler extends EventEmitter {
   }
 }
 
-export function createPerformanceProfiler(options?: Partial<ProfileOptions>): PerformanceProfiler {
+function createPerformanceProfiler(options?: Partial<ProfileOptions>): PerformanceProfiler {
   return new PerformanceProfiler(options);
 }

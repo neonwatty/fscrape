@@ -8,7 +8,7 @@ import type { Post } from '../../shared/types';
 /**
  * Enhanced heatmap data with engagement metrics
  */
-export interface EngagementHeatmapData {
+interface EngagementHeatmapData {
   hour: number;
   day: number;
   posts: number;
@@ -37,7 +37,7 @@ export interface HeatmapFilters {
 /**
  * Time slot performance metrics
  */
-export interface TimeSlotPerformance {
+interface TimeSlotPerformance {
   day: string;
   hour: string;
   performance: 'excellent' | 'good' | 'average' | 'poor';
@@ -203,7 +203,7 @@ export function getOptimalPostingTimes(
 /**
  * Get heatmap color based on value and metric
  */
-export function getHeatmapColor(
+function getHeatmapColor(
   value: number,
   maxValue: number,
   metric: HeatmapFilters['metric'] = 'avgEngagement'

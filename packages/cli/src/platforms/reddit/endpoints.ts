@@ -3,7 +3,7 @@
  */
 
 export const REDDIT_BASE_URL = 'https://oauth.reddit.com';
-export const REDDIT_WWW_URL = 'https://www.reddit.com';
+const REDDIT_WWW_URL = 'https://www.reddit.com';
 
 /**
  * Reddit API endpoints
@@ -240,7 +240,7 @@ export const QueryParams = {
 /**
  * Helper to build full URL
  */
-export function buildUrl(
+function buildUrl(
   endpoint: string,
   params?: URLSearchParams,
   baseUrl: string = REDDIT_BASE_URL

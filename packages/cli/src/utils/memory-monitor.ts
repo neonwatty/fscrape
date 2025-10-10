@@ -1,7 +1,7 @@
 import { createLogger } from './enhanced-logger.js';
 import { PerformanceObserver } from 'perf_hooks';
 
-export interface MemoryStats {
+interface MemoryStats {
   heapUsed: number;
   heapTotal: number;
   external: number;
@@ -11,14 +11,14 @@ export interface MemoryStats {
   timestamp: number;
 }
 
-export interface MemoryThresholds {
+interface MemoryThresholds {
   warningPercent: number;
   criticalPercent: number;
   maxHeapUsedMB: number;
   gcThresholdMB: number;
 }
 
-export interface MemorySnapshot {
+interface MemorySnapshot {
   stats: MemoryStats;
   gcStats?: GCStats;
 }
@@ -332,6 +332,6 @@ export class MemoryMonitor {
   }
 }
 
-export function createMemoryMonitor(thresholds?: Partial<MemoryThresholds>): MemoryMonitor {
+function createMemoryMonitor(thresholds?: Partial<MemoryThresholds>): MemoryMonitor {
   return new MemoryMonitor(thresholds);
 }

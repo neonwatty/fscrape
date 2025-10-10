@@ -10,7 +10,7 @@ import { formatError } from '../validation.js';
 import { table } from 'table';
 import type { Platform } from '../../types/core.js';
 
-export interface ListCommandOptions {
+interface ListCommandOptions {
   database?: string;
   platform?: string;
   limit?: number;

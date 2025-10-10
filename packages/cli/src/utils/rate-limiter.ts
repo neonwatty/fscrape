@@ -6,7 +6,7 @@ import { TokenBucket, TokenBucketFactory, MultiTierTokenBucket } from './token-b
 /**
  * Rate limiting configuration per platform
  */
-export interface RateLimitConfig {
+interface RateLimitConfig {
   /** Maximum requests per time window */
   maxRequests: number;
   /** Time window in milliseconds */
@@ -28,7 +28,7 @@ export interface RateLimitConfig {
 /**
  * Platform-specific rate limit configurations
  */
-export const PLATFORM_RATE_LIMITS: Record<Platform, RateLimitConfig> = {
+const PLATFORM_RATE_LIMITS: Record<Platform, RateLimitConfig> = {
   reddit: {
     maxRequests: 100, // 100 QPM for OAuth
     windowMs: 60000, // 1 minute
@@ -91,7 +91,7 @@ export const PLATFORM_RATE_LIMITS: Record<Platform, RateLimitConfig> = {
 /**
  * Rate limit status information
  */
-export interface RateLimitStatus {
+interface RateLimitStatus {
   platform: Platform;
   requestsRemaining: number;
   requestsUsed: number;
@@ -109,7 +109,7 @@ export interface RateLimitStatus {
 /**
  * Quota usage tracking
  */
-export interface QuotaUsage {
+interface QuotaUsage {
   hourly: {
     used: number;
     limit: number;
@@ -130,7 +130,7 @@ export interface QuotaUsage {
 /**
  * Rate limiter interface
  */
-export interface RateLimiter {
+interface RateLimiter {
   /** Execute a function with rate limiting */
   execute<T>(fn: () => Promise<T>): Promise<T>;
   /** Wait if necessary to respect rate limits */

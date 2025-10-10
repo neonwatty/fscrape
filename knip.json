@@ -1,0 +1,42 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "ignore": [
+    "chrome-extension/**"
+  ],
+  "workspaces": {
+    "packages/cli": {
+      "entry": [
+        "src/cli.ts",
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignore": [
+        "dist/**",
+        "**/*.test.ts",
+        "**/__tests__/**"
+      ]
+    },
+    "packages/web": {
+      "entry": [
+        "next.config.mjs",
+        "app/**/*.{ts,tsx}",
+        "components/**/*.{ts,tsx}",
+        "lib/**/*.{ts,tsx}"
+      ],
+      "project": [
+        "app/**/*.{ts,tsx}",
+        "components/**/*.{ts,tsx}",
+        "lib/**/*.{ts,tsx}",
+        "scripts/**/*.{js,ts}"
+      ],
+      "ignore": [
+        ".next/**",
+        "out/**",
+        "**/*.test.{ts,tsx}",
+        "**/__tests__/**"
+      ]
+    }
+  }
+}

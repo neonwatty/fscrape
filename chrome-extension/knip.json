@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "src/background/service-worker.ts",
+    "src/content/index.ts",
+    "src/popup/index.tsx",
+    "src/sidebar/index.tsx",
+    "demo-screenshots.js"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx,js,jsx}"
+  ],
+  "ignore": [
+    "dist/**",
+    "node_modules/**",
+    "demo-screenshots/**",
+    "**/*.test.{ts,tsx,js,jsx}",
+    "**/__tests__/**",
+    "src/__tests__/**"
+  ]
+}

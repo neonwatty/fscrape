@@ -5,7 +5,7 @@ import { ApiMonitor } from './api-monitor.js';
 import { SystemMonitor } from './system-monitor.js';
 import { DatabaseManager } from '../database/database.js';
 
-export interface HealthStatus {
+interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: Date;
   uptime: number;

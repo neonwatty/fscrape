@@ -7,7 +7,7 @@
 /**
  * Base database row with common fields
  */
-export interface BaseDBRow {
+interface BaseDBRow {
   scraped_at: number;
 }
 
@@ -68,7 +68,7 @@ export interface UserDBRow extends BaseDBRow {
 /**
  * Scrape session table row structure
  */
-export interface SessionDBRow {
+interface SessionDBRow {
   id: number;
   session_id: string;
   platform: string;
@@ -95,7 +95,7 @@ export interface SessionDBRow {
 /**
  * Rate limit state table row structure
  */
-export interface RateLimitDBRow {
+interface RateLimitDBRow {
   platform: string;
   requests_in_window: number;
   window_start: number;
@@ -109,7 +109,7 @@ export interface RateLimitDBRow {
 /**
  * Generic stats aggregation result
  */
-export interface StatsResult {
+interface StatsResult {
   total: number;
   avg_score: number;
   max_score: number;
@@ -119,7 +119,7 @@ export interface StatsResult {
 /**
  * Platform statistics query result
  */
-export interface PlatformStatsRow {
+interface PlatformStatsRow {
   platform: string;
   post_count: number;
   comment_count: number;
@@ -132,7 +132,7 @@ export interface PlatformStatsRow {
 /**
  * Engagement metrics query result
  */
-export interface EngagementMetricsRow {
+interface EngagementMetricsRow {
   date: string | number;
   post_count: number;
   comment_count: number;
@@ -143,7 +143,7 @@ export interface EngagementMetricsRow {
 /**
  * Top performers query result
  */
-export interface TopPerformerRow {
+interface TopPerformerRow {
   author: string;
   platform: string;
   post_count: number;
@@ -155,7 +155,7 @@ export interface TopPerformerRow {
 /**
  * Trending content query result
  */
-export interface TrendingRow {
+interface TrendingRow {
   id: string;
   title: string;
   platform: string;
@@ -168,7 +168,7 @@ export interface TrendingRow {
 /**
  * Time series data point
  */
-export interface TimeSeriesRow {
+interface TimeSeriesRow {
   timestamp: number;
   value: number;
   label?: string;
@@ -177,7 +177,7 @@ export interface TimeSeriesRow {
 /**
  * Database health metrics
  */
-export interface DatabaseHealthRow {
+interface DatabaseHealthRow {
   total_size: number;
   table_count: number;
   index_count: number;
@@ -198,7 +198,7 @@ export type DBRowArray<T> = T[];
 /**
  * Type guard to check if a value is a valid database row
  */
-export function isValidDBRow<T extends BaseDBRow>(value: unknown): value is T {
+function isValidDBRow<T extends BaseDBRow>(value: unknown): value is T {
   return (
     value !== null && value !== undefined && typeof value === 'object' && 'scraped_at' in value
   );
@@ -207,14 +207,14 @@ export function isValidDBRow<T extends BaseDBRow>(value: unknown): value is T {
 /**
  * Convert database timestamp to Date
  */
-export function dbTimestampToDate(timestamp: number | null): Date | null {
+function dbTimestampToDate(timestamp: number | null): Date | null {
   return timestamp ? new Date(timestamp) : null;
 }
 
 /**
  * Convert Date to database timestamp
  */
-export function dateToDbTimestamp(date: Date | null): number | null {
+function dateToDbTimestamp(date: Date | null): number | null {
   return date ? date.getTime() : null;
 }
 
@@ -233,7 +233,7 @@ export function parseDBMetadata<T = unknown>(metadata: string | null): T | null 
 /**
  * Stringify metadata for database storage
  */
-export function stringifyDBMetadata(metadata: unknown): string | null {
+function stringifyDBMetadata(metadata: unknown): string | null {
   if (!metadata) return null;
   try {
     return JSON.stringify(metadata);

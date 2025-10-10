@@ -412,7 +412,7 @@ export class HackerNewsParsers {
 /**
  * Hacker News data validators
  */
-export class HackerNewsValidators {
+class HackerNewsValidators {
   /**
    * Validate HN item ID
    */

@@ -4,12 +4,12 @@ import pRetry, { type Options as PRetryOptions, type FailedAttemptError } from '
 /**
  * Backoff strategy types
  */
-export type BackoffStrategy = 'exponential' | 'linear' | 'fibonacci' | 'decorrelated';
+type BackoffStrategy = 'exponential' | 'linear' | 'fibonacci' | 'decorrelated';
 
 /**
  * Backoff configuration
  */
-export interface BackoffConfig {
+interface BackoffConfig {
   /** Strategy type */
   strategy: BackoffStrategy;
   /** Initial delay in milliseconds */
@@ -29,7 +29,7 @@ export interface BackoffConfig {
 /**
  * Backoff state tracking
  */
-export interface BackoffState {
+interface BackoffState {
   attempt: number;
   nextDelayMs: number;
   totalDelayMs: number;
@@ -175,7 +175,7 @@ export abstract class BaseBackoffStrategy {
 /**
  * Exponential backoff strategy
  */
-export class ExponentialBackoff extends BaseBackoffStrategy {
+class ExponentialBackoff extends BaseBackoffStrategy {
   calculateDelay(attempt: number): number {
     if (this.config.customDelayFn) {
       return this.config.customDelayFn(attempt, this.state.nextDelayMs);
@@ -188,7 +188,7 @@ export class ExponentialBackoff extends BaseBackoffStrategy {
 /**
  * Linear backoff strategy
  */
-export class LinearBackoff extends BaseBackoffStrategy {
+class LinearBackoff extends BaseBackoffStrategy {
   calculateDelay(attempt: number): number {
     if (this.config.customDelayFn) {
       return this.config.customDelayFn(attempt, this.state.nextDelayMs);
@@ -201,7 +201,7 @@ export class LinearBackoff extends BaseBackoffStrategy {
 /**
  * Fibonacci backoff strategy
  */
-export class FibonacciBackoff extends BaseBackoffStrategy {
+class FibonacciBackoff extends BaseBackoffStrategy {
   calculateDelay(attempt: number): number {
     if (this.config.customDelayFn) {
       return this.config.customDelayFn(attempt, this.state.nextDelayMs);
@@ -225,7 +225,7 @@ export class FibonacciBackoff extends BaseBackoffStrategy {
 /**
  * Decorrelated jitter backoff strategy (AWS recommended)
  */
-export class DecorrelatedBackoff extends BaseBackoffStrategy {
+class DecorrelatedBackoff extends BaseBackoffStrategy {
   calculateDelay(attempt: number): number {
     if (this.config.customDelayFn) {
       return this.config.customDelayFn(attempt, this.state.nextDelayMs);
@@ -247,7 +247,7 @@ export class DecorrelatedBackoff extends BaseBackoffStrategy {
 /**
  * Backoff strategy factory
  */
-export class BackoffFactory {
+class BackoffFactory {
   /**
    * Create a backoff strategy instance
    */
@@ -327,7 +327,7 @@ export class BackoffFactory {
 /**
  * Retry with backoff helper function
  */
-export async function retryWithBackoff<T>(
+async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   config: BackoffConfig,
   shouldRetry?: (error: Error) => boolean
@@ -339,7 +339,7 @@ export async function retryWithBackoff<T>(
 /**
  * Advanced retry configuration with p-retry integration
  */
-export interface AdvancedRetryConfig {
+interface AdvancedRetryConfig {
   /** Base retry configuration */
   retries?: number;
   /** Minimum delay between retries in ms */
@@ -571,7 +571,7 @@ export class ErrorClassifier {
  * Utility function for creating a retry-enabled function
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function withRetry<T extends (...args: any[]) => Promise<any>>(
+function withRetry<T extends (...args: any[]) => Promise<any>>(
   fn: T,
   config?: AdvancedRetryConfig,
   backoffStrategy?: BaseBackoffStrategy

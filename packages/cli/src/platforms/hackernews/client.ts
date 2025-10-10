@@ -10,7 +10,7 @@ import winston from 'winston';
 /**
  * HackerNews API item types
  */
-export type HNItemType = 'story' | 'comment' | 'job' | 'poll' | 'pollopt';
+type HNItemType = 'story' | 'comment' | 'job' | 'poll' | 'pollopt';
 
 /**
  * HackerNews API item structure
@@ -58,7 +58,7 @@ export type StoryListType =
 /**
  * HackerNews API client configuration
  */
-export interface HNClientConfig {
+interface HNClientConfig {
   baseUrl?: string;
   timeout?: number;
   userAgent?: string;

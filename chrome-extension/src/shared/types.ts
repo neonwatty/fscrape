@@ -129,19 +129,19 @@ export interface Message {
   payload?: any;
 }
 
-export interface SavePostMessage extends Message {
+interface SavePostMessage extends Message {
   type: typeof MessageType.SAVE_POST;
   payload: Post;
 }
 
-export interface TogglePinMessage extends Message {
+interface TogglePinMessage extends Message {
   type: typeof MessageType.TOGGLE_PIN;
   payload: {
     subreddit: string;
   };
 }
 
-export interface GetPinnedStatusMessage extends Message {
+interface GetPinnedStatusMessage extends Message {
   type: typeof MessageType.GET_PINNED_STATUS;
   payload: {
     subreddit: string;

@@ -169,15 +169,3 @@ export const logger = {
     return advancedLogger.isLevelEnabled(level);
   },
 };
-
-// Export the advanced logger instance for direct access
-export { advancedLogger };
-
-// Re-export types and utilities from advanced-logger
-export type { LoggerConfig, LogMetadata, TransportConfig } from './advanced-logger.js';
-export { LogLevel } from './advanced-logger.js';
-export {
-  getLogger,
-  initializeLogger as configureLogger,
-  requestLoggingMiddleware,
-} from './advanced-logger.js';

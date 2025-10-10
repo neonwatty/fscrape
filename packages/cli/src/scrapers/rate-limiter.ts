@@ -31,7 +31,7 @@ export interface RateLimiter {
 /**
  * Rate limit status information
  */
-export interface RateLimitStatus {
+interface RateLimitStatus {
   requestsRemaining: number;
   resetTime: Date;
   isLimited: boolean;

@@ -3,8 +3,7 @@
  */
 
 // Main export manager
-export { ExportManager } from './export-manager.js';
-export type { ExportConfig } from './export-manager.js';
+export { ExportManager } from './export-manager.js';;
 
 // Individual exporters
 export { CsvExporter } from './exporters/csv-exporter.js';

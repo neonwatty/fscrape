@@ -10,7 +10,7 @@ import os from 'os';
 /**
  * Log levels for the application
  */
-export enum LogLevel {
+enum LogLevel {
   CRITICAL = 'critical',
   ERROR = 'error',
   WARN = 'warn',

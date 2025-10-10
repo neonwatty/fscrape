@@ -90,7 +90,7 @@ export interface RedditComment {
   replies?: RedditListing<RedditComment> | '';
 }
 
-export interface RedditUser {
+interface RedditUser {
   id: string;
   name: string;
   created_utc: number;
@@ -108,7 +108,7 @@ export interface RedditUser {
   };
 }
 
-export interface RedditSubreddit {
+interface RedditSubreddit {
   id: string;
   name: string;
   display_name: string;

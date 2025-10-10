@@ -16,7 +16,7 @@ import type { FilterOptions } from './filters.js';
 import { DataTransformer } from './transformers.js';
 import type { TransformOptions } from './transformers.js';
 
-export interface ExportConfig {
+interface ExportConfig {
   outputDirectory: string;
   defaultFormat: string;
   includeMetadata?: boolean;

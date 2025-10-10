@@ -14,7 +14,7 @@ import { formatError } from '../validation.js';
 import { dirname, extname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 
-export interface ExportCommandOptions {
+interface ExportCommandOptions {
   database?: string;
   format?: string;
   output?: string;

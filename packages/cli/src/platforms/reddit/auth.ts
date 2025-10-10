@@ -17,7 +17,7 @@ export interface RedditAuthConfig {
 /**
  * Reddit OAuth2 token response
  */
-export interface RedditTokenResponse {
+interface RedditTokenResponse {
   access_token: string;
   token_type: string;
   expires_in: number;
@@ -28,7 +28,7 @@ export interface RedditTokenResponse {
 /**
  * Reddit OAuth2 authentication state
  */
-export interface RedditAuthState {
+interface RedditAuthState {
   accessToken: string;
   tokenType: string;
   expiresAt: Date;

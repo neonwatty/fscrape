@@ -152,7 +152,7 @@ if (process.env.NODE_ENV !== 'test') {
 /**
  * Logger interface matching existing logger
  */
-export interface Logger {
+interface Logger {
   trace(message: string, ...meta: unknown[]): void;
   debug(message: string, ...meta: unknown[]): void;
   info(message: string, ...meta: unknown[]): void;
@@ -292,7 +292,7 @@ class EnhancedLogger implements Logger {
 /**
  * Global logger instance
  */
-export const logger: Logger = new EnhancedLogger();
+const logger: Logger = new EnhancedLogger();
 
 /**
  * Create a scoped logger with context
@@ -304,7 +304,7 @@ export function createLogger(scope: string, metadata?: Record<string, unknown>):
 /**
  * Middleware for Express/Koa error logging
  */
-export function errorLoggingMiddleware(
+function errorLoggingMiddleware(
   err: Error,
   req: Record<string, unknown>,
   res: Record<string, unknown>,
@@ -326,7 +326,7 @@ export function errorLoggingMiddleware(
 /**
  * Setup global error handlers
  */
-export function setupGlobalErrorHandlers(): void {
+function setupGlobalErrorHandlers(): void {
   // Handle uncaught exceptions
   process.on('uncaughtException', (error: Error) => {
     logger.critical('Uncaught Exception', error);
@@ -356,13 +356,10 @@ export function setupGlobalErrorHandlers(): void {
 /**
  * Flush logs and close transports
  */
-export async function closeLogger(): Promise<void> {
+async function closeLogger(): Promise<void> {
   return new Promise((resolve) => {
     winstonLogger.end(() => {
       resolve();
     });
   });
 }
-
-// Export the winston logger for advanced usage
-export { winstonLogger };

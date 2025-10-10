@@ -2,14 +2,6 @@
  * HackerNews platform module exports
  */
 
-export { HackerNewsScraper } from './scraper.js';
-export type { HackerNewsScraperConfig } from './scraper.js';
-
-export { HackerNewsClient } from './client.js';
-export type { HNItem, HNUser, HNItemType, StoryListType, HNClientConfig } from './client.js';
-
-export { HackerNewsParsers, HackerNewsValidators } from './parsers.js';
-
 // Import for platform constructor
 import { HackerNewsScraper } from './scraper.js';
 // import type { PlatformConstructor } from '../platform-factory.js';
@@ -94,6 +86,3 @@ export const HackerNewsPlatform: any = class {
     // This is a no-op for compatibility
   }
 };
-
-// Default export for platform registration
-export default HackerNewsPlatform;

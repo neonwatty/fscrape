@@ -5,7 +5,7 @@
 
 import type { Post } from '../shared/types';
 
-export type RedditUIVersion = 'new' | 'old' | 'sh';
+type RedditUIVersion = 'new' | 'old' | 'sh';
 
 export class RedditScraper {
   /**
